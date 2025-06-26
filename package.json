@@ -1,0 +1,16 @@
+{
+  "name": "taskond",
+  "version": "1.0.0",
+  "description": "Sistema PWA para gestão de tarefas de gerentes operacionais de condomínio",
+  "main": "index.html",
+  "scripts": {
+    "start": "http-server -p 3000"
+  },
+  "author": "Ajosenildo / Rezende Administradora",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1",
+    "nodemon": "^3.1.10",
+    "supabase": "^2.24.3"
+  }
+}

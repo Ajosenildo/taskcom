@@ -1,0 +1,6 @@
+{
+  "enable": true,
+  "lint": true,
+  "unstable": true,
+  "importMap": "supabase/functions/import_map.json"
+}
