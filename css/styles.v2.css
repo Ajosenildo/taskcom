@@ -735,6 +735,7 @@ body {
     cursor: pointer;
     width: auto;
     text-align: center;
+    margin-top: 2rem;
 }
 .btn-install:hover {
     background-color: #15803d;
