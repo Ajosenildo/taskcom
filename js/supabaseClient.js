@@ -1,3 +1,6 @@
 // js/supabaseClient.js
-
-export const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+        storage: sessionStorage, // A MUDANÇA ESTÁ AQUI
+    },
+});
