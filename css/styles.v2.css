@@ -724,3 +724,17 @@ body {
     color: #6b7280; /* Cinza mais claro */
     font-style: italic;
 }
+
+.btn-install {
+    padding: 0.75rem 1.5rem;
+    font-weight: bold;
+    background-color: #16a34a; /* Um verde de destaque */
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    width: auto;
+}
+.btn-install:hover {
+    background-color: #15803d;
+}
