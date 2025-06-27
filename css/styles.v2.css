@@ -767,3 +767,33 @@ body {
 #login-screen {
     gap: 0.7rem; 
 }
+
+.install-banner {
+    background-color: #e0e7ff; /* Um azul claro e amigável */
+    color: #3730a3;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #c7d2fe;
+    text-align: center;
+    margin: -1rem 0 1.5rem 0;
+    position: relative;
+}
+
+.install-banner p {
+    margin: 0;
+    padding: 0 20px; /* Espaço para o botão de fechar */
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.install-banner button {
+    position: absolute;
+    top: 2px;
+    right: 5px;
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    color: #4f46e5;
+    cursor: pointer;
+    padding: 5px;
+}

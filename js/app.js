@@ -726,6 +726,10 @@ function setupEventListeners() {
         });
     });
 
+    document.getElementById('ios-install-close-btn')?.addEventListener('click', () => {
+    document.getElementById('ios-install-banner').style.display = 'none';
+    });
+
     listenersInitialized = true;
 }
 
@@ -990,3 +994,16 @@ window.onload = () => {
         }
     });
 };
+
+function checkAndShowIOSInstallBanner() {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    // Verifica se o app já está rodando em modo 'standalone' (instalado)
+    const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
+    
+    if (isIOS && !isInStandaloneMode) {
+        const banner = document.getElementById('ios-install-banner');
+        if (banner) {
+            banner.style.display = 'block';
+        }
+    }
+}
