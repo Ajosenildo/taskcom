@@ -739,3 +739,8 @@ body {
 .btn-install:hover {
     background-color: #15803d;
 }
+
+.botao-install {
+    width: 100%;
+    margin: 0 auto;
+}
