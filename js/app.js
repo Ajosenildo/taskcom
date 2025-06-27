@@ -10,12 +10,18 @@ import * as utils from './utils.js';
 let deferredPrompt; // Guarda o evento de instalação
 
 window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-  const installButton = document.getElementById('install-app-btn');
-  if(installButton) {
-    installButton.style.display = 'inline-block'; // Mostra o botão
-  }
+    e.preventDefault();
+    deferredPrompt = e;
+    const installButton = document.getElementById('install-app-btn');
+    if(installButton) installButton.style.display = 'block'; // Mostra o botão
+
+    installButton.addEventListener('click', async () => {
+        installButton.style.display = 'none';
+        deferredPrompt.prompt(); // Mostra o prompt de instalação
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`User response to the install prompt: ${outcome}`);
+        deferredPrompt = null;
+    });
 });
 
 // --- ESTADO GLOBAL DA APLICAÇÃO ---
