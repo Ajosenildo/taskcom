@@ -745,8 +745,8 @@ body {
 #login-screen .btn-install {
     background-color: #16a34a; /* Verde */
     color: white;
-    width: 60%; /* Ocupa 60% da largura do container */
-    max-width: 250px; /* Define uma largura máxima */
+    width: 50%; /* Ocupa 60% da largura do container */
+    max-width: 200px; /* Define uma largura máxima */
     padding: 0.75rem;
     font-size: 0.9rem;
     margin: 0.5rem auto; /* Centraliza o botão horizontalmente */
@@ -760,7 +760,7 @@ body {
 /* Ajusta o espaçamento entre os campos de input na tela de login */
 #login-screen input[type="email"],
 #login-screen input[type="password"] {
-    margin-bottom: 0.75rem; /* Define um espaço menor abaixo de cada input */
+    margin-bottom: 0.5rem; /* Define um espaço menor abaixo de cada input */
 }
 
 /* Remove o gap geral para ter mais controle */
