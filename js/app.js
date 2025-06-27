@@ -720,17 +720,6 @@ function setupEventListeners() {
         });
     });
 
-    document.getElementById('install-app-btn')?.addEventListener('click', async () => {
-    const installButton = document.getElementById('install-app-btn');
-    if (deferredPrompt) {
-        installButton.style.display = 'none';
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        console.log(`User response to the install prompt: ${outcome}`);
-        deferredPrompt = null;
-    }
-    });
-
     listenersInitialized = true;
 }
 
