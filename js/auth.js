@@ -30,10 +30,10 @@ async function checkSession() {
     }
 
     const { data: userProfile, error } = await supabaseClient
-      .from("usuarios")
-      .select("*")
-      .eq("id", user.id)
-      .single();
+        .from("usuarios")
+        .select("*, empresa:empresa_id(nome_empresa)") // <-- CORREÇÃO AQUI
+        .eq("id", user.id)
+        .single();
 
     if (error || !userProfile) {
       console.error("Erro ao buscar perfil ou perfil não encontrado. Deslogando.", error);

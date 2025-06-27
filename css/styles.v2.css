@@ -631,7 +631,7 @@ body {
 
 .forgot-password-link {
     text-align: center;
-    margin-top: 1rem;
+    margin-top: -0.5rem;
     color: #4f46e5;
     font-size: 0.9rem;
     text-decoration: none;
@@ -703,4 +703,24 @@ body {
     margin-bottom: -1rem; /* Adiciona um espaço antes do conteúdo */
     padding-left: 0.5rem; /* Pequena margem à esquerda */
     box-sizing: border-box;
+}
+
+/* Estilos para a frase de efeito na tela de login */
+.login-tagline {
+    text-align: center;
+    margin-top: -3rem; /* Aproxima a frase da logo */
+    margin-bottom: 2rem; /* Afasta a frase do formulário */
+}
+
+.login-tagline p {
+    margin: 0;
+    font-size: 1rem;
+    color: #374151; /* Cinza escuro */
+    font-weight: 500;
+}
+
+.login-tagline small {
+    font-size: 0.9rem;
+    color: #6b7280; /* Cinza mais claro */
+    font-style: italic;
 }

@@ -7,6 +7,23 @@ import * as api from './api.js';
 import * as render from './render.js';
 import * as utils from './utils.js';
 
+let deferredPrompt; // Guarda o evento de instalação
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const installButton = document.getElementById('install-app-btn');
+    if(installButton) installButton.style.display = 'block'; // Mostra o botão
+
+    installButton.addEventListener('click', async () => {
+        installButton.style.display = 'none';
+        deferredPrompt.prompt(); // Mostra o prompt de instalação
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`User response to the install prompt: ${outcome}`);
+        deferredPrompt = null;
+    });
+});
+
 // --- ESTADO GLOBAL DA APLICAÇÃO ---
 let appInitialized = false; // <-- esta já existe
 let listenersInitialized = false; // <-- ADICIONE ESTA LINHA
@@ -52,6 +69,7 @@ async function initializeApp() {
         ui.setupRoleBasedUI(state.currentUserProfile);
         ui.populateDropdowns(state.condominios, state.taskTypes, state.allUsers);
         ui.populateTemplatesDropdown(state.taskTemplates);
+        ui.setupInstallButton();
         renderAll();
 
         // Inicializa os seletores com busca
@@ -251,7 +269,11 @@ async function handleExportToPDF() {
     const includeDesc = document.getElementById('pdf-include-desc').checked;
     const includeHistory = document.getElementById('pdf-include-history').checked;
     
+    // Pega o nome da empresa do perfil do usuário logado
+    const empresaNome = state.currentUserProfile?.empresa?.nome_empresa || 'Nome da Empresa';
+
     let reportOwnerName = null;
+    // Se o usuário logado NÃO é um admin (cargo_id diferente de 1), o relatório é dele.
     if (state.currentUserProfile && state.currentUserProfile.cargo_id !== 1) {
         reportOwnerName = state.currentUserProfile.nome_completo;
     }
@@ -259,14 +281,11 @@ async function handleExportToPDF() {
     let historyData = [];
     if (includeHistory) {
         try {
-            // Pega os IDs de todas as tarefas que serão exportadas
             const taskIds = state.tasksToDisplayForPdf.map(t => t.id);
-            // Busca o histórico de todas elas de uma só vez
             historyData = await api.fetchHistoryForTasks(taskIds);
         } catch (error) {
             console.error("Erro ao buscar histórico para o PDF:", error);
-            alert("Não foi possível buscar o histórico das tarefas.");
-            return;
+            return alert("Não foi possível buscar o histórico das tarefas.");
         }
     }
 
@@ -277,9 +296,10 @@ async function handleExportToPDF() {
         state.taskTypes, 
         state.STATUSES,
         includeDesc, 
-        includeHistory, // <-- nova opção
-        historyData,  // <-- nova opção
-        reportOwnerName
+        includeHistory,
+        historyData,
+        reportOwnerName,
+        empresaNome
     );
 }
 

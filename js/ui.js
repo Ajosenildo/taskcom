@@ -72,15 +72,16 @@ export function populateDropdowns(CONDOMINIOS, TASK_TYPES, allUsers) {
 
     if (filterAssigneeSelect) {
         filterAssigneeSelect.innerHTML = '<option value="">Todos</option>';
+        // CORREÇÃO: Removemos o 'if (user.cargo_id === 2)'
+        // para que todos os usuários apareçam na lista de filtro.
         allUsers.forEach(user => {
-            if (user.cargo_id === 2) {
-                const option = document.createElement('option');
-                option.value = user.id;
-                option.textContent = user.nome_completo;
-                filterAssigneeSelect.appendChild(option);
-            }
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = user.nome_completo;
+            filterAssigneeSelect.appendChild(option);
         });
     }
+
     if (filterTaskTypeSelect) {
         filterTaskTypeSelect.innerHTML = '<option value="">Todos os Tipos</option>';
         TASK_TYPES.forEach(type => {
@@ -252,4 +253,27 @@ export function createSearchableDropdown(inputId, optionsId, hiddenInputId, item
     };
 
     return { clear };
+}
+
+export function setupInstallButton() {
+    let deferredPrompt;
+    const installButton = document.getElementById('install-app-btn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        if (installButton) {
+            installButton.style.display = 'block'; // Mostra o botão
+        }
+    });
+
+    if (installButton) {
+        installButton.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            installButton.style.display = 'none';
+            deferredPrompt.prompt(); // Mostra o prompt de instalação
+            await deferredPrompt.userChoice;
+            deferredPrompt = null;
+        });
+    }
 }
