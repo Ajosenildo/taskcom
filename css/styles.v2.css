@@ -725,7 +725,7 @@ body {
     font-style: italic;
 }
 
-.btn-install {
+#install-app-btn {
     padding: 0.5rem 1rem;
     font-weight: bold;
     background-color: #16a34a; /* Um verde de destaque */
@@ -735,13 +735,8 @@ body {
     cursor: pointer;
     width: auto;
     text-align: center;
-    margin-top: -2rem;
+    margin-top: 0rem;
 }
-.btn-install:hover {
+#install-app-btn:hover {
     background-color: #15803d;
-}
-
-.botao-install {
-    width: 50%;
-    margin: 0 auto;
 }
