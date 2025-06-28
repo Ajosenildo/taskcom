@@ -70,6 +70,7 @@ async function initializeApp() {
         ui.populateDropdowns(state.condominios, state.taskTypes, state.allUsers);
         ui.populateTemplatesDropdown(state.taskTemplates);
         ui.setupInstallButton();
+        checkAndShowIOSInstallBanner();
         renderAll();
 
         // Inicializa os seletores com busca
@@ -726,6 +727,10 @@ function setupEventListeners() {
         });
     });
 
+    document.getElementById('ios-install-close-btn')?.addEventListener('click', () => {
+    document.getElementById('ios-install-banner').style.display = 'none';
+    });
+
     listenersInitialized = true;
 }
 
@@ -962,27 +967,44 @@ window.addEventListener('showAdminView', () => render.renderUserList(state.allUs
 // INICIALIZAÇÃO DA APLICAÇÃO
 window.onload = () => {
     setupEventListeners();
-    supabaseClient.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'PASSWORD_RECOVERY' && session) {
-            console.log("Detectado primeiro acesso por convite. Mostrando tela para definir senha.");
-            ui.show('set-password-screen');
-            return; 
-        }
-        const isMainVisible = document.getElementById('main-container')?.classList.contains('is-visible');
+
+    supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+        // A lógica agora é mais simples: se existe uma sessão, tentamos rodar o app.
         if (session) {
-            if (isMainVisible) return;
+            // Verifica se o app já está rodando para evitar recargas múltiplas
+            if (appInitialized) return;
+
             const sessionOk = await checkSession();
-            if (sessionOk && sessionOk.status === 'ACTIVE') {
-                ui.show('main-container');
-                ui.showView('tasks-view');
-                initializeApp();
-            } else if (sessionOk && sessionOk.status === 'INACTIVE') {
-                alert("Seu usuário está inativo. Contate o administrador.");
+            
+            if (sessionOk.status === 'ACTIVE') {
+                appInitialized = true; // Marca o app como inicializado
+                ui.show('main-container'); // Garante que a tela principal seja exibida
+                ui.showView('tasks-view'); // Garante que a view de tarefas seja a inicial
+                await initializeApp(); // Carrega todos os dados e renderiza o conteúdo
+            } else {
+                // Se a sessão não for ativa (INACTIVE, NO_PROFILE), força o logout
+                // para limpar o estado e mostrar a tela de login.
                 logout();
             }
+
         } else {
+            // Se não há nenhuma sessão, garante que tudo está zerado e mostra o login.
+            appInitialized = false;
             sessionStorage.clear();
             ui.show('login-screen');
         }
     });
 };
+
+function checkAndShowIOSInstallBanner() {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    // Verifica se o app já está rodando em modo 'standalone' (instalado)
+    const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
+    
+    if (isIOS && !isInStandaloneMode) {
+        const banner = document.getElementById('ios-install-banner');
+        if (banner) {
+            banner.style.display = 'block';
+        }
+    }
+}
