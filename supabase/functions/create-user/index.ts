@@ -1,4 +1,4 @@
-// supabase/functions/create-user/index.ts (Versão Definitiva e Robusta)
+// supabase/functions/create-user/index.ts (Versão Definitiva)
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
@@ -11,28 +11,14 @@ serve(async (req) => {
     if (!email || !password || !nome_completo || !cargo_id) {
       throw new Error("Todos os campos (Email, Senha, Nome, Cargo) são obrigatórios.");
     }
-
-    const supabaseAdmin = createClient(
-      Deno.env.get('TAS_KOND_URL') ?? '',
-      Deno.env.get('TAS_KOND_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    // Obtém o usuário admin que está fazendo a chamada
-    const { data: { user: adminAuthUser } } = await supabaseAdmin.auth.getUser(req.headers.get('Authorization')!.replace('Bearer ', ''));
-    if (!adminAuthUser) throw new Error("Token de administrador inválido.");
-
-    // CORREÇÃO: Busca o perfil do admin na tabela 'usuarios' para obter o empresa_id de forma confiável
-    const { data: adminProfile, error: profileFetchError } = await supabaseAdmin
-      .from('usuarios')
-      .select('empresa_id')
-      .eq('id', adminAuthUser.id)
-      .single();
-
-    if (profileFetchError) throw new Error("Perfil do administrador não encontrado.");
-    const empresa_id = adminProfile?.empresa_id;
+    if (password.length < 6) {
+        throw new Error("A senha deve ter no mínimo 6 caracteres.");
+    }
+    const supabaseAdmin = createClient(Deno.env.get('TAS_KOND_URL') ?? '', Deno.env.get('TAS_KOND_SERVICE_ROLE_KEY') ?? '');
+    const { data: { user: adminUser } } = await supabaseAdmin.auth.getUser(req.headers.get('Authorization')!.replace('Bearer ', ''));
+    const empresa_id = adminUser?.app_metadata?.empresa_id;
     if (!empresa_id) throw new Error("Administrador não está associado a uma empresa.");
 
-    // Etapa 1: Cria o usuário na autenticação com a senha provisória
     const { data: authResponse, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
       email: email,
       password: password,
@@ -42,13 +28,12 @@ serve(async (req) => {
     if (createUserError) throw createUserError;
     newAuthUserId = authResponse.user.id;
 
-    // Etapa 2: Insere o perfil na tabela 'public.usuarios', já como ativo
-    const { error: insertProfileError } = await supabaseAdmin.from('usuarios').insert({ 
+    const { error: profileError } = await supabaseAdmin.from('usuarios').insert({ 
       id: newAuthUserId, nome_completo, empresa_id, cargo_id, ativo: true
     });
-    if (insertProfileError) {
+    if (profileError) {
       await supabaseAdmin.auth.admin.deleteUser(newAuthUserId);
-      throw insertProfileError;
+      throw profileError;
     }
 
     return new Response(JSON.stringify(authResponse.user), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });

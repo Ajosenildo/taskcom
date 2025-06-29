@@ -1,39 +1,33 @@
 // js/auth.js
-
 import { supabaseClient } from './supabaseClient.js';
 
-async function login() {
+export async function login() {
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value.trim();
-    if (!email || !password) {
-        return alert("Preencha email e senha.");
-    }
-
-    const { data: loginData, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-    if (error) {
-        return alert("Email ou senha inválidos.");
-    }
+    if (!email || !password) return alert("Preencha email e senha.");
     
-    // A função checkSession será chamada pelo onAuthStateChange para validar o status
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    if (error) return alert("Email ou senha inválidos.");
+    // O onAuthStateChange cuidará do resto.
 }
 
-async function logout() {
+export async function logout() {
     await supabaseClient.auth.signOut();
     sessionStorage.clear();
     location.reload();
 }
 
-async function checkSession() {
+export async function checkSession() {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) {
         return { status: 'NO_SESSION' };
     }
 
     const { data: userProfile, error } = await supabaseClient
-        .from("usuarios")
-        .select("*, empresa:empresa_id(nome_empresa)") // <-- CORREÇÃO AQUI
-        .eq("id", user.id)
-        .single();
+      .from("usuarios")
+      .select("*, empresa:empresa_id(nome_empresa)")
+      .eq("id", user.id)
+      .single();
 
     if (error || !userProfile) {
       console.error("Erro ao buscar perfil ou perfil não encontrado. Deslogando.", error);
@@ -41,13 +35,12 @@ async function checkSession() {
       return { status: 'NO_PROFILE' };
     }
     
+    sessionStorage.setItem("userProfile", JSON.stringify(userProfile));
+
     if (!userProfile.ativo) {
-        // A lógica de mostrar alerta/tela de senha será tratada no app.js
+        // Apenas informa que está inativo. A decisão será do app.js
         return { status: 'INACTIVE', userProfile: userProfile };
     }
     
-    sessionStorage.setItem("userProfile", JSON.stringify(userProfile));
     return { status: 'ACTIVE', userProfile: userProfile };
 }
-
-export { login, logout, checkSession };

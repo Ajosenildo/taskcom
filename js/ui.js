@@ -1,11 +1,7 @@
 // js/ui.js (Versão Final e Corrigida)
 
 export function show(screenId) {
-    // Esconde todas as telas para garantir um estado limpo
-    document.getElementById('login-screen')?.classList.remove('is-visible');
-    document.getElementById('main-container')?.classList.remove('is-visible');
-    document.getElementById('set-password-screen')?.classList.remove('is-visible');
-
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('is-visible'));
     const screenToShow = document.getElementById(screenId);
     if (screenToShow) {
         screenToShow.classList.add('is-visible');
@@ -18,33 +14,40 @@ export function showView(viewId) {
     if (viewToShow) {
         viewToShow.style.display = 'flex';
     }
-    
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
     const buttonId = `nav-${viewId.replace('-view', '')}`;
     const activeBtn = document.getElementById(buttonId);
     if (activeBtn) {
         activeBtn.classList.add('active');
     }
-    
-    // Dispara um evento para o app.js saber qual tela renderizar
     window.dispatchEvent(new CustomEvent('viewChanged', { detail: { viewId } }));
 }
 
 export function setupRoleBasedUI(currentUserProfile) {
     const adminFeatures = document.querySelectorAll('.admin-feature');
+    
+    // CORREÇÃO: Usamos 'block' ou 'flex' para exibir os elementos, 
+    // e 'none' para escondê-los. É mais direto e garantido.
     if (currentUserProfile && currentUserProfile.cargo_id === 1) {
-        adminFeatures.forEach(el => el.style.display = 'flex');
+        // Se for admin, mostra os botões/seções de admin
+        adminFeatures.forEach(el => {
+            el.style.display = 'flex'; // ou 'block', dependendo do elemento
+        });
     } else {
-        adminFeatures.forEach(el => el.style.display = 'none');
+        // Se não for admin, esconde
+        adminFeatures.forEach(el => {
+            el.style.display = 'none';
+        });
     }
 }
 
-export function populateDropdowns(CONDOMINIOS, TASK_TYPES, allUsers) {
+export function populateDropdowns(CONDOMINIOS, TASK_TYPES, allUsers, allGroups) { // Adicionamos allGroups
     const createTaskTypeSelect = document.getElementById('task-type');
+    const filterTaskTypeSelect = document.getElementById('filter-task-type');
     const editTaskTypeSelect = document.getElementById('edit-task-type');
     const filterAssigneeSelect = document.getElementById('filter-assignee');
     const editTaskCondoSelect = document.getElementById('edit-task-condominio');
-    const filterTaskTypeSelect = document.getElementById('filter-task-type');
+    const condoGroupSelect = document.getElementById('condo-group-select'); // Nosso novo seletor
 
     const typeElements = [createTaskTypeSelect, editTaskTypeSelect, filterTaskTypeSelect];
     
@@ -89,6 +92,16 @@ export function populateDropdowns(CONDOMINIOS, TASK_TYPES, allUsers) {
             option.value = type.id;
             option.textContent = type.nome_tipo;
             filterTaskTypeSelect.appendChild(option);
+        });
+    }
+
+    if (condoGroupSelect) {
+        condoGroupSelect.innerHTML = '<option value="">Nenhum</option>';
+        allGroups.forEach(group => {
+            const option = document.createElement('option');
+            option.value = group.id;
+            option.textContent = group.nome_grupo;
+            condoGroupSelect.appendChild(option);
         });
     }
 }
@@ -276,4 +289,87 @@ export function setupInstallButton() {
             deferredPrompt = null;
         });
     }
+}
+
+export function setupPWAInstallHandlers() {
+    let deferredPrompt;
+    const installButton = document.getElementById('install-app-btn');
+    if (!installButton) return;
+
+    // Lógica para Chrome/Desktop
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        installButton.style.display = 'block';
+
+        installButton.addEventListener('click', async () => {
+            installButton.style.display = 'none';
+            deferredPrompt.prompt();
+            await deferredPrompt.userChoice;
+            deferredPrompt = null;
+        });
+    });
+
+    // Lógica para o banner do iOS/Safari
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
+    const iosBanner = document.getElementById('ios-install-banner');
+    const closeIOSBannerBtn = document.getElementById('ios-install-close-btn');
+
+    if (isIOS && !isInStandaloneMode && iosBanner) {
+        iosBanner.style.display = 'block';
+    }
+    if(closeIOSBannerBtn){
+        closeIOSBannerBtn.addEventListener('click', () => {
+            iosBanner.style.display = 'none';
+        });
+    }
+}
+
+export function openEditCondoModal(condo, todosGrupos) {
+    const modal = document.getElementById('edit-condo-modal');
+    if (!modal) return;
+
+    document.getElementById('edit-condo-id').value = condo.id;
+    document.getElementById('edit-condo-nome').value = condo.nome;
+    document.getElementById('edit-condo-nome-fantasia').value = condo.nome_fantasia;
+    document.getElementById('edit-condo-cnpj').value = condo.cnpj || '';
+
+    const groupSelect = document.getElementById('edit-condo-group');
+    groupSelect.innerHTML = '<option value="">Nenhum</option>'; // Opção para deixar sem grupo
+
+    todosGrupos.forEach(grupo => {
+        const option = document.createElement('option');
+        option.value = grupo.id;
+        option.textContent = grupo.nome_grupo;
+        groupSelect.appendChild(option);
+    });
+
+    groupSelect.value = condo.grupo_id || ""; // Define o grupo atual como selecionado
+
+    modal.classList.add('is-visible');
+}
+
+export function openCreateCondoModal(allGroups) {
+    const modal = document.getElementById('create-condo-modal');
+    if (!modal) return;
+
+    const groupSelect = document.getElementById('create-condo-group');
+    groupSelect.innerHTML = '<option value="">Nenhum</option>'; // Opção para não associar
+    allGroups.forEach(group => {
+        const option = document.createElement('option');
+        option.value = group.id;
+        option.textContent = group.nome_grupo;
+        groupSelect.appendChild(option);
+    });
+    
+    modal.classList.add('is-visible');
+}
+
+export function closeCreateCondoModal() {
+    document.getElementById('create-condo-modal').classList.remove('is-visible');
+}
+// NOVA FUNÇÃO GPT
+export function closeEditCondoModal() {
+  document.getElementById('edit-condo-modal')?.classList.remove('is-visible');
 }

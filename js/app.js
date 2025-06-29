@@ -51,8 +51,7 @@ async function initializeApp() {
     try {
         // Faz uma única chamada que busca TUDO que precisamos
         const initialData = await api.fetchInitialData();
-        
-        // Atualiza o nosso 'state' com os dados frescos
+         // Atualiza o nosso 'state' com os dados frescos
         state.tasks = initialData.tasks;
         state.condominios = initialData.condominios;
         state.taskTypes = initialData.taskTypes;
@@ -67,7 +66,7 @@ async function initializeApp() {
         
         // Configura e desenha a interface com os dados atualizados
         ui.setupRoleBasedUI(state.currentUserProfile);
-        ui.populateDropdowns(state.condominios, state.taskTypes, state.allUsers);
+        ui.populateDropdowns(state.condominios, state.taskTypes, state.allUsers, state.allGroups);
         ui.populateTemplatesDropdown(state.taskTemplates);
         ui.setupInstallButton();
         checkAndShowIOSInstallBanner();
@@ -206,14 +205,8 @@ async function handleCreateUser(event) {
     const email = form.elements['create-user-email'].value.trim();
     const password = form.elements['create-user-password'].value.trim();
     const cargoId = parseInt(form.elements['create-user-role'].value, 10);
-
-    if (!nome || !email || !password || isNaN(cargoId)) {
-        return alert('Todos os campos são obrigatórios.');
-    }
-    if (password.length < 6) {
-        return alert("A senha provisória deve ter no mínimo 6 caracteres.");
-    }
-
+    if (!nome || !email || !password || isNaN(cargoId)) return alert('Todos os campos são obrigatórios.');
+    if (password.length < 6) return alert("A senha provisória deve ter no mínimo 6 caracteres.");
     try {
         await api.createUser({ email, password, nome_completo: nome, cargo_id: cargoId });
         alert('Usuário criado com sucesso!');
@@ -358,11 +351,18 @@ async function handleCreateOrUpdateCondo(event) {
     event.preventDefault();
     const form = event.target;
     const condoId = form.elements['condo-id'].value;
+    const empresa_id = state.currentUserProfile?.empresa_id;
+
+    if (!empresa_id) {
+    alert('Erro: empresa_id não encontrado no perfil do usuário.');
+    return;
+    }
+
     const condoData = {
-        nome: form.elements['condo-nome'].value,
-        nome_fantasia: form.elements['condo-nome-fantasia'].value,
-        cnpj: form.elements['condo-cnpj'].value || null, // Pega o CNPJ, ou envia nulo se estiver vazio
-        empresa_id: state.currentUserProfile.empresa_id
+    nome: form.elements['condo-nome'].value,
+    nome_fantasia: form.elements['condo-nome-fantasia'].value,
+    cnpj: form.elements['condo-cnpj'].value || null,
+    // empresa_id: empresa_id
     };
 
     try {
@@ -415,31 +415,29 @@ async function handleCreateOrUpdateTaskType(event) {
     const form = event.target;
     const typeId = form.elements['task-type-id'].value;
     const typeData = {
-        nome_tipo: form.elements['task-type-nome'].value,
+        nome_tipo: form.elements['task-type-nome'].value.trim(),
         cor: form.elements['task-type-cor'].value
     };
 
-    if (!typeData.nome_tipo || !typeData.cor) {
-        return alert("O nome e a cor do tipo de tarefa são obrigatórios.");
+    if (!typeData.nome_tipo) {
+        return alert("O nome do tipo de tarefa é obrigatório.");
     }
 
     try {
         if (typeId) {
-            // Atualiza o tipo de tarefa existente
             await api.updateTaskTypeInDB(typeId, typeData);
             alert('Tipo de tarefa atualizado com sucesso!');
         } else {
-            // Cria um novo tipo de tarefa
             await api.createTaskTypeInDB(typeData);
             alert('Tipo de tarefa criado com sucesso!');
         }
         form.reset();
-        document.getElementById('task-type-id').value = ''; // Limpa o campo oculto
+        document.getElementById('task-type-id').value = '';
         document.getElementById('task-type-submit-btn').textContent = 'Adicionar Tipo';
-        initializeApp(); // Recarrega todos os dados para mostrar a atualização
+        initializeApp();
     } catch (error) {
-        console.error('Erro ao salvar o tipo de tarefa:', error);
-        alert('Erro ao salvar o tipo de tarefa: ' + error.message);
+        console.error('Erro ao salvar tipo de tarefa:', error);
+        alert('Erro ao salvar tipo de tarefa: ' + error.message);
     }
 }
 
@@ -583,8 +581,7 @@ async function handleForgotPassword(event) {
 }
 
 // --- SETUP INICIAL E LISTENERS ---
-// Substitua esta função em seu js/app.js
-function setupEventListeners() {
+ function setupEventListeners() {
     if (listenersInitialized) return;
     console.log("Configurando event listeners pela primeira vez...");
     // Auth
@@ -614,6 +611,7 @@ function setupEventListeners() {
     document.getElementById('edit-user-modal-cancel-btn')?.addEventListener('click', ui.closeEditUserModal);
     document.getElementById('edit-condo-modal-close-btn')?.addEventListener('click', ui.closeEditCondoModal);
     document.getElementById('edit-condo-modal-cancel-btn')?.addEventListener('click', ui.closeEditCondoModal);
+    document.getElementById('edit-condo-form')?.addEventListener('submit', handleUpdateCondo);
 
     // Filtros, Exportação e Importação
     document.getElementById('clear-filters')?.addEventListener('click', () => {
@@ -630,6 +628,10 @@ function setupEventListeners() {
     document.getElementById('condo-csv-input')?.addEventListener('change', handleCondoImport);
     document.getElementById('download-template-btn')?.addEventListener('click', handleDownloadTemplate);
     document.getElementById('set-password-form')?.addEventListener('submit', handleSetPassword);
+
+    document.getElementById('add-condo-btn')?.addEventListener('click', handleOpenCreateCondoModal);
+    document.getElementById('edit-task-modal-close-btn')?.addEventListener('click', ui.closeEditModal);
+    document.getElementById('edit-task-modal-cancel-btn')?.addEventListener('click', ui.closeEditModal);
 
 
     // Event Delegation para listas dinâmicas
@@ -651,9 +653,14 @@ function setupEventListeners() {
     document.getElementById('condo-list')?.addEventListener('click', (event) => {
         const button = event.target.closest('.task-action-btn');
         if (!button) return;
+        const condoId = parseInt(button.dataset.condoid, 10);
         const action = button.dataset.action;
-        if (action === 'edit-condo') handleEditCondo(parseInt(button.dataset.condoid, 10));
-        if (action === 'delete-condo') handleDeleteCondo(parseInt(button.dataset.condoid, 10));
+        if (action === 'edit-condo') {
+            handleOpenEditCondoModal(condoId);
+        }
+        if (action === 'delete-condo') {
+            handleDeleteCondo(condoId);
+        }
     });
     document.getElementById('task-type-list')?.addEventListener('click', (event) => {
         const button = event.target.closest('.task-action-btn');
@@ -676,7 +683,14 @@ function setupEventListeners() {
     });
 
     document.getElementById('cargo-form')?.addEventListener('submit', handleCreateOrUpdateCargo);
-    document.getElementById('group-form')?.addEventListener('submit', handleCreateOrUpdateGroup); // <-- Conexão para o formulário de Grupo
+    document.getElementById('group-form')?.addEventListener('submit', handleCreateOrUpdateGroup); 
+    
+    // ADICIONADO GPT
+    document.getElementById('create-condo-modal-close-btn')?.addEventListener('click', ui.closeCreateCondoModal);
+    document.getElementById('create-condo-modal-cancel-btn')?.addEventListener('click', ui.closeCreateCondoModal);
+    document.getElementById('create-condo-form')?.addEventListener('submit', handleCreateCondo);
+    // ---------
+// <-- Conexão para o formulário de Grupo
     
     document.getElementById('cargo-list')?.addEventListener('click', (event) => {
         const button = event.target.closest('.task-action-btn');
@@ -850,9 +864,11 @@ document.getElementById('user-list')?.addEventListener('click', (event) => {
     if (action === 'toggle-user-status') handleToggleUserStatus(userId);
 });
 
-async function handleCreateCondo(event) {
+// REMOVIDO POR SUGESTÃO DO GPT
+/* async function handleCreateCondo(event) {
     event.preventDefault();
     const form = event.target;
+    const grupo_id = form.elements['create-condo-group'].value || null;
     const condoData = {
         nome: form.elements['condo-nome'].value,
         nome_fantasia: form.elements['condo-nome-fantasia'].value,
@@ -872,28 +888,40 @@ async function handleCreateCondo(event) {
         }
     }
 }
+    */
+   // ---------
 
 async function handleUpdateCondo(event) {
     event.preventDefault();
     const form = event.target;
-    const condoId = form.elements['edit-condo-id'].value;
+    const condoId = parseInt(form.elements['edit-condo-id'].value, 10);
     const condoData = {
         nome: form.elements['edit-condo-nome'].value,
         nome_fantasia: form.elements['edit-condo-nome-fantasia'].value,
         cnpj: form.elements['edit-condo-cnpj'].value || null,
         grupo_id: form.elements['edit-condo-group'].value ? parseInt(form.elements['edit-condo-group'].value, 10) : null
     };
+    
     try {
         await api.updateCondoInDB(condoId, condoData);
         alert('Condomínio atualizado com sucesso!');
         ui.closeEditCondoModal();
-        initializeApp();
-    } catch(error) {
-        if (error.code === '23505') {
-            alert('Erro: O CNPJ informado já está cadastrado.');
+
+        // ATUALIZAÇÃO INSTANTÂNEA NA TELA:
+        // Encontra o índice do condomínio no nosso 'state'
+        const index = state.condominios.findIndex(c => c.id === condoId);
+        if (index !== -1) {
+            // Atualiza o objeto no state com os novos dados
+            state.condominios[index] = { ...state.condominios[index], ...condoData };
+            // Manda redesenhar a lista de condomínios
+            render.renderCondoList(state.condominios, state.allGroups);
         } else {
-            alert('Erro ao salvar condomínio: ' + error.message);
+            // Se não encontrou, recarrega tudo por segurança
+            initializeApp();
         }
+
+    } catch(error) {
+        alert('Erro ao atualizar condomínio: ' + error.message);
     }
 }
 
@@ -959,36 +987,91 @@ async function handleUpdatePassword(event) {
         document.getElementById('change-password-form').reset();
     }
 }
+// COMENTADO
+/* function handleOpenCreateCondoModal() {
+    // Usa a lista de grupos que já temos no 'state'
+    ui.openCreateCondoModal(state.allGroups);
+}
+*/
 
+async function handleOpenCreateCondoModal() {
+  const { data: grupos, error } = await supabaseClient.from('grupos').select('*');
+  if (error) {
+    alert("Erro ao carregar grupos: " + error.message);
+    return;
+  }
+  ui.openCreateCondoModal(grupos); // ou direto openCreateCondoModal(grupos)
+}
+
+// ADICIONADO GPT
+async function handleCreateCondo(event) {
+    event.preventDefault();
+    const form = event.target;
+
+    const nome = form.elements['create-condo-nome'].value.trim();
+    const fantasia = form.elements['create-condo-nome-fantasia'].value.trim();
+    const cnpj = form.elements['create-condo-cnpj'].value.trim();
+    const grupoId = form.elements['create-condo-group'].value;
+
+    if (!nome || !fantasia) return alert("Preencha todos os campos obrigatórios.");
+
+    // Busca o perfil do usuário logado para obter o ID da empresa
+    const userProfile = JSON.parse(sessionStorage.getItem('userProfile'));
+    if (!userProfile || !userProfile.empresa_id) {
+        return alert("Erro: Não foi possível identificar a empresa do usuário. Tente fazer o login novamente.");
+    }
+
+    const condoData = {
+        nome: nome,
+        nome_fantasia: fantasia,
+        cnpj: cnpj || null,
+        grupo_id: grupoId ? parseInt(grupoId, 10) : null,
+        empresa_id: userProfile.empresa_id // <-- A INFORMAÇÃO QUE FALTAVA
+    };
+
+    try {
+        await api.createCondoInDB(condoData);
+        alert("Condomínio criado com sucesso!");
+        ui.closeCreateCondoModal();
+        initializeApp(); // Recarrega os dados para mostrar o novo condomínio na lista
+    } catch (error) {
+        console.error("Erro ao criar condomínio:", error);
+        alert("Erro ao criar condomínio: " + error.message);
+    }
+}
+// -------
 
 // Listener para evento personalizado
 window.addEventListener('showAdminView', () => render.renderUserList(state.allUsers, state.currentUserProfile));
 // Marca que os listeners foram configurados
 // INICIALIZAÇÃO DA APLICAÇÃO
 window.onload = () => {
+    // A configuração dos listeners do PWA e outros já está aqui, o que está correto
+    ui.setupPWAInstallHandlers();
     setupEventListeners();
 
-    supabaseClient.auth.onAuthStateChange(async (_event, session) => {
-        // A lógica agora é mais simples: se existe uma sessão, tentamos rodar o app.
+    supabaseClient.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'PASSWORD_RECOVERY' && session) {
+            return ui.show('set-password-screen');
+        }
+        
         if (session) {
-            // Verifica se o app já está rodando para evitar recargas múltiplas
             if (appInitialized) return;
-
-            const sessionOk = await checkSession();
             
-            if (sessionOk.status === 'ACTIVE') {
-                appInitialized = true; // Marca o app como inicializado
-                ui.show('main-container'); // Garante que a tela principal seja exibida
-                ui.showView('tasks-view'); // Garante que a view de tarefas seja a inicial
-                await initializeApp(); // Carrega todos os dados e renderiza o conteúdo
+            const sessionState = await checkSession();
+            
+            if (sessionState.status === 'ACTIVE') {
+                appInitialized = true;
+                state.currentUserProfile = sessionState.userProfile;
+                
+                ui.show('main-container');
+                // CORREÇÃO: Garante que a view de tarefas seja exibida por padrão
+                ui.showView('tasks-view'); 
+                initializeApp();
             } else {
-                // Se a sessão não for ativa (INACTIVE, NO_PROFILE), força o logout
-                // para limpar o estado e mostrar a tela de login.
                 logout();
             }
-
         } else {
-            // Se não há nenhuma sessão, garante que tudo está zerado e mostra o login.
             appInitialized = false;
             sessionStorage.clear();
             ui.show('login-screen');
