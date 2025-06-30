@@ -128,28 +128,41 @@ function renderAll() {
 async function handleCreateTask(event) {
     event.preventDefault();
     const form = event.target;
-    const formData = new FormData(form);
-    const title = formData.get('task-title'), typeId = formData.get('task-type'), condominioId = formData.get('task-condominio'), dueDate = formData.get('task-due-date');
-    if (!title || !typeId || !condominioId || !dueDate) {
+    const condominioId = document.getElementById('task-condominio').value;
+    const title = form.elements['task-title'].value;
+    const typeId = form.elements['task-type'].value;
+    const dueDate = form.elements['task-due-date'].value;
+    const assigneeId = form.elements['task-assignee'].value; // <-- Pega o responsável selecionado
+
+    if (!title || !typeId || !condominioId || !dueDate || !assigneeId) {
         return alert('Todos os campos, exceto descrição, são obrigatórios.');
     }
+
     try {
         await api.createTaskInDB({
-            titulo: title, descricao: formData.get('task-desc'), data_conclusao_prevista: dueDate,
-            condominio_id: parseInt(condominioId), tipo_tarefa_id: parseInt(typeId),
-            status: formData.get('create-as-completed') ? 'completed' : 'pending',
-            criador_id: state.currentUserProfile.id, responsavel_id: state.currentUserProfile.id,
+            titulo: title,
+            descricao: form.elements['task-desc'].value,
+            data_conclusao_prevista: dueDate,
+            condominio_id: parseInt(condominioId),
+            tipo_tarefa_id: parseInt(typeId),
+            status: form.elements['create-as-completed'].checked ? 'completed' : 'pending',
+            criador_id: state.currentUserProfile.id,
+            responsavel_id: assigneeId, // <-- CORREÇÃO: Salva o responsável correto
             empresa_id: state.currentUserProfile.empresa_id
         });
-        if (formData.get('save-as-template')) {
+
+        if (form.elements['save-as-template'].checked) {
             await api.createTemplateInDB({
-                titulo: title, tipo_tarefa_id: parseInt(typeId),
-                empresa_id: state.currentUserProfile.empresa_id, criador_id: state.currentUserProfile.id
+                titulo: title,
+                tipo_tarefa_id: parseInt(typeId),
+                empresa_id: state.currentUserProfile.empresa_id,
+                criador_id: state.currentUserProfile.id
             });
         }
         form.reset();
+        document.getElementById('task-condo-search').value = '';
         initializeApp();
-    } catch (error) {
+    } catch(error) {
         alert('Erro ao criar tarefa: ' + error.message);
     }
 }

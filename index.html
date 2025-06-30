@@ -68,6 +68,8 @@
             <h3>Criar Nova Tarefa</h3>
             <select id="template-select" name="template-select"><option value="">Ou selecione um modelo...</option></select>
             <input type="text" id="task-title" name="task-title" placeholder="Título da Tarefa"/>
+            <label for="task-assignee">Designar para:</label>
+            <select id="task-assignee" name="task-assignee" required></select>
             <select id="task-type" name="task-type" required><option value="">Selecione um Tipo...</option></select>
             
             <div class="searchable-select-container">
@@ -91,14 +93,13 @@
                   <label for="filter-assignee">Responsável:</label>
                   <select id="filter-assignee"><option value="">Todos</option></select>
               </div>
-              <div id="task-list"></div>
+              
               
               <div class="searchable-select-container">
                 <input type="text" id="filter-condo-search" class="search-input" placeholder="Filtrar por condomínio..." autocomplete="off">
                 <input type="hidden" id="filter-condominio-id">
                 <div id="filter-condo-options" class="options-container"></div>
               </div>
-              
               <div class="date-range-filter">
                   <div><label for="filter-date-start">De:</label><input type="date" id="filter-date-start"/></div>
                   <div><label for="filter-date-end">Até:</label><input type="date" id="filter-date-end"/></div>
@@ -113,6 +114,7 @@
               <label for="pdf-include-history">Incluir histórico no relatório PDF</label>
               </div>
               <button id="export-pdf-btn" class="btn-export" type="button">Exportar PDF</button>
+              <div id="task-list"></div>
           </div>
 
 

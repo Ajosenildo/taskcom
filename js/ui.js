@@ -41,19 +41,21 @@ export function setupRoleBasedUI(currentUserProfile) {
     }
 }
 
-export function populateDropdowns(CONDOMINIOS, TASK_TYPES, allUsers, allGroups) { // Adicionamos allGroups
-    const createTaskTypeSelect = document.getElementById('task-type');
-    const filterTaskTypeSelect = document.getElementById('filter-task-type');
-    const editTaskTypeSelect = document.getElementById('edit-task-type');
+export function populateDropdowns(CONDOMINIOS, TASK_TYPES, allUsers, allGroups) {
+    const createTaskAssigneeSelect = document.getElementById('task-assignee');
     const filterAssigneeSelect = document.getElementById('filter-assignee');
+    const createTaskTypeSelect = document.getElementById('task-type');
+    const editTaskTypeSelect = document.getElementById('edit-task-type');
+    const filterTaskTypeSelect = document.getElementById('filter-task-type');
     const editTaskCondoSelect = document.getElementById('edit-task-condominio');
-    const condoGroupSelect = document.getElementById('condo-group-select'); // Nosso novo seletor
+    const condoGroupSelect = document.getElementById('condo-group-select');
 
+    // Popula os seletores de Tipo de Tarefa
     const typeElements = [createTaskTypeSelect, editTaskTypeSelect, filterTaskTypeSelect];
-    
     typeElements.forEach(s => { 
         if (s) {
             s.innerHTML = '<option value="">Selecione um Tipo...</option>';
+            if (s.id === 'filter-task-type') s.options[0].textContent = "Todos os Tipos";
             TASK_TYPES.forEach(type => {
                 const option = document.createElement('option');
                 option.value = type.id;
@@ -104,6 +106,29 @@ export function populateDropdowns(CONDOMINIOS, TASK_TYPES, allUsers, allGroups) 
             condoGroupSelect.appendChild(option);
         });
     }
+
+    
+
+    const assigneeElements = [createTaskAssigneeSelect, filterAssigneeSelect];
+    assigneeElements.forEach(select => {
+        if (select) {
+            const currentUserId = JSON.parse(sessionStorage.getItem('userProfile'))?.id;
+            select.innerHTML = (select.id === 'filter-assignee') 
+                ? '<option value="">Todos</option>' 
+                : '<option value="">Selecione um Responsável...</option>';
+            
+            allUsers.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = user.nome_completo;
+                select.appendChild(option);
+            });
+            // No formulário de criação, o padrão é a tarefa ser para si mesmo
+            if (select.id === 'task-assignee' && currentUserId) {
+                select.value = currentUserId;
+            }
+        }
+    });
 }
 
 export function populateTemplatesDropdown(taskTemplates) {
