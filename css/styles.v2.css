@@ -524,12 +524,7 @@ body {
     background-color: #f3f4f6;
     border-left-color: #9ca3af;
 }
-.user-role-actions-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.5rem;
-}
+
 .user-card-actions {
     display: flex;
     gap: 0.5rem;
@@ -813,4 +808,38 @@ body {
 
 .task-card-actions .btn-status.reopen {
     background-color: #d97706 !important;
+}
+
+/* Estilos para o container e ícone de mostrar/esconder senha */
+.password-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-container input {
+    padding-right: 2.5rem; /* Adiciona espaço à direita para o ícone */
+}
+
+.toggle-password-icon {
+    position: absolute;
+    right: 10px;
+    cursor: pointer;
+    user-select: none; /* Impede que o ícone seja selecionado como texto */
+    color: #6b7280; /* Cor do ícone */
+}
+
+.associations-fieldset {
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+.associations-fieldset legend {
+    font-weight: bold;
+    padding: 0 0.5rem;
+}
+.checkbox-list {
+    max-height: 150px;
+    overflow-y: auto;
 }

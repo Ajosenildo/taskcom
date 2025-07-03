@@ -7,18 +7,21 @@
   <link rel="manifest" href="manifest.json"/>
   <link rel="stylesheet" href="css/styles.v2.css"/>
   <link rel="icon" href="assets/icon-192.png"/>
-  <title>TasKond - Gestão de Tarefas</title>
+  <title>TaskCom - Gestão de Tarefas</title>
 </head>
 <body>
   <div id="app">
     <div id="login-screen" class="screen">
-      <img src="assets/logo-taskond.png" alt="Logo TasKond" class="login-logo">
+      <img src="assets/logo-taskcom.png" alt="Logo TasKCom" class="login-logo">
       <div class="login-tagline">
-      <p>Gestão de tarefas para condomínios.</p>
+      <p>Gestão de tarefas comerciais.</p>
       <small>Controle e ordem, esse é o foco!</small>
       </div>
       <input type="email" id="email" placeholder="E-mail"/>
-      <input type="password" id="password" placeholder="Senha"/>
+      <div class="password-container">
+      <input type="password" id="password" placeholder="Senha" required>
+      <span id="toggle-password" class="toggle-password-icon">👁️</span>
+      </div>
       <button id="login-btn">Entrar</button>
       <a href="#" id="forgot-password-link" class="forgot-password-link">Esqueci minha senha</a>
       <button id="install-app-btn" class="btn-install" style="display: none;">Instalar App</button>
@@ -36,7 +39,7 @@
 
     <div id="main-container" class="screen">
       <div class="main-header">
-        <img src="assets/logo-taskond.png" alt="Logo TasKond" class="header-logo">
+        <img src="assets/logo-taskcom.png" alt="Logo TaskCom" class="header-logo">
         <div class="header-actions">
           
         <button id="change-password-btn" class="btn-secondary">Alterar Senha</button>
@@ -60,10 +63,8 @@
         <p>Para a melhor experiência, adicione o TasKond à sua Tela de Início! Toque no ícone de "Compartilhar" (o quadrado com uma seta para cima) e depois em "Adicionar à Tela de Início".</p>
         <button id="ios-install-close-btn">&times;</button>
       </div>
-      
       <p id="user-display-name" class="user-display"></p>
-
-      <div id="tasks-view" class="view">
+       <div id="tasks-view" class="view">
           <form id="task-form">
             <h3>Criar Nova Tarefa</h3>
             <select id="template-select" name="template-select"><option value="">Ou selecione um modelo...</option></select>
@@ -137,7 +138,7 @@
             <h3>Gerenciamento de Usuários</h3>
             <button id="add-user-btn" class="btn-add-user">+ Novo Usuário</button>
         </div>
-        <div class="user-list-container"><div id="user-list"></div></div>
+        <div class="user-list-container"><div id="user-list"></div></div></div>
 
         <div class="view-header">
       <h3>Gerenciamento de Cargos</h3>
@@ -284,6 +285,11 @@
             <input type="email" id="edit-user-email-display" name="edit-user-email-display" disabled>
             <label for="edit-user-role">Cargo:</label>
             <select id="edit-user-role" name="edit-user-role" required></select>
+            <fieldset class="associations-fieldset">
+            <legend>Associar a Grupos</legend>
+            <div id="edit-user-groups-list" class="checkbox-list">
+            </div>
+            </fieldset>
             <div class="modal-actions">
                 <button type="button" id="edit-user-modal-cancel-btn" class="task-action-btn btn-cancel">Cancelar</button>
                 <button type="submit" class="task-action-btn btn-save">Salvar Alterações</button>
@@ -331,6 +337,7 @@
   </div>
 
   <!--<script src="js/config.js"></script>-->
+  <script type="module" src="js/config.js"></script> 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -340,10 +347,10 @@
   <script type="module" src="js/app.js"></script>
 
   <footer style="text-align: center; padding: 2rem 1rem; font-size: 0.8rem; color: #6b7280;">
-    <p>&copy; 2025 TasKond by AS.dev (iadev.app) Todos os direitos reservados.</p>
+    <p>&copy; 2025 TasKCom by AS.dev (iadev.app) Todos os direitos reservados.</p>
     <p>
         <a href="instrucoes.html" style="color: #4f46e5;">Instruções de Uso</a> | 
-        <a href="mailto:ajosenildosilva@gmail.com?subject=Ajuda com o TasKond" style="color: #4f46e5;">Clique aqui se precisar de ajuda</a>
+        <a href="mailto:ajosenildosilva@gmail.com?subject=Ajuda com o TasKCom" style="color: #4f46e5;">Clique aqui se precisar de ajuda</a>
     </p>
   </footer>
 </body>

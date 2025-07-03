@@ -41,7 +41,7 @@ export function exportTasksToPDF(tasksToExport, CONDOMINIOS, TASK_TYPES, STATUSE
     
     // Título Principal
     doc.setFontSize(18).setFont(undefined, 'bold');
-    doc.text("Relatório de Tarefas - TasKond", 14, finalY);
+    doc.text("Relatório de Tarefas - TaskCom", 14, finalY);
     finalY += 7;
 
     // Nome da Empresa (logo abaixo)
