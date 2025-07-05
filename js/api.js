@@ -1,6 +1,7 @@
 // js/api.js (Versão Final e Corrigida)
 
 import { supabaseClient } from './supabaseClient.js';
+import { SUPABASE_URL } from './config.js';
 
 // --- FUNÇÃO PRINCIPAL DE BUSCA DE DADOS ---
 export async function fetchInitialData() {
@@ -11,7 +12,7 @@ export async function fetchInitialData() {
         supabaseClient.from('modelos_tarefa').select('*'),
         supabaseClient.from('usuarios').select('*'),
         supabaseClient.from('cargos').select('*'),
-        supabaseClient.from('grupos').select('*')
+        supabaseClient.from('grupos').select('*') // Garante que os grupos sejam buscados
     ]);
 
     const error = tasksResult.error || condosResult.error || typesResult.error || templatesResult.error || usersResult.error || cargosResult.error || groupsResult.error;
@@ -27,7 +28,7 @@ export async function fetchInitialData() {
         taskTemplates: templatesResult.data || [],
         allUsers: usersResult.data || [],
         allCargos: cargosResult.data || [],
-        allGroups: groupsResult.data || []
+        allGroups: groupsResult.data || [] // Garante que os grupos sejam retornados
     };
 }
 
@@ -173,6 +174,44 @@ export async function fetchTaskHistory(taskId) {
 
 export async function fetchHistoryForTasks(taskIds) {
     const { data, error } = await supabaseClient.rpc('get_history_for_tasks', { task_ids: taskIds });
+    if (error) throw error;
+    return data || [];
+}
+
+export async function fetchUserGroupAssignments(userId) {
+    const { data, error } = await supabaseClient
+        .from('usuario_grupo')
+        .select('grupo_id')
+        .eq('usuario_id', userId);
+    if (error) throw error;
+    return data.map(item => item.grupo_id);
+}
+
+export async function updateUserGroupAssignments(userId, groupIds) {
+    // Primeiro, remove todas as associações antigas
+    const { error: deleteError } = await supabaseClient
+        .from('usuario_grupo')
+        .delete()
+        .eq('usuario_id', userId);
+    if (deleteError) throw deleteError;
+
+    // Se houver novos grupos para associar, insere-os
+    if (groupIds && groupIds.length > 0) {
+        const newAssignments = groupIds.map(groupId => ({
+            usuario_id: userId,
+            grupo_id: groupId
+        }));
+        const { error: insertError } = await supabaseClient
+            .from('usuario_grupo')
+            .insert(newAssignments);
+        if (insertError) throw insertError;
+    }
+}
+
+export async function fetchAllUserGroupAssignments() {
+    const { data, error } = await supabaseClient
+        .from('usuario_grupo')
+        .select('usuario_id, grupo_id');
     if (error) throw error;
     return data || [];
 }

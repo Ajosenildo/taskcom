@@ -30,7 +30,7 @@ let listenersInitialized = false; // <-- ADICIONE ESTA LINHA
 
 const state = {
     tasks: [], taskTemplates: [], condominios: [], taskTypes: [],
-    allUsers: [], currentUserProfile: null, allCargos: [], allGroups: [],
+    allUsers: [], currentUserProfile: null, allCargos: [], allGroups: [], userGroupAssignments: [],
     activeFilters: {
         condominioId: '', status: 'active',
         dateStart: '', dateEnd: '', assigneeId: '',
@@ -47,7 +47,7 @@ const state = {
 };
 
 // --- FUNÇÃO PRINCIPAL DE CARREGAMENTO ---
-async function initializeApp() {
+/* async function initializeApp() {
     try {
         // Faz uma única chamada que busca TUDO que precisamos
         const initialData = await api.fetchInitialData();
@@ -108,15 +108,81 @@ async function initializeApp() {
         console.error("Erro fatal ao inicializar o aplicativo:", error);
         alert("Erro fatal ao inicializar o aplicativo: " + error.message);
     }
+}*/
+
+async function initializeApp() {
+    try {
+        // Faz uma única chamada que busca todos os dados necessários.
+        const [initialData, userGroupAssignments] = await Promise.all([
+            api.fetchInitialData(),
+            api.fetchAllUserGroupAssignments()
+        ]);
+        
+        // Atualiza o 'state' global da aplicação com os dados frescos.
+        // A linha Object.assign faz o mesmo que as 7 linhas individuais.
+        Object.assign(state, initialData);
+        state.userGroupAssignments = userGroupAssignments; // Guarda os dados no estado
+        state.currentUserProfile = JSON.parse(sessionStorage.getItem('userProfile'));
+
+        console.log("Dados carregados com sucesso! Renderizando...");
+        
+        // --- CONFIGURA E DESENHA A INTERFACE ---
+        ui.setupRoleBasedUI(state.currentUserProfile);
+        ui.populateDropdowns(state.condominios, state.taskTypes, state.allUsers, state.allGroups);
+        ui.populateTemplatesDropdown(state.taskTemplates);
+        
+        // Exibe a saudação ao usuário no cabeçalho
+        const userDisplay = document.getElementById('user-display-name');
+        if (userDisplay && state.currentUserProfile) {
+            userDisplay.textContent = `Usuário: ${state.currentUserProfile.nome_completo}`;
+        }
+
+        // Inicializa os seletores de condomínio com busca
+        const filterCondoDropdown = ui.createSearchableDropdown(
+            'filter-condo-search', 'filter-condo-options', 'filter-condominio-id',
+            state.condominios,
+            (selectedValue) => {
+                state.activeFilters.condominioId = selectedValue;
+                renderAll();
+            }
+        );
+
+        ui.createSearchableDropdown(
+            'task-condo-search', 'task-condo-options', 'task-condominio',
+            state.condominios,
+            (selectedValue) => {
+                document.getElementById('task-condominio').value = selectedValue;
+            }
+        );
+        
+        // Garante que o botão 'Limpar Filtros' também limpe o seletor de busca
+        const clearFiltersBtn = document.getElementById('clear-filters');
+        if(clearFiltersBtn && filterCondoDropdown) {
+            clearFiltersBtn.addEventListener('click', () => {
+                filterCondoDropdown.clear();
+            });
+        }
+        
+        // Finalmente, renderiza todo o conteúdo da tela.
+        renderAll();
+
+    } catch (error) {
+        console.error("Erro fatal ao inicializar o aplicativo:", error);
+        alert("Erro fatal ao inicializar o aplicativo: " + error.message);
+    }
 }
 
 // --- FUNÇÕES DE ORQUESTRAÇÃO ---
 function renderAll() {
+    if (!Array.isArray(state.assignments)) state.assignments = [];
     state.tasksToDisplayForPdf = render.renderTasks(state);
     render.renderDashboard(state);
     
     // Garanta que está passando state.allCargos aqui
-    render.renderUserList(state.allUsers, state.currentUserProfile, state.allCargos);
+
+   
+
+    render.renderUserList(state.allUsers, state.currentUserProfile, state.allCargos, state.allGroups, state.userGroupAssignments, state.assignments);
     
     render.renderCondoList(state.condominios, state.allGroups);
     render.renderTaskTypeList(state.taskTypes);
@@ -124,32 +190,47 @@ function renderAll() {
     render.renderGroupList(state.allGroups);
 }
 
+
+
 // --- FUNÇÕES DE MANIPULAÇÃO DE DADOS (Handlers) ---
 async function handleCreateTask(event) {
     event.preventDefault();
     const form = event.target;
-    const formData = new FormData(form);
-    const title = formData.get('task-title'), typeId = formData.get('task-type'), condominioId = formData.get('task-condominio'), dueDate = formData.get('task-due-date');
-    if (!title || !typeId || !condominioId || !dueDate) {
+    const condominioId = document.getElementById('task-condominio').value;
+    const title = form.elements['task-title'].value;
+    const typeId = form.elements['task-type'].value;
+    const dueDate = form.elements['task-due-date'].value;
+    const assigneeId = form.elements['task-assignee'].value; // <-- Pega o responsável selecionado
+
+    if (!title || !typeId || !condominioId || !dueDate || !assigneeId) {
         return alert('Todos os campos, exceto descrição, são obrigatórios.');
     }
+
     try {
         await api.createTaskInDB({
-            titulo: title, descricao: formData.get('task-desc'), data_conclusao_prevista: dueDate,
-            condominio_id: parseInt(condominioId), tipo_tarefa_id: parseInt(typeId),
-            status: formData.get('create-as-completed') ? 'completed' : 'pending',
-            criador_id: state.currentUserProfile.id, responsavel_id: state.currentUserProfile.id,
+            titulo: title,
+            descricao: form.elements['task-desc'].value,
+            data_conclusao_prevista: dueDate,
+            condominio_id: parseInt(condominioId),
+            tipo_tarefa_id: parseInt(typeId),
+            status: form.elements['create-as-completed'].checked ? 'completed' : 'pending',
+            criador_id: state.currentUserProfile.id,
+            responsavel_id: assigneeId, // <-- CORREÇÃO: Salva o responsável correto
             empresa_id: state.currentUserProfile.empresa_id
         });
-        if (formData.get('save-as-template')) {
+
+        if (form.elements['save-as-template'].checked) {
             await api.createTemplateInDB({
-                titulo: title, tipo_tarefa_id: parseInt(typeId),
-                empresa_id: state.currentUserProfile.empresa_id, criador_id: state.currentUserProfile.id
+                titulo: title,
+                tipo_tarefa_id: parseInt(typeId),
+                empresa_id: state.currentUserProfile.empresa_id,
+                criador_id: state.currentUserProfile.id
             });
         }
         form.reset();
+        document.getElementById('task-condo-search').value = '';
         initializeApp();
-    } catch (error) {
+    } catch(error) {
         alert('Erro ao criar tarefa: ' + error.message);
     }
 }
@@ -215,6 +296,12 @@ async function handleCreateUser(event) {
     } catch(error) {
         console.error('Erro ao criar usuário:', error);
         alert('Erro ao criar usuário: ' + error.message);
+
+        if (error.message.includes('A user with this email address has already been registered')) {
+            alert('Já existe um usuário com este e-mail cadastrado.');
+        } else {
+            alert('Erro ao criar usuário: ' + error.message);
+        }
     }
 }
 
@@ -305,14 +392,17 @@ async function handleUpdateUser(event) {
         nome_completo: form.elements['edit-user-name'].value,
         cargo_id: parseInt(form.elements['edit-user-role'].value, 10),
     };
+    // Pega todos os IDs dos checkboxes de grupo que foram marcados
+    const selectedGroupIds = Array.from(form.querySelectorAll('input[name="grupos"]:checked')).map(cb => parseInt(cb.value, 10));
+
     try {
         await api.updateUserInDB(userId, updatedUserData);
+        await api.updateUserGroupAssignments(userId, selectedGroupIds);
         alert("Usuário atualizado com sucesso!");
         ui.closeEditUserModal();
         initializeApp();
-    } catch (error) {
+    } catch(error) {
         alert("Erro ao atualizar usuário: " + error.message);
-        console.error(error);
     }
 }
 
@@ -333,17 +423,18 @@ async function handleToggleUserStatus(userId) {
 
 async function handleOpenEditUserModal(userId) {
     const userToEdit = state.allUsers.find(u => u.id === userId);
-    if (!userToEdit) {
-        console.error("Usuário não encontrado para edição.");
-        return;
-    }
-
+    if(!userToEdit) return;
     try {
-        const cargos = await api.fetchRoles();
-        ui.openEditUserModal(userToEdit, cargos);
+        // Busca os cargos e as associações de grupo do usuário em paralelo
+        const [cargos, groupAssignments] = await Promise.all([
+            api.fetchRoles(),
+            api.fetchUserGroupAssignments(userId)
+        ]);
+        // Envia todas as informações necessárias para a função da UI
+        ui.openEditUserModal(userToEdit, cargos, state.allGroups, groupAssignments);
     } catch (error) {
-        console.error("Erro ao buscar cargos para edição:", error);
-        alert("Não foi possível carregar os cargos para a edição.");
+        alert("Não foi possível carregar os dados para edição.");
+        console.error(error);
     }
 }
 
@@ -580,6 +671,32 @@ async function handleForgotPassword(event) {
     }
 }
 
+function handleTogglePasswordVisibility() {
+    const passwordInput = document.getElementById('password');
+    const toggleIcon = document.getElementById('toggle-password');
+
+    // Alterna o tipo do input entre 'password' e 'text'
+    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+    passwordInput.setAttribute('type', type);
+
+    // Altera o ícone (opcional, mas melhora a UX)
+    toggleIcon.textContent = type === 'password' ? '👁️' : '🙈';
+}
+
+function handleViewChange(event) {
+    const viewId = event.detail.viewId;
+    if (viewId === 'dashboard-view') {
+        render.renderDashboard(state);
+    } else if (viewId === 'admin-view') {
+        // CORREÇÃO: Passa a lista de associações e grupos para a função
+        render.renderUserList(state.allUsers, state.currentUserProfile, state.allCargos, state.allGroups, state.userGroupAssignments);
+        render.renderCondoList(state.condominios, state.allGroups);
+        render.renderTaskTypeList(state.taskTypes);
+        render.renderCargoList(state.allCargos);
+        render.renderGroupList(state.allGroups);
+    }
+}
+
 // --- SETUP INICIAL E LISTENERS ---
  function setupEventListeners() {
     if (listenersInitialized) return;
@@ -587,6 +704,7 @@ async function handleForgotPassword(event) {
     // Auth
     document.getElementById('login-btn')?.addEventListener('click', login);
     document.getElementById('logout-btn')?.addEventListener('click', logout);
+    document.getElementById('toggle-password')?.addEventListener('click', handleTogglePasswordVisibility);
 
     // Navegação Principal
     document.getElementById('nav-tasks')?.addEventListener('click', () => ui.showView('tasks-view'));
@@ -895,25 +1013,29 @@ async function handleUpdateCondo(event) {
     event.preventDefault();
     const form = event.target;
     const condoId = parseInt(form.elements['edit-condo-id'].value, 10);
+
+    // Objeto com os dados do formulário
     const condoData = {
         nome: form.elements['edit-condo-nome'].value,
         nome_fantasia: form.elements['edit-condo-nome-fantasia'].value,
         cnpj: form.elements['edit-condo-cnpj'].value || null,
+        // CORREÇÃO: Adiciona a leitura do grupo selecionado no modal
         grupo_id: form.elements['edit-condo-group'].value ? parseInt(form.elements['edit-condo-group'].value, 10) : null
     };
     
     try {
+        // Envia os dados atualizados para a API
         await api.updateCondoInDB(condoId, condoData);
         alert('Condomínio atualizado com sucesso!');
         ui.closeEditCondoModal();
 
-        // ATUALIZAÇÃO INSTANTÂNEA NA TELA:
+        // ATUALIZAÇÃO INSTANTÂNEA NA TELA (Sua lógica, que está correta):
         // Encontra o índice do condomínio no nosso 'state'
         const index = state.condominios.findIndex(c => c.id === condoId);
         if (index !== -1) {
             // Atualiza o objeto no state com os novos dados
             state.condominios[index] = { ...state.condominios[index], ...condoData };
-            // Manda redesenhar a lista de condomínios
+            // Manda redesenhar a lista de condomínios com a informação atualizada
             render.renderCondoList(state.condominios, state.allGroups);
         } else {
             // Se não encontrou, recarrega tudo por segurança

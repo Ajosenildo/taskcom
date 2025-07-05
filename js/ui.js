@@ -41,19 +41,21 @@ export function setupRoleBasedUI(currentUserProfile) {
     }
 }
 
-export function populateDropdowns(CONDOMINIOS, TASK_TYPES, allUsers, allGroups) { // Adicionamos allGroups
-    const createTaskTypeSelect = document.getElementById('task-type');
-    const filterTaskTypeSelect = document.getElementById('filter-task-type');
-    const editTaskTypeSelect = document.getElementById('edit-task-type');
+export function populateDropdowns(CONDOMINIOS, TASK_TYPES, allUsers, allGroups) {
+    const createTaskAssigneeSelect = document.getElementById('task-assignee');
     const filterAssigneeSelect = document.getElementById('filter-assignee');
+    const createTaskTypeSelect = document.getElementById('task-type');
+    const editTaskTypeSelect = document.getElementById('edit-task-type');
+    const filterTaskTypeSelect = document.getElementById('filter-task-type');
     const editTaskCondoSelect = document.getElementById('edit-task-condominio');
-    const condoGroupSelect = document.getElementById('condo-group-select'); // Nosso novo seletor
+    const condoGroupSelect = document.getElementById('condo-group-select');
 
+    // Popula os seletores de Tipo de Tarefa
     const typeElements = [createTaskTypeSelect, editTaskTypeSelect, filterTaskTypeSelect];
-    
     typeElements.forEach(s => { 
         if (s) {
             s.innerHTML = '<option value="">Selecione um Tipo...</option>';
+            if (s.id === 'filter-task-type') s.options[0].textContent = "Todos os Tipos";
             TASK_TYPES.forEach(type => {
                 const option = document.createElement('option');
                 option.value = type.id;
@@ -104,6 +106,29 @@ export function populateDropdowns(CONDOMINIOS, TASK_TYPES, allUsers, allGroups) 
             condoGroupSelect.appendChild(option);
         });
     }
+
+    
+
+    const assigneeElements = [createTaskAssigneeSelect, filterAssigneeSelect];
+    assigneeElements.forEach(select => {
+        if (select) {
+            const currentUserId = JSON.parse(sessionStorage.getItem('userProfile'))?.id;
+            select.innerHTML = (select.id === 'filter-assignee') 
+                ? '<option value="">Todos</option>' 
+                : '<option value="">Selecione um Responsável...</option>';
+            
+            allUsers.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = user.nome_completo;
+                select.appendChild(option);
+            });
+            // No formulário de criação, o padrão é a tarefa ser para si mesmo
+            if (select.id === 'task-assignee' && currentUserId) {
+                select.value = currentUserId;
+            }
+        }
+    });
 }
 
 export function populateTemplatesDropdown(taskTemplates) {
@@ -174,26 +199,51 @@ export function closeCreateUserModal() {
     if (form) form.reset();
 }
 
-export function openEditUserModal(user, cargos) {
+export function openEditUserModal(user, cargos, todosOsGrupos, gruposDoUsuario) {
     const modal = document.getElementById('edit-user-modal');
     if (!modal || !user) return;
 
+    // Preenche os campos do formulário com os dados do usuário
     document.getElementById('edit-user-id').value = user.id;
     document.getElementById('edit-user-name').value = user.nome_completo || '';
-    document.getElementById('edit-user-email-display').value = user.email || '(não disponível)';
+    document.getElementById('edit-user-email-display').value = user.email || '(email não disponível)';
     
     const roleSelect = document.getElementById('edit-user-role');
     roleSelect.innerHTML = '';
     
+    // Preenche o dropdown de cargos
     if (cargos && cargos.length > 0) {
         cargos.forEach(cargo => {
-            const option = document.createElement('option');
-            option.value = cargo.id;
-            option.textContent = cargo.nome_cargo;
-            roleSelect.appendChild(option);
+            if (cargo.id !== 1) { // Não permite selecionar 'Administrador'
+                const option = document.createElement('option');
+                option.value = cargo.id;
+                option.textContent = cargo.nome_cargo;
+                roleSelect.appendChild(option);
+            }
         });
     }
     roleSelect.value = user.cargo_id;
+
+    // LÓGICA CORRIGIDA: Preenche os checkboxes de grupos
+    const groupsListDiv = document.getElementById('edit-user-groups-list');
+    groupsListDiv.innerHTML = '';
+    if (todosOsGrupos && todosOsGrupos.length > 0) {
+        todosOsGrupos.forEach(group => {
+            // Verifica se o ID do grupo atual está na lista de grupos do usuário
+            const isChecked = gruposDoUsuario.includes(group.id);
+            const checkboxContainer = document.createElement('div');
+            checkboxContainer.className = 'checkbox-container';
+            checkboxContainer.innerHTML = `
+                <input type="checkbox" id="group-${group.id}" name="grupos" value="${group.id}" ${isChecked ? 'checked' : ''}>
+                <label for="group-${group.id}">${group.nome_grupo}</label>
+            `;
+            groupsListDiv.appendChild(checkboxContainer);
+        });
+    } else {
+        groupsListDiv.innerHTML = '<p><small>Nenhum grupo cadastrado no sistema.</small></p>';
+    }
+    
+    // Mostra o modal
     modal.classList.add('is-visible');
 }
 
@@ -330,22 +380,26 @@ export function openEditCondoModal(condo, todosGrupos) {
     const modal = document.getElementById('edit-condo-modal');
     if (!modal) return;
 
+    // Preenche os dados básicos do condomínio
     document.getElementById('edit-condo-id').value = condo.id;
     document.getElementById('edit-condo-nome').value = condo.nome;
     document.getElementById('edit-condo-nome-fantasia').value = condo.nome_fantasia;
     document.getElementById('edit-condo-cnpj').value = condo.cnpj || '';
 
+    // Lógica corrigida para popular o seletor de grupos
     const groupSelect = document.getElementById('edit-condo-group');
     groupSelect.innerHTML = '<option value="">Nenhum</option>'; // Opção para deixar sem grupo
 
-    todosGrupos.forEach(grupo => {
+    // O loop 'forEach' que estava faltando
+    todosGrupos.forEach(group => {
         const option = document.createElement('option');
-        option.value = grupo.id;
-        option.textContent = grupo.nome_grupo;
+        option.value = group.id;
+        option.textContent = group.nome_grupo;
         groupSelect.appendChild(option);
     });
 
-    groupSelect.value = condo.grupo_id || ""; // Define o grupo atual como selecionado
+    // Define o grupo atual do condomínio como o selecionado no dropdown
+    groupSelect.value = condo.grupo_id || "";
 
     modal.classList.add('is-visible');
 }

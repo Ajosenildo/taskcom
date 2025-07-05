@@ -102,7 +102,73 @@ export function renderTasks(state) {
     return tasksToDisplay;
 }
 
-export function renderUserList(allUsers, currentUserProfile, allCargos) {
+ /* export function renderUserList(
+  allUsers = [],
+  currentUserProfile = {},
+  allCargos = [],
+  allGroups = [],
+  userGroupAssignments = [],
+  assignments = []
+) {
+  const userListDiv = document.getElementById("user-list");
+  if (!userListDiv) {
+    console.error("Elemento com ID 'user-list' não encontrado.");
+    return;
+  }
+
+  userListDiv.innerHTML = ""; // Limpa antes de preencher
+
+  allUsers.forEach(user => {
+    const tarefas = (assignments || []).filter(a => a.usuario_id === user.id);
+    const cargo = allCargos.find(c => c.id === user.cargo_id);
+    const cargoInfo = cargo
+      ? {
+          nome: cargo.nome_cargo,
+          classe: `user-role-${cargo.nome_cargo.toLowerCase().replace(/\s+/g, '-')}`
+        }
+      : { nome: 'Desconhecido', classe: '' };
+
+    const userGroups = (userGroupAssignments || [])
+      .filter(a => a.usuario_id === user.id)
+      .map(a => {
+        const group = allGroups.find(g => g.id === a.grupo_id);
+        return group ? group.nome_grupo : '';
+      })
+      .filter(Boolean);
+
+    const groupsHtml = userGroups.length > 0
+      ? `<div class="user-groups"><small>Grupos: ${userGroups.join(', ')}</small></div>`
+      : `<div class="user-groups"><small>Grupos: Nenhum</small></div>`;
+
+    let actionsHtml = '';
+        if (currentUserProfile && currentUserProfile.id !== user.id) {
+            actionsHtml = `
+                <button class="task-action-btn btn-edit" data-action="edit-user" data-userid="${user.id}">Editar</button>
+                <button class="task-action-btn btn-status ${!user.ativo ? 'inactive' : ''}" data-action="toggle-user-status" data-userid="${user.id}">
+                    ${user.ativo ? 'Desativar' : 'Reativar'}
+                </button>
+            `;
+    }
+
+    const userCard = document.createElement('div');
+    userCard.className = `user-card ${!user.ativo ? 'inactive' : ''}`;
+    userCard.innerHTML = `
+      <div class="user-info">
+        <strong>${user.nome_completo || user.email}</strong>
+        <small>Status: ${user.ativo ? 'Ativo' : 'Inativo'}</small>
+        ${groupsHtml}
+      </div>
+      <div class="user-role-actions-wrapper">
+        <span class="user-role ${cargoInfo.classe}">${cargoInfo.nome}</span>
+        ${actionsHtml}
+      </div>
+    `;
+
+    userListDiv.appendChild(userCard);
+  });
+} */
+
+export function renderUserList(allUsers, currentUserProfile, allCargos, allGroups, userGroupAssignments) {
     const userListDiv = document.getElementById('user-list');
     if (!userListDiv) return;
     userListDiv.innerHTML = '';
@@ -112,24 +178,31 @@ export function renderUserList(allUsers, currentUserProfile, allCargos) {
     }
 
     allUsers.forEach(user => {
-        // Busca o cargo na lista dinâmica 'allCargos'
         const cargo = allCargos.find(c => c.id === user.cargo_id);
-        
         // Define o nome e a classe CSS do cargo
         const cargoInfo = cargo 
             ? { nome: cargo.nome_cargo, classe: `user-role-${cargo.nome_cargo.toLowerCase().replace(/\s+/g, '-')}` }
             : { nome: 'Desconhecido', classe: '' };
-        
-        // Aplica cores padrão para cargos conhecidos para melhorar a UI
+
+        // Garante que o Administrador sempre tenha a classe correta para a cor vermelha
         if (cargo?.nome_cargo === 'Administrador') cargoInfo.classe = 'user-role-admin';
-        else if (cargo?.nome_cargo?.includes('Gerente')) cargoInfo.classe = 'user-role-gerente';
-        else if (cargo?.nome_cargo === 'Síndico') cargoInfo.classe = 'user-role-sindico';
+
+        const userGroups = (userGroupAssignments || [])
+            .filter(assignment => assignment.usuario_id === user.id)
+            .map(assignment => {
+                const group = allGroups.find(g => g.id === assignment.grupo_id);
+                return group ? group.nome_grupo : '';
+            })
+            .filter(Boolean);
 
         const userCard = document.createElement('div');
         userCard.className = `user-card ${!user.ativo ? 'inactive' : ''}`;
-        
+
+        const groupsHtml = `<div class="user-groups"><small>Grupos: ${userGroups.length > 0 ? userGroups.join(', ') : 'Nenhum'}</small></div>`;
+
         let actionsHtml = '';
         if (currentUserProfile && currentUserProfile.id !== user.id) {
+            // CORREÇÃO: Agrupa os botões dentro de um único container
             actionsHtml = `
                 <div class="user-card-actions">
                     <button class="task-action-btn btn-edit" data-action="edit-user" data-userid="${user.id}">Editar</button>
@@ -139,18 +212,18 @@ export function renderUserList(allUsers, currentUserProfile, allCargos) {
                 </div>
             `;
         }
-        
-        // GARANTE QUE O BLOCO HTML ESTEJA DENTRO DE CRASES (`)
+
         userCard.innerHTML = `
-    <div class="user-info">
-        <strong>${user.nome_completo || user.email}</strong>
-        <small>Status: ${user.ativo ? 'Ativo' : 'Inativo'}</small>
-    </div>
-    <div class="user-role-actions-wrapper">
-        <span class="user-role ${cargoInfo.classe}">${cargoInfo.nome}</span>
-        ${actionsHtml}
-    </div>
-`;
+          <div class="user-info">
+            <strong>${user.nome_completo || user.email}</strong>
+            <small>Status: ${user.ativo ? 'Ativo' : 'Inativo'}</small>
+            ${groupsHtml}
+          </div>
+          <div class="user-role-actions-wrapper">
+            <span class="user-role ${cargoInfo.classe}">${cargoInfo.nome}</span>
+            ${actionsHtml}
+          </div>
+        `;
         userListDiv.appendChild(userCard);
     });
 }
