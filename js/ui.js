@@ -203,47 +203,23 @@ export function openEditUserModal(user, cargos, todosOsGrupos, gruposDoUsuario) 
     const modal = document.getElementById('edit-user-modal');
     if (!modal || !user) return;
 
-    // Preenche os campos do formulário com os dados do usuário
     document.getElementById('edit-user-id').value = user.id;
     document.getElementById('edit-user-name').value = user.nome_completo || '';
     document.getElementById('edit-user-email-display').value = user.email || '(email não disponível)';
     
+    // Preenche o dropdown de cargos
     const roleSelect = document.getElementById('edit-user-role');
     roleSelect.innerHTML = '';
     
-    // Preenche o dropdown de cargos
     if (cargos && cargos.length > 0) {
         cargos.forEach(cargo => {
-            if (cargo.id !== 1) { // Não permite selecionar 'Administrador'
-                const option = document.createElement('option');
-                option.value = cargo.id;
-                option.textContent = cargo.nome_cargo;
-                roleSelect.appendChild(option);
-            }
+            const option = document.createElement('option');
+            option.value = cargo.id;
+            option.textContent = cargo.nome_cargo;
+            roleSelect.appendChild(option);
         });
     }
     roleSelect.value = user.cargo_id;
-
-    // LÓGICA CORRIGIDA: Preenche os checkboxes de grupos
-    const groupsListDiv = document.getElementById('edit-user-groups-list');
-    groupsListDiv.innerHTML = '';
-    if (todosOsGrupos && todosOsGrupos.length > 0) {
-        todosOsGrupos.forEach(group => {
-            // Verifica se o ID do grupo atual está na lista de grupos do usuário
-            const isChecked = gruposDoUsuario.includes(group.id);
-            const checkboxContainer = document.createElement('div');
-            checkboxContainer.className = 'checkbox-container';
-            checkboxContainer.innerHTML = `
-                <input type="checkbox" id="group-${group.id}" name="grupos" value="${group.id}" ${isChecked ? 'checked' : ''}>
-                <label for="group-${group.id}">${group.nome_grupo}</label>
-            `;
-            groupsListDiv.appendChild(checkboxContainer);
-        });
-    } else {
-        groupsListDiv.innerHTML = '<p><small>Nenhum grupo cadastrado no sistema.</small></p>';
-    }
-    
-    // Mostra o modal
     modal.classList.add('is-visible');
 }
 
@@ -390,16 +366,14 @@ export function openEditCondoModal(condo, todosGrupos) {
     const groupSelect = document.getElementById('edit-condo-group');
     groupSelect.innerHTML = '<option value="">Nenhum</option>'; // Opção para deixar sem grupo
 
-    // O loop 'forEach' que estava faltando
-    todosGrupos.forEach(group => {
+    todosGrupos.forEach(grupo => {
         const option = document.createElement('option');
         option.value = group.id;
         option.textContent = group.nome_grupo;
         groupSelect.appendChild(option);
     });
 
-    // Define o grupo atual do condomínio como o selecionado no dropdown
-    groupSelect.value = condo.grupo_id || "";
+    groupSelect.value = condo.grupo_id || ""; // Define o grupo atual como selecionado
 
     modal.classList.add('is-visible');
 }

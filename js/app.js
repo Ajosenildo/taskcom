@@ -112,18 +112,31 @@ const state = {
 
 async function initializeApp() {
     try {
+<<<<<<< HEAD
         // Faz uma única chamada que busca todos os dados necessários.
+=======
+        // Faz uma única chamada que busca todos os dados necessários de uma vez.
+>>>>>>> 923fdd480019cc76ae14f1ce063d32de0ce888e1
         const [initialData, userGroupAssignments] = await Promise.all([
             api.fetchInitialData(),
             api.fetchAllUserGroupAssignments()
         ]);
         
         // Atualiza o 'state' global da aplicação com os dados frescos.
+<<<<<<< HEAD
         // A linha Object.assign faz o mesmo que as 7 linhas individuais.
         Object.assign(state, initialData);
         state.userGroupAssignments = userGroupAssignments; // Guarda os dados no estado
         state.currentUserProfile = JSON.parse(sessionStorage.getItem('userProfile'));
 
+=======
+        Object.assign(state, initialData);
+        state.userGroupAssignments = userGroupAssignments;
+        
+        // Pega o perfil do usuário que foi salvo no login.
+        state.currentUserProfile = JSON.parse(sessionStorage.getItem('userProfile'));
+        
+>>>>>>> 923fdd480019cc76ae14f1ce063d32de0ce888e1
         console.log("Dados carregados com sucesso! Renderizando...");
         
         // --- CONFIGURA E DESENHA A INTERFACE ---
@@ -158,7 +171,13 @@ async function initializeApp() {
         // Garante que o botão 'Limpar Filtros' também limpe o seletor de busca
         const clearFiltersBtn = document.getElementById('clear-filters');
         if(clearFiltersBtn && filterCondoDropdown) {
+<<<<<<< HEAD
             clearFiltersBtn.addEventListener('click', () => {
+=======
+            // Removemos o listener antigo para evitar duplicatas, caso initializeApp seja chamado novamente
+            clearFiltersBtn.replaceWith(clearFiltersBtn.cloneNode(true));
+            document.getElementById('clear-filters').addEventListener('click', () => {
+>>>>>>> 923fdd480019cc76ae14f1ce063d32de0ce888e1
                 filterCondoDropdown.clear();
             });
         }
@@ -171,6 +190,43 @@ async function initializeApp() {
         alert("Erro fatal ao inicializar o aplicativo: " + error.message);
     }
 }
+
+/* async function initializeApp() {
+    try {
+        // PASSO 1: Busca TODOS os dados primeiro, incluindo as novas associações
+        const [initialData, userGroupAssignments] = await Promise.all([
+            api.fetchInitialData(),
+            api.fetchAllUserGroupAssignments()
+        ]);
+        
+        // PASSO 2: Atualiza o 'state' global com TUDO o que foi buscado
+        Object.assign(state, initialData);
+        state.userGroupAssignments = userGroupAssignments;
+        state.currentUserProfile = JSON.parse(sessionStorage.getItem('userProfile'));
+        
+        console.log("Dados carregados e estado atualizado com sucesso!");
+        
+        // PASSO 3: Agora que o 'state' está completo, configura a UI
+        ui.setupRoleBasedUI(state.currentUserProfile);
+        ui.populateDropdowns(state.condominios, state.taskTypes, state.allUsers, state.allGroups);
+        ui.populateTemplatesDropdown(state.taskTemplates);
+        
+        const userDisplay = document.getElementById('user-display-name');
+        if (userDisplay && state.currentUserProfile) {
+            userDisplay.textContent = `Usuário: ${state.currentUserProfile.nome_completo}`;
+        }
+        
+        // PASSO 4: Finalmente, com tudo pronto, renderiza o conteúdo da tela
+        // A função handleViewChange cuidará de renderizar a view correta
+        const currentView = document.querySelector('#main-container .view[style*="display: flex"]')?.id || 'tasks-view';
+        handleViewChange({ detail: { viewId: currentView } });
+
+    } catch (error) {
+        console.error("Erro fatal ao inicializar o aplicativo:", error);
+        alert("Erro fatal ao inicializar o aplicativo: " + error.message);
+        logout();
+    }
+}*/
 
 // --- FUNÇÕES DE ORQUESTRAÇÃO ---
 function renderAll() {
@@ -233,6 +289,28 @@ async function handleCreateTask(event) {
     } catch(error) {
         alert('Erro ao criar tarefa: ' + error.message);
     }
+}
+
+function handleViewChange(event) {
+    // Pega o ID da view para a qual estamos navegando (ex: 'dashboard-view')
+    const { viewId } = event.detail;
+
+    console.log(`Renderizando conteúdo para a view: ${viewId}`);
+
+    // Verifica qual view deve ser renderizada e chama a função correspondente
+    if (viewId === 'dashboard-view') {
+        // Se a nova tela é o Dashboard, renderiza apenas o dashboard
+        render.renderDashboard(state);
+    } else if (viewId === 'admin-view') {
+        // Se a nova tela é a de Admin, renderiza todas as listas de admin
+        render.renderUserList(state.allUsers, state.currentUserProfile, state.allCargos);
+        render.renderCondoList(state.condominios, state.allGroups);
+        render.renderTaskTypeList(state.taskTypes);
+        render.renderCargoList(state.allCargos);
+        render.renderGroupList(state.allGroups);
+    }
+    // Se a view for 'tasks-view', a função renderAll() já cuida dela
+    // quando os filtros são alterados, então não precisamos fazer nada aqui.
 }
 
 async function handleUpdateTask(event) {
@@ -430,10 +508,20 @@ async function handleOpenEditUserModal(userId) {
             api.fetchRoles(),
             api.fetchUserGroupAssignments(userId)
         ]);
+<<<<<<< HEAD
         // Envia todas as informações necessárias para a função da UI
         ui.openEditUserModal(userToEdit, cargos, state.allGroups, groupAssignments);
     } catch (error) {
         alert("Não foi possível carregar os dados para edição.");
+=======
+        
+        // Chama a função da UI, passando o usuário, os cargos,
+        // todos os grupos, e os grupos que o usuário já tem.
+        ui.openEditUserModal(userToEdit, cargos, state.allGroups, groupAssignments);
+
+    } catch (error) {
+        alert("Não foi possível carregar os dados para edição: " + error.message);
+>>>>>>> 923fdd480019cc76ae14f1ce063d32de0ce888e1
         console.error(error);
     }
 }
@@ -491,12 +579,22 @@ function handleEditCondo(condoId) {
 async function handleDeleteCondo(condoId) {
     const condo = state.condominios.find(c => c.id === condoId);
     if (!condo) return;
-    if (confirm(`Tem certeza que deseja excluir o condomínio "${condo.nome_fantasia}"?\nATENÇÃO: Todas as tarefas associadas a ele também serão excluídas!`)) {
+
+    if (confirm(`Tem certeza que deseja excluir o condomínio "${condo.nome_fantasia}"?`)) {
         try {
             await api.deleteCondoInDB(condoId);
-            initializeApp();
+            initializeApp(); // Recarrega os dados para atualizar a lista
         } catch (error) {
-            alert('Erro ao excluir condomínio: ' + error.message);
+            // console.error("Erro ao excluir condomínio:", error);
+
+            // CORREÇÃO: Verifica o código de erro específico do PostgreSQL
+            if (error.code === '23503') { // '23503' é o código para violação de chave estrangeira
+                // Mostra a sua mensagem personalizada e amigável
+                alert("Este condomínio não pode ser excluído por haver tarefas vinculadas.");
+            } else {
+                // Para qualquer outro erro, mostra a mensagem padrão
+                alert('Erro ao excluir condomínio: ' + error.message);
+            }
         }
     }
 }
@@ -683,6 +781,7 @@ function handleTogglePasswordVisibility() {
     toggleIcon.textContent = type === 'password' ? '👁️' : '🙈';
 }
 
+<<<<<<< HEAD
 function handleViewChange(event) {
     const viewId = event.detail.viewId;
     if (viewId === 'dashboard-view') {
@@ -697,39 +796,56 @@ function handleViewChange(event) {
     }
 }
 
+=======
+>>>>>>> 923fdd480019cc76ae14f1ce063d32de0ce888e1
 // --- SETUP INICIAL E LISTENERS ---
  function setupEventListeners() {
     if (listenersInitialized) return;
     console.log("Configurando event listeners pela primeira vez...");
-    // Auth
+    // --- Autenticação e Navegação Principal ---
     document.getElementById('login-btn')?.addEventListener('click', login);
     document.getElementById('logout-btn')?.addEventListener('click', logout);
+<<<<<<< HEAD
     document.getElementById('toggle-password')?.addEventListener('click', handleTogglePasswordVisibility);
 
     // Navegação Principal
+=======
+    document.getElementById('forgot-password-link')?.addEventListener('click', handleForgotPassword);
+>>>>>>> 923fdd480019cc76ae14f1ce063d32de0ce888e1
     document.getElementById('nav-tasks')?.addEventListener('click', () => ui.showView('tasks-view'));
     document.getElementById('nav-dashboard')?.addEventListener('click', () => ui.showView('dashboard-view'));
     document.getElementById('nav-admin')?.addEventListener('click', () => ui.showView('admin-view'));
+    document.getElementById('change-password-btn')?.addEventListener('click', () => document.getElementById('change-password-modal').classList.add('is-visible'));
 
-    // Formulários
+
+    // --- Formulários ---
     document.getElementById('task-form')?.addEventListener('submit', handleCreateTask);
     document.getElementById('edit-task-form')?.addEventListener('submit', handleUpdateTask);
     document.getElementById('create-user-form')?.addEventListener('submit', handleCreateUser);
     document.getElementById('edit-user-form')?.addEventListener('submit', handleUpdateUser);
-    document.getElementById('condo-form')?.addEventListener('submit', handleCreateOrUpdateCondo);
+    document.getElementById('condo-form')?.addEventListener('submit', handleCreateOrUpdateCondo); // Para o form antigo, se ainda usar
     document.getElementById('task-type-form')?.addEventListener('submit', handleCreateOrUpdateTaskType);
+    document.getElementById('group-form')?.addEventListener('submit', handleCreateOrUpdateGroup);
+    document.getElementById('cargo-form')?.addEventListener('submit', handleCreateOrUpdateCargo);
+    document.getElementById('change-password-form')?.addEventListener('submit', handleUpdatePassword);
+    document.getElementById('set-password-form')?.addEventListener('submit', handleSetPassword);
 
-    // Botões de Ação e Modais
+    // --- CONEXÕES CORRIGIDAS PARA MODAIS DE CONDOMÍNIO ---
     document.getElementById('add-user-btn')?.addEventListener('click', handleOpenCreateUserModal);
-    document.getElementById('edit-task-modal-close-btn')?.addEventListener('click', ui.closeEditModal);
-    document.getElementById('edit-task-modal-cancel-btn')?.addEventListener('click', ui.closeEditModal);
+    document.getElementById('add-condo-btn')?.addEventListener('click', handleOpenCreateCondoModal);
     document.getElementById('create-user-modal-close-btn')?.addEventListener('click', ui.closeCreateUserModal);
     document.getElementById('create-user-modal-cancel-btn')?.addEventListener('click', ui.closeCreateUserModal);
+    document.getElementById('create-condo-modal-close-btn')?.addEventListener('click', ui.closeCreateCondoModal);
+    document.getElementById('create-condo-modal-cancel-btn')?.addEventListener('click', ui.closeCreateCondoModal);
+    document.getElementById('edit-task-modal-close-btn')?.addEventListener('click', ui.closeEditModal);
+    document.getElementById('edit-task-modal-cancel-btn')?.addEventListener('click', ui.closeEditModal);
     document.getElementById('edit-user-modal-close-btn')?.addEventListener('click', ui.closeEditUserModal);
     document.getElementById('edit-user-modal-cancel-btn')?.addEventListener('click', ui.closeEditUserModal);
     document.getElementById('edit-condo-modal-close-btn')?.addEventListener('click', ui.closeEditCondoModal);
     document.getElementById('edit-condo-modal-cancel-btn')?.addEventListener('click', ui.closeEditCondoModal);
     document.getElementById('edit-condo-form')?.addEventListener('submit', handleUpdateCondo);
+    document.getElementById('create-condo-form')?.addEventListener('submit', handleCreateCondo);
+      
 
     // Filtros, Exportação e Importação
     document.getElementById('clear-filters')?.addEventListener('click', () => {
@@ -773,6 +889,7 @@ function handleViewChange(event) {
         if (!button) return;
         const condoId = parseInt(button.dataset.condoid, 10);
         const action = button.dataset.action;
+
         if (action === 'edit-condo') {
             handleOpenEditCondoModal(condoId);
         }
@@ -803,12 +920,8 @@ function handleViewChange(event) {
     document.getElementById('cargo-form')?.addEventListener('submit', handleCreateOrUpdateCargo);
     document.getElementById('group-form')?.addEventListener('submit', handleCreateOrUpdateGroup); 
     
-    // ADICIONADO GPT
-    document.getElementById('create-condo-modal-close-btn')?.addEventListener('click', ui.closeCreateCondoModal);
-    document.getElementById('create-condo-modal-cancel-btn')?.addEventListener('click', ui.closeCreateCondoModal);
-    document.getElementById('create-condo-form')?.addEventListener('submit', handleCreateCondo);
     // ---------
-// <-- Conexão para o formulário de Grupo
+    // <-- Conexão para o formulário de Grupo
     
     document.getElementById('cargo-list')?.addEventListener('click', (event) => {
         const button = event.target.closest('.task-action-btn');
@@ -858,6 +971,8 @@ function handleViewChange(event) {
             renderAll(); // Atualiza a tela a cada mudança
         });
     });
+
+    window.addEventListener('viewChanged', handleViewChange);
 
     document.getElementById('ios-install-close-btn')?.addEventListener('click', () => {
     document.getElementById('ios-install-banner').style.display = 'none';
