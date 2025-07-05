@@ -7,32 +7,25 @@
   <link rel="manifest" href="manifest.json"/>
   <link rel="stylesheet" href="css/styles.v2.css"/>
   <link rel="icon" href="assets/icon-192.png"/>
-  <title>TaskCom - Gestão de Tarefas</title>
+  <title>TasKCom - Gestão de Tarefas</title>
 </head>
 <body>
   <div id="app">
     <div id="login-screen" class="screen">
-<<<<<<< HEAD
-      <img src="assets/logo-taskcom.png" alt="Logo TasKcom" class="login-logo">
-=======
       <img src="assets/logo-taskcom.png" alt="Logo TasKCom" class="login-logo">
->>>>>>> 923fdd480019cc76ae14f1ce063d32de0ce888e1
       <div class="login-tagline">
-      <p>Gestão de tarefas comerciais.</p>
+      <p>Gestão de tarefas para condomínios.</p>
       <small>Controle e ordem, esse é o foco!</small>
       </div>
       <input type="email" id="email" placeholder="E-mail"/>
-      <div class="password-container">
-      <input type="password" id="password" placeholder="Senha" required>
-      <span id="toggle-password" class="toggle-password-icon">👁️</span>
-      </div>
+      <input type="password" id="password" placeholder="Senha"/>
       <button id="login-btn">Entrar</button>
       <a href="#" id="forgot-password-link" class="forgot-password-link">Esqueci minha senha</a>
       <button id="install-app-btn" class="btn-install" style="display: none;">Instalar App</button>
     </div>
     
     <div id="set-password-screen" class="screen">
-    <h2>Bem-vindo(a) ao TasKond!</h2>
+    <h2>Bem-vindo(a) ao TasKCom!</h2>
     <p>Crie uma senha segura para finalizar seu cadastro.</p>
     <form id="set-password-form">
         <input type="password" id="new-password" placeholder="Nova Senha" required>
@@ -43,11 +36,7 @@
 
     <div id="main-container" class="screen">
       <div class="main-header">
-<<<<<<< HEAD
-        <img src="assets/logo-taskcom.png" alt="Logo Taskcom" class="header-logo">
-=======
-        <img src="assets/logo-taskcom.png" alt="Logo TaskCom" class="header-logo">
->>>>>>> 923fdd480019cc76ae14f1ce063d32de0ce888e1
+        <img src="assets/logo-taskcom.png" alt="Logo TasKCom" class="header-logo">
         <div class="header-actions">
           
         <button id="change-password-btn" class="btn-secondary">Alterar Senha</button>
@@ -68,11 +57,13 @@
       </nav>
 
       <div id="ios-install-banner" class="install-banner" style="display: none;">
-        <p>Para a melhor experiência, adicione o TasKond à sua Tela de Início! Toque no ícone de "Compartilhar" (o quadrado com uma seta para cima) e depois em "Adicionar à Tela de Início".</p>
+        <p>Para a melhor experiência, adicione o TasKCom à sua Tela de Início! Toque no ícone de "Compartilhar" (o quadrado com uma seta para cima) e depois em "Adicionar à Tela de Início".</p>
         <button id="ios-install-close-btn">&times;</button>
       </div>
+      
       <p id="user-display-name" class="user-display"></p>
-       <div id="tasks-view" class="view">
+
+      <div id="tasks-view" class="view">
           <form id="task-form">
             <h3>Criar Nova Tarefa</h3>
             <select id="template-select" name="template-select"><option value="">Ou selecione um modelo...</option></select>
@@ -146,7 +137,7 @@
             <h3>Gerenciamento de Usuários</h3>
             <button id="add-user-btn" class="btn-add-user">+ Novo Usuário</button>
         </div>
-        <div class="user-list-container"><div id="user-list"></div></div></div>
+        <div class="user-list-container"><div id="user-list"></div></div>
 
         <div class="view-header">
       <h3>Gerenciamento de Cargos</h3>
@@ -197,21 +188,6 @@
         <div>
          <button type="button" id="add-condo-btn" class="btn-add">+ Novo Condomínio</button>
       </div>
-        <!--<form id="condo-form">
-    <input type="hidden" id="condo-id">
-    
-    <input type="text" id="condo-nome" name="condo-nome" placeholder="Nome/Razão Social do Condomínio" required>
-    <input type="text" id="condo-nome-fantasia" name="condo-nome-fantasia" placeholder="Nome Fantasia" required>
-    <input type="text" id="condo-cnpj" name="condo-cnpj" placeholder="CNPJ">
-    <label for="condo-group-select">Grupo:</label>
-    <select id="condo-group-select" name="condo-group-select">
-        <option value="">Nenhum</option>
-    </select>
-    
-    <button type="submit" id="condo-submit-btn" class="btn-add">Adicionar Condomínio</button>
-    </form>-->
-
-
         <div class="condo-list-container" id="condo-list"></div>
       </div>
     </div>
@@ -286,46 +262,28 @@
         <button id="edit-user-modal-close-btn" class="modal-close-btn">&times;</button>
         <h3>Editar Usuário</h3>
         <form id="edit-user-form">
-<<<<<<< HEAD
-    <input type="hidden" id="edit-user-id">
+          <input type="hidden" id="edit-user-id">
 
-    <label for="edit-user-name">Nome Completo:</label>
-    <input type="text" id="edit-user-name" name="edit-user-name" required>
+          <label for="edit-user-name">Nome Completo:</label>
+          <input type="text" id="edit-user-name" name="edit-user-name" required>
 
-    <label for="edit-user-email-display">Email (não pode ser alterado):</label>
-    <input type="email" id="edit-user-email-display" name="edit-user-email-display" disabled>
+          <label for="edit-user-email-display">Email (não pode ser alterado):</label>
+          <input type="email" id="edit-user-email-display" name="edit-user-email-display" disabled>
 
-    <label for="edit-user-role">Cargo:</label>
-    <select id="edit-user-role" name="edit-user-role" required></select>
+          <label for="edit-user-role">Cargo:</label>
+          <select id="edit-user-role" name="edit-user-role" required></select>
 
-    <fieldset class="associations-fieldset">
-        <legend>Associar a Grupos</legend>
-        <div id="edit-user-groups-list" class="checkbox-list">
-=======
-            <input type="hidden" id="edit-user-id">
-            <label for="edit-user-name">Nome Completo:</label>
-            <input type="text" id="edit-user-name" name="edit-user-name" required>
-            <label for="edit-user-email-display">Email (não pode ser alterado):</label>
-            <input type="email" id="edit-user-email-display" name="edit-user-email-display" disabled>
-            <label for="edit-user-role">Cargo:</label>
-            <select id="edit-user-role" name="edit-user-role" required></select>
-            <fieldset class="associations-fieldset">
-            <legend>Associar a Grupos</legend>
-            <div id="edit-user-groups-list" class="checkbox-list">
-            </div>
-            </fieldset>
-            <div class="modal-actions">
-                <button type="button" id="edit-user-modal-cancel-btn" class="task-action-btn btn-cancel">Cancelar</button>
-                <button type="submit" class="task-action-btn btn-save">Salvar Alterações</button>
->>>>>>> 923fdd480019cc76ae14f1ce063d32de0ce888e1
-            </div>
-    </fieldset>
+          <fieldset class="associations-fieldset">
+              <legend>Associar a Grupos</legend>
+              <div id="edit-user-groups-list" class="checkbox-list">
+                  </div>
+          </fieldset>
 
-    <div class="modal-actions">
-        <button type="button" id="edit-user-modal-cancel-btn" class="task-action-btn btn-cancel">Cancelar</button>
-        <button type="submit" class="task-action-btn btn-save">Salvar Alterações</button>
-    </div>
-</form>
+              <div class="modal-actions">
+                  <button type="button" id="edit-user-modal-cancel-btn" class="task-action-btn btn-cancel">Cancelar</button>
+                  <button type="submit" class="task-action-btn btn-save">Salvar Alterações</button>
+              </div>
+        </form>
     </div>
   </div>
 
@@ -368,11 +326,7 @@
   </div>
 
   <!--<script src="js/config.js"></script>-->
-<<<<<<< HEAD
   <script type="module" src="js/config.js"></script>
-=======
-  <script type="module" src="js/config.js"></script> 
->>>>>>> 923fdd480019cc76ae14f1ce063d32de0ce888e1
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

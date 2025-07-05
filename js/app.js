@@ -46,97 +46,20 @@ const state = {
     }
 };
 
-// --- FUNÇÃO PRINCIPAL DE CARREGAMENTO ---
-/* async function initializeApp() {
-    try {
-        // Faz uma única chamada que busca TUDO que precisamos
-        const initialData = await api.fetchInitialData();
-         // Atualiza o nosso 'state' com os dados frescos
-        state.tasks = initialData.tasks;
-        state.condominios = initialData.condominios;
-        state.taskTypes = initialData.taskTypes;
-        state.taskTemplates = initialData.taskTemplates;
-        state.allUsers = initialData.allUsers;
-        state.allCargos = initialData.allCargos;
-        state.allGroups = initialData.allGroups;
-        Object.assign(state, initialData);
-        state.currentUserProfile = JSON.parse(sessionStorage.getItem('userProfile')); 
-        
-        console.log("Dados carregados com sucesso! Renderizando...");
-        
-        // Configura e desenha a interface com os dados atualizados
-        ui.setupRoleBasedUI(state.currentUserProfile);
-        ui.populateDropdowns(state.condominios, state.taskTypes, state.allUsers, state.allGroups);
-        ui.populateTemplatesDropdown(state.taskTemplates);
-        ui.setupInstallButton();
-        checkAndShowIOSInstallBanner();
-        renderAll();
-
-        // Inicializa os seletores com busca
-        const taskCondoDropdown = ui.createSearchableDropdown(
-            'task-condo-search', 'task-condo-options', 'task-condominio',
-            state.condominios,
-            (selectedValue) => {
-                // No formulário de tarefa, apenas guardamos o valor
-                document.getElementById('task-condominio').value = selectedValue;
-            }
-        );
-
-        const filterCondoDropdown = ui.createSearchableDropdown(
-            'filter-condo-search', 'filter-condo-options', 'filter-condominio-id',
-            state.condominios,
-            (selectedValue) => {
-                state.activeFilters.condominioId = selectedValue;
-                renderAll();
-            }
-        );
-
-        // Conecta o botão "Limpar Filtros" para limpar também o novo seletor
-        const clearFiltersBtn = document.getElementById('clear-filters');
-        if(clearFiltersBtn && filterCondoDropdown) {
-            clearFiltersBtn.addEventListener('click', () => {
-                filterCondoDropdown.clear();
-            });
-        }
-
-        const userDisplay = document.getElementById('user-display-name');
-        if (userDisplay && state.currentUserProfile) {
-            userDisplay.textContent = `Usuário: ${state.currentUserProfile.nome_completo}`;
-        }
-
-    } catch (error) {
-        console.error("Erro fatal ao inicializar o aplicativo:", error);
-        alert("Erro fatal ao inicializar o aplicativo: " + error.message);
-    }
-}*/
-
 async function initializeApp() {
     try {
-<<<<<<< HEAD
         // Faz uma única chamada que busca todos os dados necessários.
-=======
-        // Faz uma única chamada que busca todos os dados necessários de uma vez.
->>>>>>> 923fdd480019cc76ae14f1ce063d32de0ce888e1
         const [initialData, userGroupAssignments] = await Promise.all([
             api.fetchInitialData(),
             api.fetchAllUserGroupAssignments()
         ]);
         
         // Atualiza o 'state' global da aplicação com os dados frescos.
-<<<<<<< HEAD
         // A linha Object.assign faz o mesmo que as 7 linhas individuais.
         Object.assign(state, initialData);
         state.userGroupAssignments = userGroupAssignments; // Guarda os dados no estado
         state.currentUserProfile = JSON.parse(sessionStorage.getItem('userProfile'));
 
-=======
-        Object.assign(state, initialData);
-        state.userGroupAssignments = userGroupAssignments;
-        
-        // Pega o perfil do usuário que foi salvo no login.
-        state.currentUserProfile = JSON.parse(sessionStorage.getItem('userProfile'));
-        
->>>>>>> 923fdd480019cc76ae14f1ce063d32de0ce888e1
         console.log("Dados carregados com sucesso! Renderizando...");
         
         // --- CONFIGURA E DESENHA A INTERFACE ---
@@ -171,13 +94,7 @@ async function initializeApp() {
         // Garante que o botão 'Limpar Filtros' também limpe o seletor de busca
         const clearFiltersBtn = document.getElementById('clear-filters');
         if(clearFiltersBtn && filterCondoDropdown) {
-<<<<<<< HEAD
             clearFiltersBtn.addEventListener('click', () => {
-=======
-            // Removemos o listener antigo para evitar duplicatas, caso initializeApp seja chamado novamente
-            clearFiltersBtn.replaceWith(clearFiltersBtn.cloneNode(true));
-            document.getElementById('clear-filters').addEventListener('click', () => {
->>>>>>> 923fdd480019cc76ae14f1ce063d32de0ce888e1
                 filterCondoDropdown.clear();
             });
         }
@@ -190,43 +107,6 @@ async function initializeApp() {
         alert("Erro fatal ao inicializar o aplicativo: " + error.message);
     }
 }
-
-/* async function initializeApp() {
-    try {
-        // PASSO 1: Busca TODOS os dados primeiro, incluindo as novas associações
-        const [initialData, userGroupAssignments] = await Promise.all([
-            api.fetchInitialData(),
-            api.fetchAllUserGroupAssignments()
-        ]);
-        
-        // PASSO 2: Atualiza o 'state' global com TUDO o que foi buscado
-        Object.assign(state, initialData);
-        state.userGroupAssignments = userGroupAssignments;
-        state.currentUserProfile = JSON.parse(sessionStorage.getItem('userProfile'));
-        
-        console.log("Dados carregados e estado atualizado com sucesso!");
-        
-        // PASSO 3: Agora que o 'state' está completo, configura a UI
-        ui.setupRoleBasedUI(state.currentUserProfile);
-        ui.populateDropdowns(state.condominios, state.taskTypes, state.allUsers, state.allGroups);
-        ui.populateTemplatesDropdown(state.taskTemplates);
-        
-        const userDisplay = document.getElementById('user-display-name');
-        if (userDisplay && state.currentUserProfile) {
-            userDisplay.textContent = `Usuário: ${state.currentUserProfile.nome_completo}`;
-        }
-        
-        // PASSO 4: Finalmente, com tudo pronto, renderiza o conteúdo da tela
-        // A função handleViewChange cuidará de renderizar a view correta
-        const currentView = document.querySelector('#main-container .view[style*="display: flex"]')?.id || 'tasks-view';
-        handleViewChange({ detail: { viewId: currentView } });
-
-    } catch (error) {
-        console.error("Erro fatal ao inicializar o aplicativo:", error);
-        alert("Erro fatal ao inicializar o aplicativo: " + error.message);
-        logout();
-    }
-}*/
 
 // --- FUNÇÕES DE ORQUESTRAÇÃO ---
 function renderAll() {
@@ -508,20 +388,10 @@ async function handleOpenEditUserModal(userId) {
             api.fetchRoles(),
             api.fetchUserGroupAssignments(userId)
         ]);
-<<<<<<< HEAD
         // Envia todas as informações necessárias para a função da UI
         ui.openEditUserModal(userToEdit, cargos, state.allGroups, groupAssignments);
     } catch (error) {
         alert("Não foi possível carregar os dados para edição.");
-=======
-        
-        // Chama a função da UI, passando o usuário, os cargos,
-        // todos os grupos, e os grupos que o usuário já tem.
-        ui.openEditUserModal(userToEdit, cargos, state.allGroups, groupAssignments);
-
-    } catch (error) {
-        alert("Não foi possível carregar os dados para edição: " + error.message);
->>>>>>> 923fdd480019cc76ae14f1ce063d32de0ce888e1
         console.error(error);
     }
 }
@@ -781,23 +651,6 @@ function handleTogglePasswordVisibility() {
     toggleIcon.textContent = type === 'password' ? '👁️' : '🙈';
 }
 
-<<<<<<< HEAD
-function handleViewChange(event) {
-    const viewId = event.detail.viewId;
-    if (viewId === 'dashboard-view') {
-        render.renderDashboard(state);
-    } else if (viewId === 'admin-view') {
-        // CORREÇÃO: Passa a lista de associações e grupos para a função
-        render.renderUserList(state.allUsers, state.currentUserProfile, state.allCargos, state.allGroups, state.userGroupAssignments);
-        render.renderCondoList(state.condominios, state.allGroups);
-        render.renderTaskTypeList(state.taskTypes);
-        render.renderCargoList(state.allCargos);
-        render.renderGroupList(state.allGroups);
-    }
-}
-
-=======
->>>>>>> 923fdd480019cc76ae14f1ce063d32de0ce888e1
 // --- SETUP INICIAL E LISTENERS ---
  function setupEventListeners() {
     if (listenersInitialized) return;
@@ -805,13 +658,9 @@ function handleViewChange(event) {
     // --- Autenticação e Navegação Principal ---
     document.getElementById('login-btn')?.addEventListener('click', login);
     document.getElementById('logout-btn')?.addEventListener('click', logout);
-<<<<<<< HEAD
     document.getElementById('toggle-password')?.addEventListener('click', handleTogglePasswordVisibility);
 
     // Navegação Principal
-=======
-    document.getElementById('forgot-password-link')?.addEventListener('click', handleForgotPassword);
->>>>>>> 923fdd480019cc76ae14f1ce063d32de0ce888e1
     document.getElementById('nav-tasks')?.addEventListener('click', () => ui.showView('tasks-view'));
     document.getElementById('nav-dashboard')?.addEventListener('click', () => ui.showView('dashboard-view'));
     document.getElementById('nav-admin')?.addEventListener('click', () => ui.showView('admin-view'));
@@ -1097,33 +946,6 @@ document.getElementById('user-list')?.addEventListener('click', (event) => {
     if (action === 'toggle-user-status') handleToggleUserStatus(userId);
 });
 
-// REMOVIDO POR SUGESTÃO DO GPT
-/* async function handleCreateCondo(event) {
-    event.preventDefault();
-    const form = event.target;
-    const grupo_id = form.elements['create-condo-group'].value || null;
-    const condoData = {
-        nome: form.elements['condo-nome'].value,
-        nome_fantasia: form.elements['condo-nome-fantasia'].value,
-        cnpj: form.elements['condo-cnpj'].value || null,
-        empresa_id: state.currentUserProfile.empresa_id
-    };
-    try {
-        await api.createCondoInDB(condoData);
-        alert('Condomínio criado com sucesso!');
-        form.reset();
-        initializeApp();
-    } catch (error) {
-        if (error.code === '23505') {
-            alert('Erro: O CNPJ informado já está cadastrado.');
-        } else {
-            alert('Erro ao salvar condomínio: ' + error.message);
-        }
-    }
-}
-    */
-   // ---------
-
 async function handleUpdateCondo(event) {
     event.preventDefault();
     const form = event.target;
@@ -1224,12 +1046,6 @@ async function handleUpdatePassword(event) {
         document.getElementById('change-password-form').reset();
     }
 }
-// COMENTADO
-/* function handleOpenCreateCondoModal() {
-    // Usa a lista de grupos que já temos no 'state'
-    ui.openCreateCondoModal(state.allGroups);
-}
-*/
 
 async function handleOpenCreateCondoModal() {
   const { data: grupos, error } = await supabaseClient.from('grupos').select('*');
@@ -1240,7 +1056,6 @@ async function handleOpenCreateCondoModal() {
   ui.openCreateCondoModal(grupos); // ou direto openCreateCondoModal(grupos)
 }
 
-// ADICIONADO GPT
 async function handleCreateCondo(event) {
     event.preventDefault();
     const form = event.target;

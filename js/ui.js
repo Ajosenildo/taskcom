@@ -366,14 +366,16 @@ export function openEditCondoModal(condo, todosGrupos) {
     const groupSelect = document.getElementById('edit-condo-group');
     groupSelect.innerHTML = '<option value="">Nenhum</option>'; // Opção para deixar sem grupo
 
-    todosGrupos.forEach(grupo => {
+    // O loop 'forEach' que estava faltando
+    todosGrupos.forEach(group => {
         const option = document.createElement('option');
         option.value = group.id;
         option.textContent = group.nome_grupo;
         groupSelect.appendChild(option);
     });
 
-    groupSelect.value = condo.grupo_id || ""; // Define o grupo atual como selecionado
+    // Define o grupo atual do condomínio como o selecionado no dropdown
+    groupSelect.value = condo.grupo_id || "";
 
     modal.classList.add('is-visible');
 }

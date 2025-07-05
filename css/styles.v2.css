@@ -486,17 +486,7 @@ body {
 }
 
 .user-role-admin {
-    background-color: #ef4444;
-    color: white;
-}
-
-.user-role-gerente {
-    background-color: #3b82f6;
-    color: white;
-}
-
-.user-role-sindico {
-    background-color: #10b981;
+    background-color: #c5c4c4;
     color: white;
 }
 
