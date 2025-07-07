@@ -1,0 +1,3 @@
+// js/config.js
+export const SUPABASE_URL = 'https://aabetrestcppdsagcvfs.supabase.co';
+export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFhYmV0cmVzdGNwcGRzYWdjdmZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4ODAzNjgsImV4cCI6MjA2NjQ1NjM2OH0.uL-Ae4TO3KznkQ245OR-2kk_KhkWTbYahaZcXg008UM';

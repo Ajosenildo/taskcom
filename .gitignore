@@ -1,0 +1,5 @@
+# Ignorar arquivos de ambiente com chaves secretas
+.env
+
+# Ignorar pasta de dependências do Node (boa prática)
+/node_modules

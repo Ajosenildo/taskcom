@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="theme-color" content="#1e3a8a"/>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="stylesheet" href="css/styles.v2.css"/>
+  <!--<link rel="icon" href="/favicon.ico" type="image/x-icon"/>-->
+  <link rel="icon" type="image/png" href="favicon/favicon-96x96.png" sizes="96x96" />
+  <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg" />
+  <link rel="shortcut icon" href="favicon/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png" />
+  <link rel="manifest" href="favicon/site.webmanifest" />
+</head>
+<body>
+  <div id="app">
+    <div id="login-screen" class="screen">
+      <img src="assets/logo-taskcom.png" alt="Logo TasKCom" class="login-logo">
+      <div class="login-tagline">
+      <p>Gestão de tarefas para condomínios.</p>
+      <small>Controle e ordem, esse é o foco!</small>
+      </div>
+      <input type="email" id="email" placeholder="E-mail"/>
+      <div class="password-container">
+      <input type="password" id="password" placeholder="Senha"/>
+      <span id="toggle-password" class="toggle-password-icon">👁️</span>
+      </div>
+      <button id="login-btn">Entrar</button>
+      <a href="#" id="forgot-password-link" class="forgot-password-link">Esqueci minha senha</a>
+      <button id="install-app-btn" class="btn-install" style="display: none;">Instalar App</button>
+    </div>
+    
+    <div id="set-password-screen" class="screen">
+    <h2>Bem-vindo(a) ao TasKCom!</h2>
+    <p>Crie uma senha segura para finalizar seu cadastro.</p>
+    <form id="set-password-form">
+        <input type="password" id="new-password" placeholder="Nova Senha" required>
+        <input type="password" id="confirm-password" placeholder="Confirme a Nova Senha" required>
+        <button type="submit">Salvar Senha e Entrar</button>
+    </form>
+    </div>
+
+    <div id="main-container" class="screen">
+      <div class="main-header">
+        <img src="assets/logo-taskcom.png" alt="Logo TasKCom" class="header-logo">
+        <div class="header-actions">
+          
+        <button id="change-password-btn" class="btn-secondary">Alterar Senha</button>
+        <button id="logout-btn">Sair</button>
+        </div>
+      </div>
+           <div id="first-access-banner" style="display: none; background-color: #fff3cd; padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid #ffeeba;">
+        <p style="margin: 0; color: #856404;"><strong>Este é seu primeiro acesso!</strong> Para liberar todas as funcionalidades, por favor, crie sua senha pessoal.</p>
+        <button id="show-set-password-btn" style="margin-top: 1rem; background-color: #0d6efd; width: auto; padding: 0.5rem 1rem;">Definir Minha Senha</button>
+         </div>
+      
+      <nav class="main-nav">
+        
+          <button id="nav-tasks" class="nav-btn active">Tarefas</button>
+          <button id="nav-dashboard" class="nav-btn">Dashboard</button>
+          <button id="nav-admin" class="nav-btn admin-feature">Admin</button>
+          
+      </nav>
+
+      <div id="ios-install-banner" class="install-banner" style="display: none;">
+        <p>Para a melhor experiência, adicione o TasKCom à sua Tela de Início! Toque no ícone de "Compartilhar" (o quadrado com uma seta para cima) e depois em "Adicionar à Tela de Início".</p>
+        <button id="ios-install-close-btn">&times;</button>
+      </div>
+      
+      <p id="user-display-name" class="user-display"></p>
+
+      <div id="tasks-view" class="view">
+          <form id="task-form">
+            <h3>Criar Nova Tarefa</h3>
+            <select id="template-select" name="template-select"><option value="">Ou selecione um modelo...</option></select>
+            <input type="text" id="task-title" name="task-title" placeholder="Título da Tarefa"/>
+            <label for="task-assignee">Designar para:</label>
+            <select id="task-assignee" name="task-assignee" required></select>
+            <select id="task-type" name="task-type" required><option value="">Selecione um Tipo...</option></select>
+            
+            <div class="searchable-select-container">
+              <input type="text" id="task-condo-search" class="search-input" placeholder="Selecione ou busque um condomínio..." autocomplete="off">
+              <input type="hidden" id="task-condominio" name="task-condominio" required>
+              <div id="task-condo-options" class="options-container"></div>
+            </div>
+            
+            <textarea id="task-desc" name="task-desc" placeholder="Descrição"></textarea>
+            <label for="task-due-date">Data Prevista de Conclusão:</label>
+            <input type="date" id="task-due-date" name="task-due-date" required/>
+            <div class="checkbox-container"><input type="checkbox" id="create-as-completed" name="create-as-completed"/><label for="create-as-completed">Registrar como concluída</label></div>
+            <div class="checkbox-container"><input type="checkbox" id="save-as-template" name="save-as-template"/><label for="save-as-template">Salvar como modelo</label></div>
+            <button type="submit">Criar Tarefa</button>
+          </form>
+          <div id="filter-bar">
+              <h3>Filtrar Tarefas</h3>
+              <select id="filter-status"><option value="active">Ativas</option><option value="in_progress">Em Andamento</option><option value="overdue">Atrasadas</option><option value="completed">Concluídas</option><option value="deleted">Excluídas</option></select>
+              <select id="filter-task-type"><option value="">Todos os Tipos</option></select>
+              <select id="filter-group"><option value="">Todos os Grupos</option></select>
+              <div id="admin-filters" class="admin-feature">
+                  <label for="filter-assignee">Responsável:</label>
+                  <select id="filter-assignee"><option value="">Todos</option></select>
+              </div>
+              
+              
+              <div class="searchable-select-container">
+                <input type="text" id="filter-condo-search" class="search-input" placeholder="Filtrar por condomínio..." autocomplete="off">
+                <input type="hidden" id="filter-condominio-id">
+                <div id="filter-condo-options" class="options-container"></div>
+              </div>
+              <div class="date-range-filter">
+                  <div><label for="filter-date-start">De:</label><input type="date" id="filter-date-start"/></div>
+                  <div><label for="filter-date-end">Até:</label><input type="date" id="filter-date-end"/></div>
+              </div>
+              <button id="clear-filters" type="button">Limpar Filtros</button>
+              <div class="checkbox-container">
+              <input type="checkbox" id="pdf-include-desc" name="pdf-include-desc">
+              <label for="pdf-include-desc">Incluir descrição no relatório PDF</label>
+              </div>
+              <div class="checkbox-container">
+              <input type="checkbox" id="pdf-include-history" name="pdf-include-history">
+              <label for="pdf-include-history">Incluir histórico no relatório PDF</label>
+              </div>
+              <button id="export-pdf-btn" class="btn-export" type="button">Exportar PDF</button>
+              <div id="task-list"></div>
+          </div>
+
+
+          
+        </div> <!--Fim da task view-->
+      
+        <div id="dashboard-view" class="view">
+        <h3>Indicadores de Desempenho</h3>
+        <div class="kpi-grid">
+            <div class="kpi-card"><h4>Em Andamento</h4><span id="kpi-in-progress" class="kpi-value">0</span></div>
+            <div class="kpi-card"><h4>Atrasadas</h4><span id="kpi-overdue" class="kpi-value">0</span></div>
+            <div class="kpi-card"><h4>Concluídas (Mês)</h4><span id="kpi-completed" class="kpi-value">0</span></div>
+        </div>
+        <hr>
+        <div class="chart-container"><h4>Tarefas por Status</h4><canvas id="statusChart"></canvas></div>
+        <div class="chart-container"><h4>Tarefas Ativas por Condomínio</h4><canvas id="condoChart"></canvas></div>
+      </div>
+      <div id="admin-view" class="view">
+        <div class="view-header">
+            <h3>Gerenciamento de Usuários</h3>
+            <button id="add-user-btn" class="btn-add-user">+ Novo Usuário</button>
+        </div>
+        <div class="user-list-container"><div id="user-list"></div></div>
+
+        <div class="view-header">
+      <h3>Gerenciamento de Cargos</h3>
+      </div>
+        <form id="cargo-form">
+      <input type="hidden" id="cargo-id">
+      <input type="text" id="cargo-nome" placeholder="Nome do Cargo" required>      
+      <button type="submit" id="cargo-submit-btn">Adicionar Cargo</button>
+      </form>
+      <div class="condo-list-container"> <div id="cargo-list"></div>
+      </div>
+      <hr>
+    <div class="view-header">
+      <h3>Gerenciamento de Grupos</h3>
+    </div>
+    <form id="group-form">
+      <input type="hidden" id="group-id">
+      <input type="text" id="group-name" placeholder="Nome do Grupo (Ex: Filial RN)" required>
+      <button type="submit" id="group-submit-btn">Adicionar Grupo</button>
+    </form>
+    <div class="condo-list-container"> <div id="group-list"></div>
+    </div>
+        <hr>
+        <div class="view-header">
+            <h3>Gerenciamento de Tipos de Tarefa</h3>
+        </div>
+        <form id="task-type-form">
+            <input type="hidden" id="task-type-id">
+            <div class="form-row">
+                <input type="text" id="task-type-nome" name="task-type-nome" placeholder="Nome do Tipo de Tarefa" required style="flex-grow: 1;">
+                <input type="color" id="task-type-cor" name="task-type-cor" title="Selecione uma cor" required style="flex-basis: 50px; padding: 5px;">
+            </div>
+            <button type="submit" id="task-type-submit-btn">Adicionar Tipo</button>
+        </form>
+        <div class="condo-list-container" id="task-type-list"></div>
+        <hr>
+        <div class="view-header">
+            <h3>Gerenciamento de Condomínios</h3>
+            <div class="header-actions"> <button type="button" id="download-template-btn" class="btn-secondary">Baixar Modelo</button>
+          <input type="file" id="condo-csv-input" accept=".csv" style="display: none;">
+          </div>
+            <div>
+                <input type="file" id="condo-csv-input" accept=".csv" style="display: none;">
+                <button type="button" id="import-condo-btn" class="btn-import">Importar Planilha</button>
+            </div>
+        </div>
+
+        <div>
+         <button type="button" id="add-condo-btn" class="btn-add">+ Novo Condomínio</button>
+      </div>
+        <div class="condo-list-container" id="condo-list"></div>
+      </div>
+    </div>
+  </div>
+<!-- ADICIONADO GPT -->
+  <div id="create-condo-modal" class="modal-container">
+  <div class="modal-content">
+    <button id="create-condo-modal-close-btn" class="modal-close-btn">&times;</button>
+    <h3>Adicionar Condomínio</h3>
+    <form id="create-condo-form">
+      <input type="text" id="create-condo-nome" placeholder="Nome/Razão Social" required>
+      <input type="text" id="create-condo-nome-fantasia" placeholder="Nome Fantasia" required>
+      <input type="text" id="create-condo-cnpj" placeholder="CNPJ">
+      <label for="create-condo-group">Grupo:</label>
+      <select id="create-condo-group"><option value="">Nenhum</option></select>
+      <div class="modal-actions">
+        <button type="button" id="create-condo-modal-cancel-btn" class="task-action-btn btn-cancel">Cancelar</button>
+        <button type="submit" class="task-action-btn btn-save">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+  <div id="edit-task-modal" class="modal-container">
+      <div class="modal-content">
+        <button id="edit-task-modal-close-btn" class="modal-close-btn">&times;</button>
+        <h3>Editar Tarefa</h3>
+        <form id="edit-task-form">
+            <input type="hidden" id="edit-task-id">
+            <label for="edit-task-title">Título:</label><input type="text" id="edit-task-title" name="edit-task-title" required>
+            <label for="edit-task-assignee">Designar para:</label><select id="edit-task-assignee" name="edit-task-assignee" required></select>
+            <label for="edit-task-type">Tipo:</label><select id="edit-task-type" name="edit-task-type" required></select>
+            <label for="edit-task-condominio">Condomínio:</label><select id="edit-task-condominio" name="edit-task-condominio" required></select>
+            <label for="edit-task-desc">Descrição:</label>
+            <textarea id="edit-task-desc" name="edit-task-desc"></textarea>
+            <fieldset class="task-history">
+            <legend>Histórico da Tarefa</legend>
+            <div id="task-history-list">
+            </div>
+            </fieldset>
+            <label for="edit-task-due-date">Data Prevista de Conclusão:</label><input type="date" id="edit-task-due-date" name="edit-task-due-date" required>
+            <div class="modal-actions">
+                <button type="button" id="edit-task-modal-cancel-btn" class="task-action-btn btn-cancel">Cancelar</button>
+                <button type="submit" class="task-action-btn btn-save">Salvar Alterações</button>
+            </div>
+        </form>
+      </div>
+  </div>
+  <div id="create-user-modal" class="modal-container">
+  <div class="modal-content">
+    <button id="create-user-modal-close-btn" class="modal-close-btn">&times;</button>
+    <h3>Convidar Novo Usuário</h3>
+    <form id="create-user-form">
+    <label for="create-user-name">Nome Completo:</label>
+    <input type="text" id="create-user-name" name="create-user-name" required>
+    <label for="create-user-email">Email:</label>
+    <input type="email" id="create-user-email" name="create-user-email" required>
+    <label for="create-user-password">Senha Provisória:</label>
+    <input type="password" id="create-user-password" name="create-user-password" required>
+    <label for="create-user-role">Cargo:</label>
+    <select id="create-user-role" name="create-user-role" required></select>
+    <div class="modal-actions">
+        <button type="button" id="create-user-modal-cancel-btn" class="task-action-btn btn-cancel">Cancelar</button>
+        <button type="submit" class="task-action-btn btn-save">Criar Usuário</button>
+    </div>
+</form>
+
+  </div>
+</div>
+  <div id="edit-user-modal" class="modal-container">
+    <div class="modal-content">
+        <button id="edit-user-modal-close-btn" class="modal-close-btn">&times;</button>
+        <h3>Editar Usuário</h3>
+        <form id="edit-user-form">
+          <input type="hidden" id="edit-user-id">
+
+          <label for="edit-user-name">Nome Completo:</label>
+          <input type="text" id="edit-user-name" name="edit-user-name" required>
+
+          <label for="edit-user-email-display">Email (não pode ser alterado):</label>
+          <input type="email" id="edit-user-email-display" name="edit-user-email-display" disabled>
+
+          <label for="edit-user-role">Cargo:</label>
+          <select id="edit-user-role" name="edit-user-role" required></select>
+
+          <fieldset class="associations-fieldset">
+              <legend>Associar a Grupos</legend>
+              <div id="edit-user-groups-list" class="checkbox-list">
+                  </div>
+          </fieldset>
+
+              <div class="modal-actions">
+                  <button type="button" id="edit-user-modal-cancel-btn" class="task-action-btn btn-cancel">Cancelar</button>
+                  <button type="submit" class="task-action-btn btn-save">Salvar Alterações</button>
+              </div>
+        </form>
+    </div>
+  </div>
+
+  <div id="edit-condo-modal" class="modal-container">
+    <div class="modal-content">
+        <button id="edit-condo-modal-close-btn" class="modal-close-btn">&times;</button>
+        <h3>Editar Condomínio</h3>
+        <form id="edit-condo-form">
+            <input type="hidden" id="edit-condo-id">
+            <label for="edit-condo-nome">Nome/Razão Social:</label>
+            <input type="text" id="edit-condo-nome" name="edit-condo-nome" required>
+            <label for="edit-condo-nome-fantasia">Nome Fantasia:</label>
+            <input type="text" id="edit-condo-nome-fantasia" name="edit-condo-nome-fantasia" required>
+            <label for="edit-condo-cnpj">CNPJ:</label>
+            <input type="text" id="edit-condo-cnpj" name="edit-condo-cnpj">
+            <label for="edit-condo-group">Grupo:</label>
+            <select id="edit-condo-group" name="edit-condo-group"></select>
+            <div class="modal-actions">
+                <button type="button" id="edit-condo-modal-cancel-btn" class="task-action-btn btn-cancel">Cancelar</button>
+                <button type="submit" class="task-action-btn btn-save">Salvar Alterações</button>
+            </div>
+        </form>
+    </div>
+  </div>
+  <div id="change-password-modal" class="modal-container">
+  <div class="modal-content">
+      <button id="change-password-close-btn" class="modal-close-btn">&times;</button>
+      <h3>Alterar Minha Senha</h3>
+      <form id="change-password-form">
+          <label for="change-new-password">Nova Senha (mínimo 6 caracteres):</label>
+          <input type="password" id="change-new-password" required>
+          <label for="change-confirm-password">Confirme a Nova Senha:</label>
+          <input type="password" id="change-confirm-password" required>
+          <div class="modal-actions">
+              <button type="button" id="change-password-cancel-btn" class="task-action-btn btn-cancel">Cancelar</button>
+              <button type="submit" class="task-action-btn btn-save">Salvar Nova Senha</button>
+          </div>
+      </form>
+  </div>
+  </div>
+
+  <!--<script src="js/config.js"></script>-->
+  <script type="module" src="js/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+  <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
+  <script src="https://unpkg.com/jspdf-autotable@3.5.23/dist/jspdf.plugin.autotable.js"></script>
+  <script type="module" src="js/app.js"></script>
+
+  <footer style="text-align: center; padding: 2rem 1rem; font-size: 0.8rem; color: #6b7280;">
+    <p>&copy; 2025 TasKCom by AS.dev (iadev.app) Todos os direitos reservados.</p>
+    <p>
+        <a href="instrucoes.html" style="color: #4f46e5;">Instruções de Uso</a> | 
+        <a href="mailto:ajosenildosilva@gmail.com?subject=Ajuda com o TasKCom" style="color: #4f46e5;">Clique aqui se precisar de ajuda</a>
+    </p>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instruções de Uso - Taskcom</title>
+    <link rel="stylesheet" href="css/styles.v2.css">
+    <link rel="icon" href="assets/icon-192.png"/>
+    <style>
+        /* Estilos adicionais para a página de instruções */
+        body {
+            background-color: #fff;
+        }
+        .instructions-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: #f9fafb;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .instructions-container h1, .instructions-container h2 {
+            color: #1e3a8a;
+            border-bottom: 2px solid #e0e7ff;
+            padding-bottom: 0.5rem;
+            margin-top: 1.5rem;
+        }
+        .instructions-container p, .instructions-container li {
+            color: #374151;
+            line-height: 1.6;
+        }
+        .instructions-container a {
+            color: #4f46e5;
+            text-decoration: none;
+        }
+        .instructions-container a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="instructions-container">
+        <div>
+            <p style="margin-top: 2rem; text-align: center;">
+            <a href="index.html">Voltar para o Aplicativo</a>
+            </p>
+        </div>
+        <h1>Instruções de Uso - Taskcom</h1>
+
+        <section id="admin-instructions">
+            <h2>Para Administradores</h2>
+            <p>Como Administrador, você tem controle total sobre o sistema. Suas principais responsabilidades são configurar a base de trabalho e gerenciar os acessos.</p>
+            
+            <h3>Cadastros Básicos (Tela de Admin)</h3>
+            <ul>
+                <li><strong>Cargos:</strong> Crie os diferentes cargos da sua equipe (ex: "Eletricista", "Encanador", "Supervisor").</li>
+                <li><strong>Grupos:</strong> Crie os "Grupos de Condomínios" para organizar seus clientes (ex: "Filial Natal", "Clientes Zona Sul").</li>
+                <li><strong>Tipos de Tarefa:</strong> Cadastre as categorias de tarefas (ex: "Manutenção Preventiva", "Orçamento", "Visita Técnica") e associe uma cor a cada uma.</li>
+                <li><strong>Condomínios:</strong> Cadastre seus clientes. Você pode associar cada condomínio a um grupo e também importar uma lista de condomínios em massa usando uma planilha CSV.</li>
+            </ul>
+
+            <h3>Gerenciamento de Usuários</h3>
+            <ul>
+                <li><strong>Criar Usuário:</strong> Na tela "Admin", clique em "+ Novo Usuário", preencha o nome completo, e-mail, cargo e uma senha provisória. O novo usuário poderá logar imediatamente.</li>
+                <li><strong>Editar Usuário:</strong> Permite alterar o nome e o cargo de um usuário, além de associá-lo a um ou mais "Grupos de Condomínios".</li>
+                <li><strong>Desativar/Reativar:</strong> Um usuário desativado não consegue mais acessar o sistema, mas seu histórico de tarefas é mantido.</li>
+            </ul>
+
+            
+        </section>
+
+        <hr>
+
+        <section id="user-instructions">
+            <h2>Para Gerentes e Outros Usuários</h2>
+            <p>Seu foco é a execução e o gerenciamento das tarefas do dia a dia.</p>
+            
+            <h3>Tela de Tarefas</h3>
+            <ul>
+                <li><strong>Criar Tarefa:</strong> Preencha o formulário para criar uma nova tarefa. Você pode designá-la para si mesmo ou para outro colega, dependendo da sua permissão.</li>
+                <li><strong>Filtros:</strong> Use a barra de filtros para encontrar tarefas por status (Ativas, Concluídas, etc.), tipo, responsável, condomínio ou período.</li>
+                <li><strong>Ações da Tarefa:</strong> Em cada tarefa, você pode clicar em "Editar" para alterar seus detalhes, "Concluir" para finalizá-la ou "Excluir" para removê-la da lista principal.</li>
+            </ul>
+
+            <h3>Tela de Dashboard</h3>
+            <ul>
+                <li>Acesse o Dashboard para ter uma visão geral e rápida da situação das suas tarefas, com gráficos que mostram o total de tarefas por status e por condomínio.</li>
+            </ul>
+
+            <h3>Segurança da Conta</h3>
+            <ul>
+                <li><strong>Alterar Senha:</strong> No topo da página, clique em "Alterar Senha" para definir uma nova senha de acesso a qualquer momento.</li>
+                <li><strong>Esqueci Minha Senha:</strong> Na tela de login, caso esqueça sua senha, use o link "Esqueci minha senha" para receber um e-mail de redefinição.</li>
+            </ul>
+        </section>
+
+        <p style="margin-top: 2rem; text-align: center;">
+            <a href="index.html">Voltar para o Aplicativo</a>
+        </p>
+    </div>
+</body>
+</html>
