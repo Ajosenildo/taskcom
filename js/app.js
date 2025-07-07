@@ -382,6 +382,7 @@ async function handleToggleUserStatus(userId) {
 }
 
 async function handleOpenEditUserModal(userId) {
+    // 1. Encontra o usuário que queremos editar na nossa lista 'state'
     const userToEdit = state.allUsers.find(u => u.id === userId);
     if (!userToEdit) {
         console.error("Usuário não encontrado para edição.");
@@ -389,14 +390,19 @@ async function handleOpenEditUserModal(userId) {
     }
 
     try {
-        // Busca os cargos e as associações de grupo do usuário em paralelo
+        // 2. Busca, em paralelo, a lista de cargos e as associações de grupo deste usuário
         const [cargos, groupAssignments] = await Promise.all([
             api.fetchRoles(),
             api.fetchUserGroupAssignments(userId)
         ]);
         
-        // Envia todas as informações necessárias para a função da UI
-        ui.openEditUserModal(userToEdit, cargos, state.allGroups, groupAssignments);
+        // 3. Chama a função da UI, entregando todas as informações necessárias
+        ui.openEditUserModal(
+            userToEdit, 
+            cargos, 
+            state.allGroups,      // A lista de todos os grupos
+            groupAssignments      // A lista de IDs de grupo aos quais o usuário pertence
+        );
 
     } catch (error) {
         alert("Não foi possível carregar os dados para edição: " + error.message);
@@ -894,19 +900,22 @@ async function handleCreateOrUpdateCargo(event) {
     }
 }
 
-function handleEditCargo(cargoId, cargoName) {
-    // Primeiro, busca o objeto 'cargo' completo na nossa lista 'state.allCargos'
+function handleEditCargo(cargoId) {
+    // Busca o objeto 'cargo' completo na nossa lista 'state.allCargos'
     const cargo = state.allCargos.find(c => c.id === cargoId);
     if (!cargo) {
         console.error("Cargo não encontrado para edição:", cargoId);
         return;
     }
 
-    // Agora, com o objeto 'cargo' completo, preenche o formulário
+    // Preenche os campos do formulário com os dados do cargo
     document.getElementById('cargo-id').value = cargo.id;
     document.getElementById('cargo-nome').value = cargo.nome_cargo;
-    document.getElementById('cargo-is-admin').checked = cargo.is_admin; // Esta linha agora funciona
+    
+    // CORREÇÃO: Altera o texto do botão para "Salvar Alterações"
     document.getElementById('cargo-submit-btn').textContent = 'Salvar Alterações';
+    
+    // Move o foco do cursor para o campo de nome para facilitar a edição
     document.getElementById('cargo-nome').focus();
 }
 
