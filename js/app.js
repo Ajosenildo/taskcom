@@ -129,7 +129,7 @@ function renderAll() {
 
 
 // --- FUNÇÕES DE MANIPULAÇÃO DE DADOS (Handlers) ---
-async function handleCreateTask(event) {
+/* async function handleCreateTask(event) {
     event.preventDefault();
     const form = event.target;
     const condominioId = document.getElementById('task-condominio').value;
@@ -169,7 +169,122 @@ async function handleCreateTask(event) {
     } catch(error) {
         alert('Erro ao criar tarefa: ' + error.message);
     }
+}*/
+
+/* async function handleCreateTask(event) {
+    event.preventDefault();
+    const form = event.target;
+
+    // --- ESPIÕES DE DEPURAÇÃO ---
+    console.log("--- Depurando Criação de Tarefa ---");
+    
+    const title = form.elements['task-title'].value;
+    console.log("Título:", title);
+
+    const assigneeId = form.elements['task-assignee'].value;
+    console.log("ID do Responsável:", assigneeId);
+    
+    const typeId = form.elements['task-type'].value;
+    console.log("ID do Tipo:", typeId);
+
+    const condominioId = document.getElementById('task-condominio').value;
+    console.log("ID do Condomínio:", condominioId);
+
+    const dueDate = form.elements['task-due-date'].value;
+    console.log("Data de Conclusão:", dueDate);
+    console.log("---------------------------------");
+    
+    // --- Validação ---
+    if (!title || !typeId || !condominioId || !dueDate || !assigneeId) {
+        alert('Todos os campos obrigatórios precisam ser preenchidos para criar a tarefa.');
+        console.error("Validação falhou. Um dos campos está vazio.");
+        return; 
+    }
+
+    try {
+        await api.createTaskInDB({
+            titulo: title,
+            descricao: form.elements['task-desc'].value,
+            data_conclusao_prevista: dueDate,
+            condominio_id: parseInt(condominioId),
+            tipo_tarefa_id: parseInt(typeId),
+            status: form.elements['create-as-completed'].checked ? 'completed' : 'pending',
+            criador_id: state.currentUserProfile.id,
+            responsavel_id: assigneeId,
+            empresa_id: state.currentUserProfile.empresa_id
+        });
+
+        if (form.elements['save-as-template'].checked) {
+            await api.createTemplateInDB({
+                titulo: title,
+                tipo_tarefa_id: parseInt(typeId),
+                empresa_id: state.currentUserProfile.empresa_id,
+                criador_id: state.currentUserProfile.id
+            });
+        }
+        form.reset();
+        document.getElementById('task-condo-search').value = '';
+        initializeApp();
+        alert('Tarefa criada com sucesso!');
+    } catch(error) {
+        alert('Erro ao criar tarefa: ' + error.message);
+    }
+}*/
+
+async function handleCreateTask(event) {
+    event.preventDefault();
+    const form = event.target;
+
+    // Coleta os valores de todos os campos do formulário
+    const title = form.elements['task-title'].value.trim();
+    const assigneeId = form.elements['task-assignee'].value;
+    const typeId = form.elements['task-type'].value;
+    const condominioId = document.getElementById('task-condominio').value;
+    const dueDate = form.elements['task-due-date'].value;
+
+    // Validação para garantir que nenhum campo obrigatório esteja vazio
+    if (!title || !typeId || !condominioId || !dueDate || !assigneeId) {
+        return alert('Todos os campos obrigatórios (Título, Designar para, Tipo, Condomínio, Data) precisam ser preenchidos.');
+    }
+
+    try {
+        // Monta o objeto de dados da tarefa para enviar ao banco
+        const taskData = {
+            titulo: title,
+            descricao: form.elements['task-desc'].value,
+            data_conclusao_prevista: dueDate,
+            condominio_id: parseInt(condominioId),
+            tipo_tarefa_id: parseInt(typeId),
+            status: form.elements['create-as-completed'].checked ? 'completed' : 'pending',
+            criador_id: state.currentUserProfile.id,
+            responsavel_id: assigneeId,
+            empresa_id: state.currentUserProfile.empresa_id
+        };
+
+        // Envia os dados para a API
+        await api.createTaskInDB(taskData);
+
+        // Opcional: Salva como modelo se a caixa estiver marcada
+        if (form.elements['save-as-template'].checked) {
+            await api.createTemplateInDB({
+                titulo: title,
+                tipo_tarefa_id: parseInt(typeId),
+                empresa_id: state.currentUserProfile.empresa_id,
+                criador_id: state.currentUserProfile.id
+            });
+        }
+
+        form.reset();
+        document.getElementById('task-condo-search').value = ''; // Limpa o campo de busca de condomínio
+        initializeApp();
+        alert('Tarefa criada com sucesso!');
+
+    } catch(error) {
+        console.error('Erro ao criar tarefa:', error);
+        alert('Erro ao criar tarefa: ' + error.message);
+    }
 }
+
 
 function handleViewChange(event) {
     // Pega o ID da view para a qual estamos navegando (ex: 'dashboard-view')
@@ -489,7 +604,8 @@ async function handleCreateOrUpdateTaskType(event) {
     const typeId = form.elements['task-type-id'].value;
     const typeData = {
         nome_tipo: form.elements['task-type-nome'].value.trim(),
-        cor: form.elements['task-type-cor'].value
+        cor: form.elements['task-type-cor'].value,
+        empresa_id: state.currentUserProfile.empresa_id // <-- Adiciona o ID da empresa
     };
 
     if (!typeData.nome_tipo) {
@@ -665,7 +781,7 @@ async function handleForgotPassword(event) {
     const toggleBtn = document.getElementById('toggle-password');
     const isHidden = passwordInput.type === 'password';
     passwordInput.type = isHidden ? 'text' : 'password';
-    toggleBtn.textContent = isHidden ? '🙈' : ' 👁️'; // Ícones diferentes para alternar
+    toggleBtn.textContent = isHidden ? '👁️' : '🙈'; // Ícones diferentes para alternar
     });
 
     // Navegação Principal
@@ -872,9 +988,9 @@ async function handleCreateOrUpdateCargo(event) {
     event.preventDefault();
     const form = event.target;
     const cargoId = form.elements['cargo-id'].value;
-    // Agora só nos preocupamos com o nome do cargo
     const cargoData = {
-        nome_cargo: form.elements['cargo-nome'].value
+        nome_cargo: form.elements['cargo-nome'].value,
+        empresa_id: state.currentUserProfile.empresa_id // <-- Adiciona o ID da empresa
     };
 
     if (!cargoData.nome_cargo) {
@@ -1146,7 +1262,7 @@ window.onload = () => {
         }
     });*/
 
-    supabaseClient.auth.onAuthStateChange(async (event, session) => {
+  /*  supabaseClient.auth.onAuthStateChange(async (event, session) => {
   // console.log("[Auth] Estado mudou:", event, session);
 
   if (session) {
@@ -1159,6 +1275,47 @@ window.onload = () => {
         ui.show('main-container');
         ui.showView('tasks-view');
         ui.setupRoleBasedUI(sessionOk.profile);
+
+        await initializeApp();
+      } else {
+        // console.warn("[Auth] Sessão inválida:", sessionOk.status);
+        logout();
+      }
+
+    } catch (err) {
+      // console.error("[Auth] Erro ao validar sessão:", err);
+      logout();
+    }
+
+  } else {
+    // console.log("[Auth] Nenhuma sessão ativa");
+    appInitialized = false;
+    sessionStorage.clear();
+    ui.show('login-screen');
+  }
+    });
+}; */
+
+supabaseClient.auth.onAuthStateChange(async (event, session) => {
+  // console.log("[Auth] Estado mudou:", event, session);
+
+  if (session) {
+    try {
+      const sessionOk = await checkSession();
+
+      if (sessionOk.status === 'ACTIVE') {
+        appInitialized = true;
+
+        //if (sessionOk.profile?.cargo?.nome === 'Administrador') {
+        //
+        if (sessionOk.profile?.cargo?.is_admin) {
+        ui.showAdminFeatures();
+        // ui.setupRoleBasedUI(); // ou ui.setupRoleBasedUI()
+    }
+
+        ui.show('main-container');
+        ui.showView('tasks-view');
+     //   ui.setupRoleBasedUI(sessionOk.profile);
 
         await initializeApp();
       } else {

@@ -105,6 +105,7 @@ export async function bulkInsertCondos(condosToInsert) {
 
 // --- FUNÇÕES DE TIPOS DE TAREFA ---
 export async function createTaskTypeInDB(newTaskTypeData) {
+    // A função já recebe a empresa_id do app.js
     const { error } = await supabaseClient.from('tipos_tarefa').insert(newTaskTypeData);
     if (error) throw error;
 }
@@ -124,6 +125,7 @@ export async function fetchRoles() {
     return data || [];
 }
 export async function createCargoInDB(newCargoData) {
+    // A função já recebe a empresa_id do app.js
     const { error } = await supabaseClient.from('cargos').insert(newCargoData);
     if (error) throw error;
 }

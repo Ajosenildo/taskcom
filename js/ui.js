@@ -28,7 +28,7 @@ export function setupRoleBasedUI(currentUserProfile) {
     
     // CORREÇÃO: Usamos 'block' ou 'flex' para exibir os elementos, 
     // e 'none' para escondê-los. É mais direto e garantido.
-    if (currentUserProfile && currentUserProfile.cargo_id === 1) {
+    if (currentUserProfile && currentUserProfile.cargo?.is_admin) {
         // Se for admin, mostra os botões/seções de admin
         adminFeatures.forEach(el => {
             el.style.display = 'flex'; // ou 'block', dependendo do elemento
@@ -116,9 +116,7 @@ export function populateDropdowns(CONDOMINIOS, TASK_TYPES, allUsers, allGroups) 
             option.textContent = group.nome_grupo;
             filterGroupSelect.appendChild(option);
         });
-    }
-
-    
+    }  
 
     const assigneeElements = [createTaskAssigneeSelect, filterAssigneeSelect];
     assigneeElements.forEach(select => {

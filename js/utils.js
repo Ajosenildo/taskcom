@@ -1,17 +1,26 @@
 // Substitua todo o conteúdo de js/utils.js
 
-// Função auxiliar para calcular o status visual de uma tarefa
+// Função auxiliar para calcular o status visual de uma tarefa, AGORA COM DIAS DE ATRASO
 function getVisualStatus(task, STATUSES) {
     if (!task || !task.status) return null;
-    if (task.status === 'completed') return STATUSES.completed;
-    if (task.status === 'deleted') return STATUSES.deleted;
+
+    if (task.status === 'completed') return { status: STATUSES.completed, days: 0 };
+    if (task.status === 'deleted') return { status: STATUSES.deleted, days: 0 };
+
     if (task.status === 'pending') {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        // Garante que a data seja tratada corretamente
+
         const dateParts = task.data_conclusao_prevista.split('-');
         const dueDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
-        return dueDate < today ? STATUSES.overdue : STATUSES.in_progress;
+
+        if (dueDate < today) {
+            const diffTime = today - dueDate;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return { status: STATUSES.overdue, days: diffDays };
+        } else {
+            return { status: STATUSES.in_progress, days: 0 };
+        }
     }
     return null;
 }
@@ -39,19 +48,16 @@ export function exportTasksToPDF(tasksToExport, CONDOMINIOS, TASK_TYPES, STATUSE
     // --- CABEÇALHO DO RELATÓRIO ---
     let finalY = 15;
     
-    // Título Principal
     doc.setFontSize(18).setFont(undefined, 'bold');
     doc.text("Relatório de Tarefas - TaskCom", 14, finalY);
     finalY += 7;
 
-    // Nome da Empresa (logo abaixo)
     if (empresaNome) {
         doc.setFontSize(14).setFont(undefined, 'normal');
         doc.text(empresaNome, 14, finalY);
         finalY += 8;
     }
     
-    // Nome do Responsável (se for um relatório específico)
     if (reportOwnerName) {
         doc.setFontSize(11).setFont(undefined, 'italic');
         doc.setTextColor(100);
@@ -59,32 +65,40 @@ export function exportTasksToPDF(tasksToExport, CONDOMINIOS, TASK_TYPES, STATUSE
         finalY += 6;
     }
     
-    // Data de Emissão
     doc.setFontSize(11).setFont(undefined, 'normal');
     doc.setTextColor(100);
     doc.text(`Data de Emissão: ${new Date().toLocaleDateString('pt-BR')}`, 14, finalY);
 
-    // --- COLUNAS DA TABELA (DINÂMICO) ---
+    // --- COLUNAS DA TABELA ---
     const head = [['ID', 'Título', 'Tipo', 'Condomínio', 'Status', 'Concluir Até']];
-    // Se o relatório NÃO for de um usuário específico (gerado pelo admin), mostra a coluna "Responsável"
     if (!reportOwnerName) {
         head[0].splice(4, 0, 'Responsável');
     }
     if (includeDesc) head[0].push('Descrição');
     if (includeHistory) head[0].push('Histórico');
 
-    // --- CORPO DA TABELA (DINÂMICO) ---
+    // --- CORPO DA TABELA ---
     const body = tasksToExport
         .filter(task => task)
         .map(task => {
             const taskType = TASK_TYPES.find(t => t.id == task.tipo_tarefa_id)?.nome_tipo || 'N/A';
             const condo = CONDOMINIOS.find(c => c.id == task.condominio_id);
             const condoDisplayName = condo ? (condo.nome_fantasia || condo.nome) : 'N/A';
-            const visualStatus = getVisualStatus(task, STATUSES);
+            
+            // --- LÓGICA DO STATUS PARA O PDF ---
+            const visualStatusInfo = getVisualStatus(task, STATUSES);
+            let statusText = 'N/A';
+            if (visualStatusInfo) {
+                statusText = visualStatusInfo.status.text; // Usa a propriedade 'status' do objeto
+                if (visualStatusInfo.status.key === 'overdue' && visualStatusInfo.days > 0) {
+                    statusText += ` (${visualStatusInfo.days} dia${visualStatusInfo.days > 1 ? 's' : ''})`;
+                }
+            }
+            // --- FIM DA LÓGICA DO STATUS ---
 
             let row = [
                 task.id, task.titulo, taskType, condoDisplayName,
-                visualStatus ? visualStatus.text : 'N/A',
+                statusText, // <-- AQUI entra a variável com o texto completo
                 new Date(task.data_conclusao_prevista).toLocaleDateString('pt-BR', {timeZone: 'UTC'})
             ];
 
@@ -114,5 +128,5 @@ export function exportTasksToPDF(tasksToExport, CONDOMINIOS, TASK_TYPES, STATUSE
         headStyles: { fillColor: [30, 58, 138] }
     });
 
-    doc.save(`relatorio-taskond-${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`relatorio-taskcom-${new Date().toISOString().split('T')[0]}.pdf`);
 }

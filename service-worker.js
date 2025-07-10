@@ -1,4 +1,4 @@
-const CACHE_NAME = "taskond-cache-v2"; // Nome do cache atualizado
+const CACHE_NAME = "taskcom-cache-v2"; // Nome do cache atualizado
 const urlsToCache = [
   "/",
   "/index.html",

@@ -25,7 +25,9 @@ export async function checkSession() {
 
     const { data: userProfile, error } = await supabaseClient
       .from("usuarios")
-      .select("*, empresa:empresa_id(nome_empresa)")
+      .select("*, cargo: cargo_id (nome_cargo, is_admin), empresa:empresa_id (nome_empresa)")
+      // .select("*, empresa:empresa_id(nome_empresa), cargo: cargo_id (nome_cargo, is_admin)")
+      //.select("*, empresa:empresa_id(nome_empresa)")
       .eq("id", user.id)
       .single();
 
