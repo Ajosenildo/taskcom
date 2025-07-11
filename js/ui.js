@@ -1,5 +1,3 @@
-// js/ui.js (Versão Final e Corrigida)
-
 export function show(screenId) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('is-visible'));
     const screenToShow = document.getElementById(screenId);
@@ -26,15 +24,11 @@ export function showView(viewId) {
 export function setupRoleBasedUI(currentUserProfile) {
     const adminFeatures = document.querySelectorAll('.admin-feature');
     
-    // CORREÇÃO: Usamos 'block' ou 'flex' para exibir os elementos, 
-    // e 'none' para escondê-los. É mais direto e garantido.
     if (currentUserProfile && currentUserProfile.cargo?.is_admin) {
-        // Se for admin, mostra os botões/seções de admin
         adminFeatures.forEach(el => {
-            el.style.display = 'flex'; // ou 'block', dependendo do elemento
+            el.style.display = 'flex';
         });
     } else {
-        // Se não for admin, esconde
         adminFeatures.forEach(el => {
             el.style.display = 'none';
         });
@@ -78,8 +72,6 @@ export function populateDropdowns(CONDOMINIOS, TASK_TYPES, allUsers, allGroups) 
 
     if (filterAssigneeSelect) {
         filterAssigneeSelect.innerHTML = '<option value="">Todos</option>';
-        // CORREÇÃO: Removemos o 'if (user.cargo_id === 2)'
-        // para que todos os usuários apareçam na lista de filtro.
         allUsers.forEach(user => {
             const option = document.createElement('option');
             option.value = user.id;
@@ -132,7 +124,6 @@ export function populateDropdowns(CONDOMINIOS, TASK_TYPES, allUsers, allGroups) 
                 option.textContent = user.nome_completo;
                 select.appendChild(option);
             });
-            // No formulário de criação, o padrão é a tarefa ser para si mesmo
             if (select.id === 'task-assignee' && currentUserId) {
                 select.value = currentUserId;
             }
@@ -152,25 +143,24 @@ export function populateTemplatesDropdown(taskTemplates) {
     });
 }
 
+// --- LÓGICA DE MODAIS ATUALIZADA ---
+
 export function openEditModal(task, allUsers, currentUserProfile) {
     const modal = document.getElementById('edit-task-modal');
     if (!task || !modal) return;
 
-    // A lógica de delegação (quem pode alterar o responsável) continua a mesma
-    const canDelegate = (currentUserProfile && currentUserProfile.cargo_id === 1) || (currentUserProfile.id === task.criador_id);
+    const canDelegate = (currentUserProfile && currentUserProfile.cargo?.is_admin) || (currentUserProfile.id === task.criador_id);
 
     document.getElementById('edit-task-id').value = task.id;
     document.getElementById('edit-task-title').value = task.titulo;
     document.getElementById('edit-task-desc').value = task.descricao;
     document.getElementById('edit-task-due-date').value = task.data_conclusao_prevista;
     document.getElementById('edit-task-type').value = task.tipo_tarefa_id;
-    document.getElementById('edit-task-condominio').value = task.condominio_id; // Este continua um select normal por enquanto
+    document.getElementById('edit-task-condominio').value = task.condominio_id;
     document.getElementById('edit-task-condominio').disabled = true;
 
     const assigneeSelect = document.getElementById('edit-task-assignee');
     assigneeSelect.innerHTML = '';
-
-    // CORREÇÃO: Removemos o filtro de 'cargo_id', agora todos os usuários aparecem na lista
     allUsers.forEach(u => {
         const option = document.createElement('option');
         option.value = u.id;
@@ -181,16 +171,21 @@ export function openEditModal(task, allUsers, currentUserProfile) {
     assigneeSelect.value = task.responsavel_id;
     assigneeSelect.disabled = !canDelegate;
 
-    modal.classList.add('is-visible');
+    // CORREÇÃO: Usando style.display para garantir que o modal seja exibido.
+    modal.style.display = 'flex';
 }
 
 export function closeEditModal() {
-    document.getElementById('edit-task-modal').classList.remove('is-visible');
+    // CORREÇÃO: Usando style.display para garantir que o modal seja escondido e não bloqueie cliques.
+    const modal = document.getElementById('edit-task-modal');
+    if (modal) modal.style.display = 'none';
 }
 
 export function openCreateUserModal(cargos) {
     const roleSelect = document.getElementById('create-user-role');
-    if (!roleSelect) return;
+    const modal = document.getElementById('create-user-modal');
+    if (!roleSelect || !modal) return;
+    
     roleSelect.innerHTML = '<option value="">Selecione um cargo...</option>';
     cargos.forEach(cargo => {
         const option = document.createElement('option');
@@ -198,12 +193,12 @@ export function openCreateUserModal(cargos) {
         option.textContent = cargo.nome_cargo;
         roleSelect.appendChild(option);
     });
-    document.getElementById('create-user-modal').classList.add('is-visible');
+    modal.style.display = 'flex';
 }
 
 export function closeCreateUserModal() {
     const modal = document.getElementById('create-user-modal');
-    if (modal) modal.classList.remove('is-visible');
+    if (modal) modal.style.display = 'none';
     const form = document.getElementById('create-user-form');
     if (form) form.reset();
 }
@@ -212,7 +207,6 @@ export function openEditUserModal(user, cargos, todosOsGrupos, gruposDoUsuario) 
     const modal = document.getElementById('edit-user-modal');
     if (!modal || !user) return;
 
-    // Preenche os campos do formulário
     document.getElementById('edit-user-id').value = user.id;
     document.getElementById('edit-user-name').value = user.nome_completo || '';
     document.getElementById('edit-user-email-display').value = user.email || '(email não disponível)';
@@ -220,10 +214,9 @@ export function openEditUserModal(user, cargos, todosOsGrupos, gruposDoUsuario) 
     const roleSelect = document.getElementById('edit-user-role');
     roleSelect.innerHTML = '';
     
-    // Preenche o dropdown de cargos
     if (cargos && cargos.length > 0) {
         cargos.forEach(cargo => {
-            if (cargo.id !== 1) { // Não permite selecionar 'Administrador'
+            if (cargo.id !== 1) {
                 const option = document.createElement('option');
                 option.value = cargo.id;
                 option.textContent = cargo.nome_cargo;
@@ -233,7 +226,6 @@ export function openEditUserModal(user, cargos, todosOsGrupos, gruposDoUsuario) 
     }
     roleSelect.value = user.cargo_id;
 
-    // LÓGICA CORRIGIDA: Preenche os checkboxes de grupos
     const groupsListDiv = document.getElementById('edit-user-groups-list');
     groupsListDiv.innerHTML = '';
     if (todosOsGrupos && todosOsGrupos.length > 0) {
@@ -251,14 +243,65 @@ export function openEditUserModal(user, cargos, todosOsGrupos, gruposDoUsuario) 
         groupsListDiv.innerHTML = '<p><small>Nenhum grupo cadastrado no sistema.</small></p>';
     }
     
-    // Mostra o modal
-    modal.classList.add('is-visible');
+    modal.style.display = 'flex';
 }
 
 export function closeEditUserModal() {
-    document.getElementById('edit-user-modal').classList.remove('is-visible');
+    const modal = document.getElementById('edit-user-modal');
+    if (modal) modal.style.display = 'none';
 }
 
+export function openCreateCondoModal(allGroups) {
+    const modal = document.getElementById('create-condo-modal');
+    if (!modal) return;
+
+    const groupSelect = document.getElementById('create-condo-group');
+    groupSelect.innerHTML = '<option value="">Nenhum</option>';
+    allGroups.forEach(group => {
+        const option = document.createElement('option');
+        option.value = group.id;
+        option.textContent = group.nome_grupo;
+        groupSelect.appendChild(option);
+    });
+    
+    modal.style.display = 'flex';
+}
+
+export function closeCreateCondoModal() {
+    const modal = document.getElementById('create-condo-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+export function openEditCondoModal(condo, todosGrupos) {
+    const modal = document.getElementById('edit-condo-modal');
+    if (!modal) return;
+
+    document.getElementById('edit-condo-id').value = condo.id;
+    document.getElementById('edit-condo-nome').value = condo.nome;
+    document.getElementById('edit-condo-nome-fantasia').value = condo.nome_fantasia;
+    document.getElementById('edit-condo-cnpj').value = condo.cnpj || '';
+
+    const groupSelect = document.getElementById('edit-condo-group');
+    groupSelect.innerHTML = '<option value="">Nenhum</option>'; 
+
+    todosGrupos.forEach(group => {
+        const option = document.createElement('option');
+        option.value = group.id;
+        option.textContent = group.nome_grupo;
+        groupSelect.appendChild(option);
+    });
+
+    groupSelect.value = condo.grupo_id || "";
+
+    modal.style.display = 'flex';
+}
+
+export function closeEditCondoModal() {
+    const modal = document.getElementById('edit-condo-modal');
+    if(modal) modal.style.display = 'none';
+}
+
+// O restante das funções não precisa de alteração
 export function createSearchableDropdown(inputId, optionsId, hiddenInputId, items, onSelectCallback) {
     const searchInput = document.getElementById(inputId);
     const optionsContainer = document.getElementById(optionsId);
@@ -326,35 +369,11 @@ export function createSearchableDropdown(inputId, optionsId, hiddenInputId, item
     return { clear };
 }
 
-export function setupInstallButton() {
-    let deferredPrompt;
-    const installButton = document.getElementById('install-app-btn');
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        if (installButton) {
-            installButton.style.display = 'block'; // Mostra o botão
-        }
-    });
-
-    if (installButton) {
-        installButton.addEventListener('click', async () => {
-            if (!deferredPrompt) return;
-            installButton.style.display = 'none';
-            deferredPrompt.prompt(); // Mostra o prompt de instalação
-            await deferredPrompt.userChoice;
-            deferredPrompt = null;
-        });
-    }
-}
-
 export function setupPWAInstallHandlers() {
     let deferredPrompt;
     const installButton = document.getElementById('install-app-btn');
     if (!installButton) return;
 
-    // Lógica para Chrome/Desktop
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
@@ -368,7 +387,6 @@ export function setupPWAInstallHandlers() {
         });
     });
 
-    // Lógica para o banner do iOS/Safari
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
     const iosBanner = document.getElementById('ios-install-banner');
@@ -379,59 +397,7 @@ export function setupPWAInstallHandlers() {
     }
     if(closeIOSBannerBtn){
         closeIOSBannerBtn.addEventListener('click', () => {
-            iosBanner.style.display = 'none';
+            if (iosBanner) iosBanner.style.display = 'none';
         });
     }
-}
-
-export function openEditCondoModal(condo, todosGrupos) {
-    const modal = document.getElementById('edit-condo-modal');
-    if (!modal) return;
-
-    // Preenche os dados básicos do condomínio
-    document.getElementById('edit-condo-id').value = condo.id;
-    document.getElementById('edit-condo-nome').value = condo.nome;
-    document.getElementById('edit-condo-nome-fantasia').value = condo.nome_fantasia;
-    document.getElementById('edit-condo-cnpj').value = condo.cnpj || '';
-
-    // Lógica corrigida para popular o seletor de grupos
-    const groupSelect = document.getElementById('edit-condo-group');
-    groupSelect.innerHTML = '<option value="">Nenhum</option>'; // Opção para deixar sem grupo
-
-    // O loop 'forEach' que estava faltando
-    todosGrupos.forEach(group => {
-        const option = document.createElement('option');
-        option.value = group.id;
-        option.textContent = group.nome_grupo;
-        groupSelect.appendChild(option);
-    });
-
-    // Define o grupo atual do condomínio como o selecionado no dropdown
-    groupSelect.value = condo.grupo_id || "";
-
-    modal.classList.add('is-visible');
-}
-
-export function openCreateCondoModal(allGroups) {
-    const modal = document.getElementById('create-condo-modal');
-    if (!modal) return;
-
-    const groupSelect = document.getElementById('create-condo-group');
-    groupSelect.innerHTML = '<option value="">Nenhum</option>'; // Opção para não associar
-    allGroups.forEach(group => {
-        const option = document.createElement('option');
-        option.value = group.id;
-        option.textContent = group.nome_grupo;
-        groupSelect.appendChild(option);
-    });
-    
-    modal.classList.add('is-visible');
-}
-
-export function closeCreateCondoModal() {
-    document.getElementById('create-condo-modal').classList.remove('is-visible');
-}
-// NOVA FUNÇÃO GPT
-export function closeEditCondoModal() {
-  document.getElementById('edit-condo-modal')?.classList.remove('is-visible');
 }

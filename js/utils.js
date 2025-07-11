@@ -1,6 +1,7 @@
-// Substitua todo o conteúdo de js/utils.js
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 
-// Função auxiliar para calcular o status visual de uma tarefa, AGORA COM DIAS DE ATRASO
+// Função auxiliar para calcular o status visual de uma tarefa, incluindo dias de atraso
 function getVisualStatus(task, STATUSES) {
     if (!task || !task.status) return null;
 
@@ -39,69 +40,99 @@ export function createOrUpdateChart(canvasId, type, data, chartInstances, instan
 }
 
 // Função para exportar as tarefas para PDF
-export function exportTasksToPDF(tasksToExport, CONDOMINIOS, TASK_TYPES, STATUSES, includeDesc, includeHistory, historyData, reportOwnerName = null, empresaNome = 'Relatório Geral') {
+export async function exportTasksToPDF(tasksToExport, CONDOMINIOS, TASK_TYPES, STATUSES, includeDesc, includeHistory, reportOwnerName = null, empresaNome = 'Relatório Geral', emitterName = 'N/A') {
     const { jsPDF } = window.jspdf;
+    
+    let historyData = [];
+    if (includeHistory) {
+        const taskIds = tasksToExport.filter(task => task).map(t => t.id);
+        if (taskIds.length > 0) {
+            try {
+                // --- CORREÇÃO FINAL ---
+                // Ao criar o cliente temporário, especificamos que ele deve usar o 'sessionStorage',
+                // assim como o cliente principal da aplicação. Isso garante que ele encontre a sessão ativa.
+                const tempSupabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+                    auth: {
+                        storage: sessionStorage,
+                    },
+                });
+
+                // Agora, a chamada getSession() encontrará a sessão correta.
+                const { data: { session } } = await tempSupabaseClient.auth.getSession();
+
+                if (!session?.access_token) throw new Error("Token de acesso não encontrado. Não é possível buscar o histórico.");
+
+                const { data, error } = await tempSupabaseClient
+                    .rpc('get_history_for_tasks', { task_ids: taskIds });
+                    // Não precisamos mais do .auth(token) porque o cliente já está ciente da sessão.
+
+                if (error) throw error;
+                historyData = data || [];
+
+            } catch (error) {
+                console.error("Falha ao buscar histórico dentro de utils.js:", error);
+                alert("Não foi possível buscar o histórico das tarefas para o PDF: " + error.message);
+                return; 
+            }
+        }
+    }
     
     const orientation = (includeDesc || includeHistory) ? 'landscape' : 'portrait';
     const doc = new jsPDF({ orientation });
 
-    // --- CABEÇALHO DO RELATÓRIO ---
+    // O resto da função continua exatamente igual...
     let finalY = 15;
-    
     doc.setFontSize(18).setFont(undefined, 'bold');
     doc.text("Relatório de Tarefas - TaskCom", 14, finalY);
     finalY += 7;
-
     if (empresaNome) {
         doc.setFontSize(14).setFont(undefined, 'normal');
         doc.text(empresaNome, 14, finalY);
         finalY += 8;
     }
-    
+    doc.setFontSize(11).setFont(undefined, 'italic');
+    doc.setTextColor(100);
     if (reportOwnerName) {
-        doc.setFontSize(11).setFont(undefined, 'italic');
-        doc.setTextColor(100);
         doc.text(`Relatório de: ${reportOwnerName}`, 14, finalY);
-        finalY += 6;
+    } else {
+        doc.text(`Relatório emitido por: ${emitterName}`, 14, finalY);
     }
+    finalY += 6;
     
     doc.setFontSize(11).setFont(undefined, 'normal');
     doc.setTextColor(100);
     doc.text(`Data de Emissão: ${new Date().toLocaleDateString('pt-BR')}`, 14, finalY);
 
-    // --- COLUNAS DA TABELA ---
     const head = [['ID', 'Título', 'Tipo', 'Condomínio', 'Status', 'Concluir Até']];
     if (!reportOwnerName) {
         head[0].splice(4, 0, 'Responsável');
     }
-    if (includeDesc) head[0].push('Descrição');
-    if (includeHistory) head[0].push('Histórico');
+    if (includeDesc) {
+        head[0].push('Descrição');
+    }
+    if (includeHistory) {
+        head[0].push('Histórico');
+    }
 
-    // --- CORPO DA TABELA ---
     const body = tasksToExport
         .filter(task => task)
         .map(task => {
             const taskType = TASK_TYPES.find(t => t.id == task.tipo_tarefa_id)?.nome_tipo || 'N/A';
             const condo = CONDOMINIOS.find(c => c.id == task.condominio_id);
             const condoDisplayName = condo ? (condo.nome_fantasia || condo.nome) : 'N/A';
-            
-            // --- LÓGICA DO STATUS PARA O PDF ---
             const visualStatusInfo = getVisualStatus(task, STATUSES);
             let statusText = 'N/A';
             if (visualStatusInfo) {
-                statusText = visualStatusInfo.status.text; // Usa a propriedade 'status' do objeto
+                statusText = visualStatusInfo.status.text;
                 if (visualStatusInfo.status.key === 'overdue' && visualStatusInfo.days > 0) {
                     statusText += ` (${visualStatusInfo.days} dia${visualStatusInfo.days > 1 ? 's' : ''})`;
                 }
             }
-            // --- FIM DA LÓGICA DO STATUS ---
-
             let row = [
                 task.id, task.titulo, taskType, condoDisplayName,
-                statusText, // <-- AQUI entra a variável com o texto completo
+                statusText,
                 new Date(task.data_conclusao_prevista).toLocaleDateString('pt-BR', {timeZone: 'UTC'})
             ];
-
             if (!reportOwnerName) {
                 row.splice(4, 0, task.responsavel?.nome_completo || 'N/A');
             }
@@ -111,9 +142,21 @@ export function exportTasksToPDF(tasksToExport, CONDOMINIOS, TASK_TYPES, STATUSE
             if (includeHistory) {
                 const events = historyData.filter(h => h.tarefa_id === task.id);
                 const historyString = events.map(e => {
-                    const de = e.detalhes?.de || 'Ninguém';
-                    const para = e.detalhes?.para || 'Não definido';
-                    return `${new Date(e.created_at).toLocaleDateString('pt-BR')}: ${e.evento} de ${de} para ${para}`;
+                    const eventDate = new Date(e.created_at).toLocaleDateString('pt-BR');
+                    const userName = e.usuario_nome || 'Sistema';
+                    if (e.evento === 'Criação') {
+                        return `${eventDate}: Tarefa criada por ${userName}`;
+                    }
+                    if (e.evento === 'Re-designação') {
+                        const de = e.detalhes?.de || 'Ninguém';
+                        const para = e.detalhes?.para || 'Não definido';
+                        return `${eventDate}: Re-designado de '${de}' para '${para}' por ${userName}`;
+                    }
+                     if (e.evento === 'Alteração de Status') {
+                        const para = e.detalhes?.para || 'desconhecido';
+                        return `${eventDate}: Status alterado para '${para}' por ${userName}`;
+                    }
+                    return `${eventDate}: ${e.evento} (por ${userName})`;
                 }).join('\n');
                 row.push(historyString || 'Nenhum histórico.');
             }

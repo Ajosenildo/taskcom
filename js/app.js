@@ -126,111 +126,6 @@ function renderAll() {
     render.renderGroupList(state.allGroups);
 }
 
-
-
-// --- FUNÇÕES DE MANIPULAÇÃO DE DADOS (Handlers) ---
-/* async function handleCreateTask(event) {
-    event.preventDefault();
-    const form = event.target;
-    const condominioId = document.getElementById('task-condominio').value;
-    const title = form.elements['task-title'].value;
-    const typeId = form.elements['task-type'].value;
-    const dueDate = form.elements['task-due-date'].value;
-    const assigneeId = form.elements['task-assignee'].value; // <-- Pega o responsável selecionado
-
-    if (!title || !typeId || !condominioId || !dueDate || !assigneeId) {
-        return alert('Todos os campos, exceto descrição, são obrigatórios.');
-    }
-
-    try {
-        await api.createTaskInDB({
-            titulo: title,
-            descricao: form.elements['task-desc'].value,
-            data_conclusao_prevista: dueDate,
-            condominio_id: parseInt(condominioId),
-            tipo_tarefa_id: parseInt(typeId),
-            status: form.elements['create-as-completed'].checked ? 'completed' : 'pending',
-            criador_id: state.currentUserProfile.id,
-            responsavel_id: assigneeId, // <-- CORREÇÃO: Salva o responsável correto
-            empresa_id: state.currentUserProfile.empresa_id
-        });
-
-        if (form.elements['save-as-template'].checked) {
-            await api.createTemplateInDB({
-                titulo: title,
-                tipo_tarefa_id: parseInt(typeId),
-                empresa_id: state.currentUserProfile.empresa_id,
-                criador_id: state.currentUserProfile.id
-            });
-        }
-        form.reset();
-        document.getElementById('task-condo-search').value = '';
-        initializeApp();
-    } catch(error) {
-        alert('Erro ao criar tarefa: ' + error.message);
-    }
-}*/
-
-/* async function handleCreateTask(event) {
-    event.preventDefault();
-    const form = event.target;
-
-    // --- ESPIÕES DE DEPURAÇÃO ---
-    console.log("--- Depurando Criação de Tarefa ---");
-    
-    const title = form.elements['task-title'].value;
-    console.log("Título:", title);
-
-    const assigneeId = form.elements['task-assignee'].value;
-    console.log("ID do Responsável:", assigneeId);
-    
-    const typeId = form.elements['task-type'].value;
-    console.log("ID do Tipo:", typeId);
-
-    const condominioId = document.getElementById('task-condominio').value;
-    console.log("ID do Condomínio:", condominioId);
-
-    const dueDate = form.elements['task-due-date'].value;
-    console.log("Data de Conclusão:", dueDate);
-    console.log("---------------------------------");
-    
-    // --- Validação ---
-    if (!title || !typeId || !condominioId || !dueDate || !assigneeId) {
-        alert('Todos os campos obrigatórios precisam ser preenchidos para criar a tarefa.');
-        console.error("Validação falhou. Um dos campos está vazio.");
-        return; 
-    }
-
-    try {
-        await api.createTaskInDB({
-            titulo: title,
-            descricao: form.elements['task-desc'].value,
-            data_conclusao_prevista: dueDate,
-            condominio_id: parseInt(condominioId),
-            tipo_tarefa_id: parseInt(typeId),
-            status: form.elements['create-as-completed'].checked ? 'completed' : 'pending',
-            criador_id: state.currentUserProfile.id,
-            responsavel_id: assigneeId,
-            empresa_id: state.currentUserProfile.empresa_id
-        });
-
-        if (form.elements['save-as-template'].checked) {
-            await api.createTemplateInDB({
-                titulo: title,
-                tipo_tarefa_id: parseInt(typeId),
-                empresa_id: state.currentUserProfile.empresa_id,
-                criador_id: state.currentUserProfile.id
-            });
-        }
-        form.reset();
-        document.getElementById('task-condo-search').value = '';
-        initializeApp();
-        alert('Tarefa criada com sucesso!');
-    } catch(error) {
-        alert('Erro ao criar tarefa: ' + error.message);
-    }
-}*/
-
 async function handleCreateTask(event) {
     event.preventDefault();
     const form = event.target;
@@ -292,22 +187,27 @@ function handleViewChange(event) {
 
     console.log(`Renderizando conteúdo para a view: ${viewId}`);
 
-    // Verifica qual view deve ser renderizada e chama a função correspondente
-    if (viewId === 'dashboard-view') {
-        // Se a nova tela é o Dashboard, renderiza apenas o dashboard
-        render.renderDashboard(state);
-    } else if (viewId === 'admin-view') {
-        // Se a nova tela é a de Admin, renderiza todas as listas de admin
-        render.renderUserList(state.allUsers, state.currentUserProfile, state.allCargos, state.allGroups, state.userGroupAssignments);
-        render.renderCondoList(state.condominios, state.allGroups);
-        render.renderTaskTypeList(state.taskTypes);
-        render.renderCargoList(state.allCargos);
-        render.renderGroupList(state.allGroups);
+    try { // <-- INÍCIO DO BLOCO DE SEGURANÇA
 
-        
+        // Verifica qual view deve ser renderizada e chama a função correspondente
+        if (viewId === 'dashboard-view') {
+            // Se a nova tela é o Dashboard, renderiza apenas o dashboard
+            render.renderDashboard(state);
+        } else if (viewId === 'admin-view') {
+            // Se a nova tela é a de Admin, renderiza todas as listas de admin
+            render.renderUserList(state.allUsers, state.currentUserProfile, state.allCargos, state.allGroups, state.userGroupAssignments);
+            render.renderCondoList(state.condominios, state.allGroups);
+            render.renderTaskTypeList(state.taskTypes);
+            render.renderCargoList(state.allCargos);
+            render.renderGroupList(state.allGroups);
+        }
+        // Se a view for 'tasks-view', a função renderAll() já cuida dela, então não há ação aqui.
+
+    } catch (error) {
+        // Se qualquer erro ocorrer ao tentar renderizar uma das views acima, ele será capturado aqui.
+        console.error(`Erro fatal ao renderizar a view '${viewId}':`, error);
+        alert(`Ocorreu um erro ao tentar exibir a tela '${viewId}'. A aplicação pode se tornar instável. Por favor, atualize a página (F5). Detalhes do erro: ${error.message}`);
     }
-    // Se a view for 'tasks-view', a função renderAll() já cuida dela
-    // quando os filtros são alterados, então não precisamos fazer nada aqui.
 }
 
 async function handleUpdateTask(event) {
@@ -417,7 +317,7 @@ function handleTemplateSelect(e) {
     }
 }
 
-async function handleExportToPDF() {
+/* async function handleExportToPDF() {
     if (state.tasksToDisplayForPdf.length === 0) {
         return alert("Não há tarefas na lista atual para exportar.");
     }
@@ -425,12 +325,13 @@ async function handleExportToPDF() {
     const includeDesc = document.getElementById('pdf-include-desc').checked;
     const includeHistory = document.getElementById('pdf-include-history').checked;
     
-    // Pega o nome da empresa do perfil do usuário logado
     const empresaNome = state.currentUserProfile?.empresa?.nome_empresa || 'Nome da Empresa';
 
     let reportOwnerName = null;
-    // Se o usuário logado NÃO é um admin (cargo_id diferente de 1), o relatório é dele.
-    if (state.currentUserProfile && state.currentUserProfile.cargo_id !== 1) {
+    // CORREÇÃO: A verificação agora usa a flag 'is_admin' do objeto 'cargo'.
+    // A flag 'is_admin' é carregada pela função checkSession() em auth.js.
+    // Se o usuário logado NÃO é um admin, o relatório é dele.
+    if (state.currentUserProfile && !state.currentUserProfile.cargo?.is_admin) {
         reportOwnerName = state.currentUserProfile.nome_completo;
     }
 
@@ -445,7 +346,6 @@ async function handleExportToPDF() {
         }
     }
 
-    // Chama a função de gerar PDF passando todas as novas opções
     utils.exportTasksToPDF(
         state.tasksToDisplayForPdf, 
         state.condominios, 
@@ -457,6 +357,94 @@ async function handleExportToPDF() {
         reportOwnerName,
         empresaNome
     );
+}*/
+
+/* async function handleExportToPDF() {
+    try {
+        if (state.tasksToDisplayForPdf.length === 0) {
+            return alert("Não há tarefas na lista atual para exportar.");
+        }
+
+        const includeDesc = document.getElementById('pdf-include-desc').checked;
+        const includeHistory = document.getElementById('pdf-include-history').checked;
+
+        const empresaNome = state.currentUserProfile?.empresa?.nome_empresa || 'Relatório Geral';
+
+        let reportOwnerName = null;
+        if (state.currentUserProfile && !state.currentUserProfile.cargo?.is_admin) {
+            reportOwnerName = state.currentUserProfile.nome_completo;
+        }
+
+        let historyData = [];
+        if (includeHistory) {
+            const taskIds = state.tasksToDisplayForPdf.filter(task => task).map(t => t.id);
+            if (taskIds.length > 0) {
+                 historyData = await api.fetchHistoryForTasks(taskIds);
+            }
+        }
+
+        // --- SOLUÇÃO DEFINITIVA ---
+        // Criamos cópias profundas dos dados antes de enviá-los para a função de PDF.
+        // Isso impede que a biblioteca modifique nossos dados originais no 'state'.
+        const tasksCopy = JSON.parse(JSON.stringify(state.tasksToDisplayForPdf));
+        const historyCopy = JSON.parse(JSON.stringify(historyData));
+
+        utils.exportTasksToPDF(
+            tasksCopy, // Enviando a cópia das tarefas
+            state.condominios,
+            state.taskTypes,
+            state.STATUSES,
+            includeDesc,
+            includeHistory,
+            historyCopy, // Enviando a cópia do histórico
+            reportOwnerName,
+            empresaNome
+        );
+
+    } catch (error) {
+        console.error("ERRO CRÍTICO ao tentar gerar o PDF:", error);
+        alert("Ocorreu um erro crítico ao gerar o PDF. Verifique o console (F12) para detalhes. Mensagem: " + error.message);
+    }
+}*/
+
+async function handleExportToPDF() {
+    try {
+        // A função agora é mais simples. Ela não busca mais o histórico.
+        // Ela apenas reúne os parâmetros e chama a função em utils.js.
+
+        if (state.tasksToDisplayForPdf.length === 0) {
+            return alert("Não há tarefas na lista atual para exportar.");
+        }
+
+        const includeDesc = document.getElementById('pdf-include-desc').checked;
+        const includeHistory = document.getElementById('pdf-include-history').checked;
+
+        const empresaNome = state.currentUserProfile?.empresa?.nome_empresa || 'Relatório Geral';
+
+        let reportOwnerName = null;
+        if (state.currentUserProfile && !state.currentUserProfile.cargo?.is_admin) {
+            reportOwnerName = state.currentUserProfile.nome_completo;
+        }
+        
+        const emitterName = state.currentUserProfile?.nome_completo || 'Usuário Desconhecido';
+        // A chamada agora tem um 'await' porque a função no utils.js se tornará assíncrona.
+        await utils.exportTasksToPDF(
+            state.tasksToDisplayForPdf,
+            state.condominios,
+            state.taskTypes,
+            state.STATUSES,
+            includeDesc,
+            includeHistory,
+            // Não passamos mais o 'historyData' daqui
+            reportOwnerName,
+            empresaNome,
+            emitterName // <-- NOVO PARÂMETRO: Enviando o nome do emissor.
+        );
+
+    } catch (error) {
+        console.error("ERRO CRÍTICO ao tentar gerar o PDF:", error);
+        alert("Ocorreu um erro crítico ao gerar o PDF. Verifique o console (F12) para detalhes. Mensagem: " + error.message);
+    }
 }
 
 async function handleUpdateUser(event) {
@@ -1229,73 +1217,7 @@ window.onload = () => {
     // A configuração dos listeners do PWA e outros já está aqui, o que está correto
     ui.setupPWAInstallHandlers();
     setupEventListeners();
-
-    /* supabaseClient.auth.onAuthStateChange(async (event, session) => {
-         callback: async () => {
-        console.log("Evento:", _event); // <-- ERRO! _event não foi definido aqui
-        }
-        if (event === 'PASSWORD_RECOVERY' && session) {
-            return ui.show('set-password-screen');
-        }
-        
-        if (session) {
-            if (appInitialized) return;
-            
-            const sessionState = await checkSession();
-            
-            if (sessionState.status === 'ACTIVE') {
-                appInitialized = true;
-                state.currentUserProfile = sessionState.userProfile;
-                
-                ui.show('main-container');
-                // CORREÇÃO: Garante que a view de tarefas seja exibida por padrão
-                ui.showView('tasks-view'); 
-                initializeApp();
-            } else {
-                logout();
-            }
-        } else {
-            appInitialized = false;
-            sessionStorage.clear();
-            ui.show('login-screen');
-            console.log("[Auth] Nenhuma sessão ativa");
-        }
-    });*/
-
-  /*  supabaseClient.auth.onAuthStateChange(async (event, session) => {
-  // console.log("[Auth] Estado mudou:", event, session);
-
-  if (session) {
-    try {
-      const sessionOk = await checkSession();
-
-      if (sessionOk.status === 'ACTIVE') {
-        appInitialized = true;
-
-        ui.show('main-container');
-        ui.showView('tasks-view');
-        ui.setupRoleBasedUI(sessionOk.profile);
-
-        await initializeApp();
-      } else {
-        // console.warn("[Auth] Sessão inválida:", sessionOk.status);
-        logout();
-      }
-
-    } catch (err) {
-      // console.error("[Auth] Erro ao validar sessão:", err);
-      logout();
-    }
-
-  } else {
-    // console.log("[Auth] Nenhuma sessão ativa");
-    appInitialized = false;
-    sessionStorage.clear();
-    ui.show('login-screen');
-  }
-    });
-}; */
-
+    
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
   // console.log("[Auth] Estado mudou:", event, session);
 
@@ -1349,3 +1271,11 @@ function checkAndShowIOSInstallBanner() {
         }
     }
 }
+
+window.addEventListener('pageshow', function(event) {
+    // A propriedade 'persisted' é 'true' se a página foi restaurada do bfcache.
+    if (event.persisted) {
+        console.log('Página restaurada do cache. Forçando recarregamento.');
+        location.reload();
+    }
+});
