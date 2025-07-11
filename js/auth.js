@@ -12,9 +12,34 @@ export async function login() {
 }
 
 export async function logout() {
-    await supabaseClient.auth.signOut();
-    sessionStorage.clear();
-    location.reload();
+    console.log("Iniciando processo de logout...");
+
+    try {
+        // Cria uma promessa de "timeout" que será rejeitada após 5 segundos.
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Logout no servidor demorou demais (timeout).')), 2000)
+        );
+
+        // Colocamos o signOut do Supabase para "correr" contra o nosso timeout.
+        // O que acontecer primeiro (o logout ou o fim dos 5 segundos) determinará o resultado.
+        await Promise.race([
+            supabaseClient.auth.signOut(),
+            timeoutPromise
+        ]);
+
+        console.log("Logout no servidor Supabase concluído com sucesso.");
+
+    } catch (error) {
+        console.error("Ocorreu um erro ou timeout durante o signOut:", error.message);
+        // Independentemente do erro, o processo continuará no bloco 'finally'.
+        
+    } finally {
+        // ESTE BLOCO DE CÓDIGO É EXECUTADO SEMPRE, COM SUCESSO OU FALHA.
+        // Isso garante que o usuário seja deslogado da interface.
+        console.log("Limpando dados da sessão local e recarregando a página.");
+        sessionStorage.clear();
+        location.reload();
+    }
 }
 
 export async function checkSession() {

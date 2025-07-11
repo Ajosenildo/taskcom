@@ -934,6 +934,14 @@ async function handleForgotPassword(event) {
         });
     });
 
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            console.log("Aba do TasKCom se tornou visível. Verificando a sessão para reativar a conexão.");
+            // Esta operação leve é suficiente para "acordar" a conexão com o Supabase.
+            supabaseClient.auth.getSession(); 
+        }
+    });
+
     window.addEventListener('viewChanged', handleViewChange);
 
     document.getElementById('ios-install-close-btn')?.addEventListener('click', () => {
