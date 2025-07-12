@@ -413,3 +413,13 @@ export function setupPWAInstallHandlers() {
         });
     }
 }
+
+export function openInstructionsModal() {
+    const modal = document.getElementById('instructions-modal');
+    if (modal) modal.style.display = 'flex';
+}
+
+export function closeInstructionsModal() {
+    const modal = document.getElementById('instructions-modal');
+    if (modal) modal.style.display = 'none';
+}

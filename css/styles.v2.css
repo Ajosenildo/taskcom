@@ -835,3 +835,13 @@ body {
     max-height: 150px;
     overflow-y: auto;
 }
+
+.modal-content .btn-save {
+    color: #FFFFFF; /* Define a cor do texto para branco */
+    font-weight: bold; /* Opcional: deixa o texto um pouco mais forte e legível */
+}
+
+.modal-content .btn-cancel {
+    color: #FFFFFF;
+    font-weight: bold;
+}
