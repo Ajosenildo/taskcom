@@ -935,11 +935,28 @@ async function handleForgotPassword(event) {
     });
 
     document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-            console.log("Aba do TasKCom se tornou visível. Verificando a sessão para reativar a conexão.");
-            // Esta operação leve é suficiente para "acordar" a conexão com o Supabase.
-            supabaseClient.auth.getSession(); 
+    // Executa o código somente quando a aba ACABA de se tornar visível.
+    if (document.visibilityState === 'visible') {
+
+        console.log("Aba do TasKCom se tornou visível. Verificando a integridade da UI...");
+
+        // 1. Verificamos se existe um perfil de usuário guardado na sessionStorage.
+        // Isso nos diz se o usuário DEVERIA estar logado.
+        const userProfile = sessionStorage.getItem('userProfile');
+
+        // 2. Verificamos se a tela principal está de fato sendo exibida.
+        const mainContainer = document.getElementById('main-container');
+        const isMainContainerVisible = mainContainer && getComputedStyle(mainContainer).display !== 'none';
+
+        // 3. CONDIÇÃO DE ERRO: Se o usuário deveria estar logado, mas a tela principal não está visível...
+        if (userProfile && !isMainContainerVisible) {
+            // ...isso significa que a aplicação está em um estado quebrado.
+            console.error("Estado de UI quebrado detectado! O usuário está logado, mas a tela principal não está visível. Forçando recarregamento completo.");
+            
+            // Força o recarregamento da página a partir do servidor, ignorando qualquer cache.
+            window.location.href = window.location.href;
         }
+    }
     });
 
     window.addEventListener('viewChanged', handleViewChange);
