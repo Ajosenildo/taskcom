@@ -296,9 +296,21 @@ export function openEditCondoModal(condo, todosGrupos) {
     modal.style.display = 'flex';
 }
 
+export function openChangePasswordModal() {
+    const modal = document.getElementById('change-password-modal');
+    if (modal) modal.style.display = 'flex';
+}
+
 export function closeEditCondoModal() {
     const modal = document.getElementById('edit-condo-modal');
     if(modal) modal.style.display = 'none';
+}
+
+export function closeChangePasswordModal() {
+    const modal = document.getElementById('change-password-modal');
+    if (modal) modal.style.display = 'none';
+    const form = document.getElementById('change-password-form');
+    if (form) form.reset();
 }
 
 // O restante das funções não precisa de alteração

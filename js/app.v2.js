@@ -2,8 +2,8 @@
 
 import { supabaseClient } from './supabaseClient.js';
 import { login, logout, checkSession } from './auth.js';
-import * as ui from './ui.js';
-import * as api from './api.js';
+import * as ui from './ui.v2.js';
+import * as api from './api.v2.js';
 import * as render from './render.js';
 import * as utils from './utils.js';
 
@@ -27,6 +27,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 // --- ESTADO GLOBAL DA APLICAÇÃO ---
 let appInitialized = false; // <-- esta já existe
 let listenersInitialized = false; // <-- ADICIONE ESTA LINHA
+let isPasswordUpdateInProgress = false;
 
 const state = {
     tasks: [], taskTemplates: [], condominios: [], taskTypes: [],
@@ -776,7 +777,7 @@ async function handleForgotPassword(event) {
     document.getElementById('nav-tasks')?.addEventListener('click', () => ui.showView('tasks-view'));
     document.getElementById('nav-dashboard')?.addEventListener('click', () => ui.showView('dashboard-view'));
     document.getElementById('nav-admin')?.addEventListener('click', () => ui.showView('admin-view'));
-    document.getElementById('change-password-btn')?.addEventListener('click', () => document.getElementById('change-password-modal').classList.add('is-visible'));
+    document.getElementById('change-password-btn')?.addEventListener('click', ui.openChangePasswordModal);
 
 
     // --- Formulários ---
@@ -902,15 +903,11 @@ async function handleForgotPassword(event) {
     });
 
     // Listener para o formulário do modal
-    document.getElementById('change-password-form')?.addEventListener('submit', handleUpdatePassword);
+    // document.getElementById('change-password-form')?.addEventListener('submit', handleUpdatePassword);
 
     // Listeners para fechar o novo modal
-    document.getElementById('change-password-close-btn')?.addEventListener('click', () => {
-    document.getElementById('change-password-modal').classList.remove('is-visible');
-    });
-    document.getElementById('change-password-cancel-btn')?.addEventListener('click', () => {
-    document.getElementById('change-password-modal').classList.remove('is-visible');
-    });
+    document.getElementById('change-password-close-btn')?.addEventListener('click', ui.closeChangePasswordModal);
+    document.getElementById('change-password-cancel-btn')?.addEventListener('click', ui.closeChangePasswordModal);
 
     document.getElementById('forgot-password-link')?.addEventListener('click', handleForgotPassword);
 
@@ -1163,8 +1160,9 @@ async function handleSetPassword(event) {
 
 async function handleUpdatePassword(event) {
     event.preventDefault();
-    const newPassword = document.getElementById('change-new-password').value;
-    const confirmPassword = document.getElementById('change-confirm-password').value;
+    const form = event.target;
+    const newPassword = form.elements['change-new-password'].value;
+    const confirmPassword = form.elements['change-confirm-password'].value;
 
     if (newPassword.length < 6) {
         return alert('A nova senha deve ter no mínimo 6 caracteres.');
@@ -1173,18 +1171,24 @@ async function handleUpdatePassword(event) {
         return alert('As senhas não coincidem.');
     }
 
-    // A função updateUser do Supabase, quando chamada por um usuário logado,
-    // atualiza a senha deste próprio usuário.
-    const { error } = await supabaseClient.auth.updateUser({ 
-        password: newPassword 
-    });
+    // 1. Levanta a "bandeira" para sinalizar a intenção de atualizar a senha.
+    isPasswordUpdateInProgress = true;
+    
+    // 2. Fecha o modal imediatamente para dar um feedback visual rápido ao usuário.
+    ui.closeChangePasswordModal();
 
-    if (error) {
-        alert("Erro ao atualizar a senha: " + error.message);
-    } else {
-        alert("Senha alterada com sucesso!");
-        document.getElementById('change-password-modal').classList.remove('is-visible');
-        document.getElementById('change-password-form').reset();
+    try {
+        // 3. Envia a requisição para o Supabase e espera a conclusão.
+        const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
+        if (error) {
+            // Se o Supabase retornar um erro, lança-o para ser pego pelo catch.
+            throw error;
+        }
+    } catch (err) {
+        // 4. Em caso de erro, abaixa a bandeira e exibe o alerta de erro.
+        isPasswordUpdateInProgress = false; 
+        console.error("Erro ao atualizar a senha:", err);
+        alert("Não foi possível alterar a senha. Erro: " + err.message);
     }
 }
 
@@ -1244,44 +1248,39 @@ window.onload = () => {
     setupEventListeners();
     
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
-  // console.log("[Auth] Estado mudou:", event, session);
-
-  if (session) {
-    try {
-      const sessionOk = await checkSession();
-
-      if (sessionOk.status === 'ACTIVE') {
-        appInitialized = true;
-
-        //if (sessionOk.profile?.cargo?.nome === 'Administrador') {
-        //
-        if (sessionOk.profile?.cargo?.is_admin) {
-        ui.showAdminFeatures();
-        // ui.setupRoleBasedUI(); // ou ui.setupRoleBasedUI()
+    // --- VERIFICAÇÃO ESPECIAL PARA ATUALIZAÇÃO DE SENHA ---
+    // Se o evento for de atualização de usuário E a nossa bandeira estiver levantada...
+    if (event === 'USER_UPDATED' && isPasswordUpdateInProgress) {
+        isPasswordUpdateInProgress = false; // Abaixamos a bandeira para não mostrar o alerta de novo.
+        alert("Senha alterada com sucesso!"); // Exibimos o feedback de sucesso!
+        return; // Paramos a execução aqui para não recarregar a tela inteira desnecessariamente.
     }
+    // --- FIM DA VERIFICAÇÃO ESPECIAL ---
 
-        ui.show('main-container');
-        ui.showView('tasks-view');
-     //   ui.setupRoleBasedUI(sessionOk.profile);
-
-        await initializeApp();
-      } else {
-        // console.warn("[Auth] Sessão inválida:", sessionOk.status);
-        logout();
-      }
-
-    } catch (err) {
-      // console.error("[Auth] Erro ao validar sessão:", err);
-      logout();
+    // O resto do seu código onAuthStateChange continua normalmente abaixo...
+    if (session) {
+        try {
+            const sessionOk = await checkSession();
+            if (sessionOk.status === 'ACTIVE') {
+                if (sessionOk.profile?.cargo?.is_admin) {
+                    ui.setupRoleBasedUI(sessionOk.profile);
+                }
+                ui.show('main-container');
+                ui.showView('tasks-view');
+                await initializeApp();
+            } else {
+                logout();
+            }
+        } catch (err) {
+            logout();
+        }
+    } else {
+        appInitialized = false;
+        sessionStorage.clear();
+        ui.show('login-screen');
     }
+});
 
-  } else {
-    // console.log("[Auth] Nenhuma sessão ativa");
-    appInitialized = false;
-    sessionStorage.clear();
-    ui.show('login-screen');
-  }
-    });
 };
 
 function checkAndShowIOSInstallBanner() {

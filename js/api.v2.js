@@ -7,12 +7,18 @@ import { SUPABASE_URL } from './config.js';
 export async function fetchInitialData() {
     const [tasksResult, condosResult, typesResult, templatesResult, usersResult, cargosResult, groupsResult] = await Promise.all([
         supabaseClient.from('tarefas').select('*, responsavel:responsavel_id(nome_completo), criador:criador_id(nome_completo)'),
-        supabaseClient.from('condominios').select('*'),
-        supabaseClient.from('tipos_tarefa').select('*'),
+        
+        // CORREÇÃO: Ordenação mais robusta para condomínios.
+        // Ordena primeiro por 'nome_fantasia' e depois por 'nome' como critério de desempate.
+        supabaseClient.from('condominios').select('*').order('nome_fantasia', { ascending: true }).order('nome', { ascending: true }),
+        
+        // A ordenação de tipos de tarefa já está correta e foi mantida.
+        supabaseClient.from('tipos_tarefa').select('*').order('nome_tipo', { ascending: true }),
+
         supabaseClient.from('modelos_tarefa').select('*'),
         supabaseClient.from('usuarios').select('*'),
         supabaseClient.from('cargos').select('*'),
-        supabaseClient.from('grupos').select('*') // Garante que os grupos sejam buscados
+        supabaseClient.from('grupos').select('*')
     ]);
 
     const error = tasksResult.error || condosResult.error || typesResult.error || templatesResult.error || usersResult.error || cargosResult.error || groupsResult.error;
@@ -28,7 +34,7 @@ export async function fetchInitialData() {
         taskTemplates: templatesResult.data || [],
         allUsers: usersResult.data || [],
         allCargos: cargosResult.data || [],
-        allGroups: groupsResult.data || [] // Garante que os grupos sejam retornados
+        allGroups: groupsResult.data || []
     };
 }
 
