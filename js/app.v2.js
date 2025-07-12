@@ -962,7 +962,13 @@ async function handleForgotPassword(event) {
     document.getElementById('ios-install-banner').style.display = 'none';
     });
 
+    window.addEventListener('unload', () => {
+      // O listener pode ficar vazio. A simples existência dele já desativa o bfcache.
+    });
+
     listenersInitialized = true;
+
+  
 }
 
 function handleEditTaskType(typeId) {
