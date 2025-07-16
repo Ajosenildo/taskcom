@@ -286,23 +286,6 @@ async function handleCreateUser(event) {
     }
 }
 
-/* async function handleOpenEditModal(taskId) {
-    const task = state.tasks.find(t => t.id == taskId);
-    if (!task) return;
-
-    // Mostra o modal imediatamente com os dados básicos
-    ui.openEditModal(task, state.allUsers, state.currentUserProfile);
-
-    // Em paralelo, busca e renderiza o histórico
-    try {
-        const historyEvents = await api.fetchTaskHistory(taskId);
-        render.renderTaskHistory(historyEvents);
-    } catch (error) {
-        console.error("Erro ao buscar histórico da tarefa:", error);
-        document.getElementById('task-history-list').innerHTML = '<p>Erro ao carregar histórico.</p>';
-    }
-} */
-
 async function handleOpenEditModal(taskId) {
     const task = state.tasks.find(t => t.id == taskId);
     if (!task) return;
@@ -1122,81 +1105,6 @@ async function handleCreateCondo(event) {
 
 // Listener para evento personalizado
 window.addEventListener('showAdminView', () => render.renderUserList(state.allUsers, state.currentUserProfile));
-
-/*async function startApp() {
-    setupEventListeners();
-    ui.setupPWAInstallHandlers();
-
-    const { data: { session } } = await supabaseClient.auth.getSession();
-
-    if (session) {
-        // =======================================================================
-        // LÓGICA DE INICIALIZAÇÃO ÚNICA E SEGURA
-        // =======================================================================
-        if (appInitialized) return;
-        appInitialized = true;
-
-        try {
-            console.log("Sessão válida. Iniciando aplicação...");
-
-            const { data: userProfile, error: profileError } = await supabaseClient
-                .from("usuarios")
-                .select("*, cargo: cargo_id(nome_cargo, is_admin), empresa:empresa_id(nome_empresa)")
-                .eq("id", session.user.id)
-                .single();
-
-            if (profileError) throw profileError;
-            if (!userProfile) throw new Error("Perfil de usuário não encontrado.");
-            if (!userProfile.ativo) {
-                alert("Seu usuário está inativo. Contate o administrador.");
-                return await logout();
-            }
-            if (!userProfile.empresa_id) throw new Error("Usuário não vinculado a uma empresa.");
-
-            const initialData = await api.fetchInitialData(userProfile.empresa_id);
-
-            state.currentUserProfile = userProfile;
-            Object.assign(state, initialData);
-            sessionStorage.setItem("userProfile", JSON.stringify(userProfile));
-
-            console.log("Dados carregados. Renderizando a aplicação...");
-
-            ui.setupRoleBasedUI(state.currentUserProfile);
-            ui.populateDropdowns(state.condominios, state.taskTypes, state.allUsers, state.allGroups);
-            ui.populateTemplatesDropdown(state.taskTemplates);
-            document.getElementById('user-display-name').textContent = `Usuário: ${userProfile.nome_completo}`;
-            
-            state.tasksToDisplayForPdf = render.renderTasks(state);
-
-            ui.show('main-container');
-            ui.showView('tasks-view');
-
-        } catch (error) {
-            console.error("Erro crítico durante a inicialização:", error);
-            alert(`Ocorreu um erro crítico ao carregar a aplicação: ${error.message}`);
-            await logout();
-        }
-    } else {
-        appInitialized = false;
-        sessionStorage.clear();
-        ui.show('login-screen');
-    }
-
-    // Listener para eventos futuros de login/logout após a carga inicial
-    supabaseClient.auth.onAuthStateChange((_event, newSession) => {
-        if (event === 'SIGNED_OUT' && appInitialized) {
-            console.log("Sessão encerrada pelo servidor ou outra aba. Recarregando a página.");
-            
-            // CORREÇÃO:
-            // NÃO chame logout() aqui. Apenas recarregue a página.
-            // A página recarregada não terá sessão e o próprio startApp mostrará a tela de login.
-            location.reload();
-        }
-    });
-}
-
-// Evento que dispara a aplicação
-window.addEventListener('DOMContentLoaded', startApp);*/
 
 async function startApp() {
     setupEventListeners();
