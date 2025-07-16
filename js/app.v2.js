@@ -180,8 +180,9 @@ async function handleCreateTask(event) {
 
         form.reset();
         document.getElementById('task-condo-search').value = ''; // Limpa o campo de busca de condomínio
-        initializeApp();
         alert('Tarefa criada com sucesso!');
+        sessionStorage.setItem('lastActiveView', 'tasks-view');
+        location.reload();
 
     } catch(error) {
         // Se qualquer erro ocorrer no bloco try, ele será capturado e exibido aqui.
@@ -216,7 +217,7 @@ function handleViewChange(event) {
     }
 }
 
-async function handleUpdateTask(event) {
+/* async function handleUpdateTask(event) {
     event.preventDefault();
     const form = event.target;
     const taskId = form.elements['edit-task-id'].value;
@@ -229,10 +230,64 @@ async function handleUpdateTask(event) {
             condominio_id: parseInt(form.elements['edit-task-condominio'].value),
             responsavel_id: form.elements['edit-task-assignee'].value
         });
+
+        // --- INÍCIO DA CORREÇÃO ---
+        
+        // 1. Dê um feedback positivo para o usuário
+        alert('Tarefa atualizada com sucesso!');
+        
+        // 2. Feche o modal
         ui.closeEditModal();
-        initializeApp();
+        
+        // 3. Recarregue a página para mostrar os dados atualizados de forma confiável
+        location.reload();
+
+        // --- FIM DA CORREÇÃO ---
+
     } catch (error) {
+        // Adicionamos um log de erro mais detalhado para nós
+        console.error("Erro ao tentar atualizar a tarefa:", error);
         alert('Erro ao salvar alterações: ' + error.message);
+    }
+}
+*/
+
+// Arquivo: js/app.v2.js -> Substitua pela versão de diagnóstico
+
+async function handleUpdateTask(event) {
+    event.preventDefault();
+    const form = event.target;
+    const taskId = form.elements['edit-task-id'].value;
+    const dadosParaAtualizar = {
+        titulo: form.elements['edit-task-title'].value,
+        descricao: form.elements['edit-task-desc'].value,
+        data_conclusao_prevista: form.elements['edit-task-due-date'].value,
+        tipo_tarefa_id: parseInt(form.elements['edit-task-type'].value),
+        condominio_id: parseInt(form.elements['edit-task-condominio'].value),
+        responsavel_id: form.elements['edit-task-assignee'].value
+    };
+
+    console.log("--- ENVIANDO ATUALIZAÇÃO ---", dadosParaAtualizar);
+
+    try {
+        // Agora a chamada à API nos retorna o objeto completo
+        const { error } = await api.updateTaskInDB(taskId, dadosParaAtualizar);
+
+        // VERIFICAÇÃO CRÍTICA: Esta é a lógica que faltava!
+        // Se o Supabase retornou um objeto de erro, nós o tratamos aqui.
+        if (error) {
+            throw error; // Joga o erro para que o bloco CATCH o pegue e exiba.
+        }
+
+        // Este código só será executado se NÃO houver erro.
+        alert('Tarefa atualizada com sucesso!');
+        ui.closeEditModal();
+        location.reload();
+
+    } catch (error) {
+        // Agora, este bloco mostrará a mensagem de erro REAL do banco de dados.
+        console.error("ERRO REAL DETECTADO AO SALVAR:", error);
+        alert(`Falha ao salvar alterações: ${error.message}`);
     }
 }
 
@@ -241,7 +296,8 @@ async function handleToggleStatus(taskId) {
     if (!task) return;
     try {
         await api.toggleStatusInDB(taskId, task.status);
-        initializeApp();
+        sessionStorage.setItem('lastActiveView', 'tasks-view');
+        location.reload();
     } catch (error) {
         alert('Erro ao atualizar status: ' + error.message);
     }
@@ -253,7 +309,8 @@ async function handleDeleteTask(taskId) {
     if (window.confirm(`Tem certeza que deseja marcar a tarefa "${task.titulo}" como excluída?`)) {
         try {
             await api.deleteTaskInDB(taskId);
-            initializeApp();
+            sessionStorage.setItem('lastActiveView', 'tasks-view');
+            location.reload();
         } catch (error) {
             alert('Erro ao excluir tarefa: ' + error.message);
         }
@@ -273,7 +330,8 @@ async function handleCreateUser(event) {
         await api.createUser({ email, password, nome_completo: nome, cargo_id: cargoId });
         alert('Usuário criado com sucesso!');
         ui.closeCreateUserModal();
-        await initializeApp();
+        sessionStorage.setItem('lastActiveView', 'admin-view');
+        location.reload();
     } catch(error) {
         console.error('Erro ao criar usuário:', error);
         alert('Erro ao criar usuário: ' + error.message);
@@ -395,7 +453,8 @@ async function handleUpdateUser(event) {
         await api.updateUserGroupAssignments(userId, selectedGroupIds);
         alert("Usuário atualizado com sucesso!");
         ui.closeEditUserModal();
-        initializeApp();
+        sessionStorage.setItem('lastActiveView', 'admin-view');
+        location.reload();
     } catch(error) {
         alert("Erro ao atualizar usuário: " + error.message);
     }
@@ -409,7 +468,11 @@ async function handleToggleUserStatus(userId) {
     if (confirm(`Tem certeza que deseja ${action} o usuário ${userToToggle.nome_completo}?`)) {
         try {
             await api.toggleUserStatusInDB(userId, userToToggle.ativo);
-            initializeApp(); // Recarrega os dados para atualizar a lista
+            
+            // CORREÇÃO: Adicione esta linha para recarregar a página
+            sessionStorage.setItem('lastActiveView', 'admin-view');
+            location.reload();
+
         } catch (error) {
             alert(`Erro ao ${action} o usuário: ` + error.message);
         }
@@ -469,7 +532,8 @@ async function handleCreateOrUpdateCondo(event) {
         form.reset();
         document.getElementById('condo-id').value = '';
         document.getElementById('condo-submit-btn').textContent = 'Adicionar Condomínio';
-        initializeApp();
+        sessionStorage.setItem('lastActiveView', 'admin-view');
+        location.reload();
     } catch (error) {
         if (error.code === '23505') { // Código de erro para violação de 'UNIQUE constraint'
             alert('Erro: O CNPJ informado já está cadastrado.');
@@ -497,7 +561,8 @@ async function handleDeleteCondo(condoId) {
     if (confirm(`Tem certeza que deseja excluir o condomínio "${condo.nome_fantasia}"?`)) {
         try {
             await api.deleteCondoInDB(condoId);
-            initializeApp(); // Recarrega os dados para atualizar a lista
+            sessionStorage.setItem('lastActiveView', 'admin-view');
+            location.reload(); // Recarrega os dados para atualizar a lista
         } catch (error) {
             // console.error("Erro ao excluir condomínio:", error);
 
@@ -538,7 +603,8 @@ async function handleCreateOrUpdateTaskType(event) {
         form.reset();
         document.getElementById('task-type-id').value = '';
         document.getElementById('task-type-submit-btn').textContent = 'Adicionar Tipo';
-        initializeApp();
+        sessionStorage.setItem('lastActiveView', 'admin-view');
+        location.reload();
     } catch (error) {
         console.error('Erro ao salvar tipo de tarefa:', error);
         alert('Erro ao salvar tipo de tarefa: ' + error.message);
@@ -585,7 +651,8 @@ function handleCondoImport(event) {
                 try {
                     await api.bulkInsertCondos(condosToInsert);
                     alert("Condomínios importados com sucesso!");
-                    initializeApp(); // Recarrega tudo para mostrar a nova lista
+                    sessionStorage.setItem('lastActiveView', 'admin-view');
+                    location.reload(); // Recarrega tudo para mostrar a nova lista
                 } catch (error) {
                     alert("Ocorreu um erro ao importar os condomínios: " + error.message);
                 }
@@ -621,7 +688,8 @@ async function handleCreateOrUpdateGroup(event) {
         form.reset();
         document.getElementById('group-id').value = '';
         document.getElementById('group-submit-btn').textContent = 'Adicionar Grupo';
-        initializeApp();
+        sessionStorage.setItem('lastActiveView', 'admin-view');
+        location.reload();
     } catch (error) {
         alert('Erro ao salvar grupo: ' + error.message);
     }
@@ -638,7 +706,8 @@ async function handleDeleteGroup(groupId, groupName) {
     if (confirm(`Tem certeza que deseja excluir o grupo "${groupName}"?`)) {
         try {
             await api.deleteGroupInDB(groupId);
-            initializeApp();
+            sessionStorage.setItem('lastActiveView', 'admin-view');
+            location.reload();
         } catch (error) {
             alert('Erro ao excluir grupo: ' + error.message);
         }
@@ -847,7 +916,8 @@ async function handleDeleteTaskType(typeId) {
     if (confirm(`Tem certeza que deseja excluir o tipo de tarefa "${type.nome_tipo}"?`)) {
         try {
             await api.deleteTaskTypeInDB(typeId);
-            initializeApp();
+            sessionStorage.setItem('lastActiveView', 'admin-view');
+            location.reload();
         } catch (error) {
             console.error("Erro ao excluir tipo de tarefa:", error);
             // CORREÇÃO: Verifica o código de erro do PostgreSQL
@@ -886,9 +956,24 @@ async function handleCreateOrUpdateCargo(event) {
         form.reset();
         document.getElementById('cargo-id').value = '';
         document.getElementById('cargo-submit-btn').textContent = 'Adicionar Cargo';
-        initializeApp(); // Recarrega os dados para mostrar a atualização
+        sessionStorage.setItem('lastActiveView', 'admin-view');
+        location.reload(); // Recarrega os dados para mostrar a atualização
     } catch (error) {
-        alert('Erro ao salvar cargo: ' + error.message);
+        // --- INÍCIO DA CORREÇÃO ---
+        
+        // Log para nossa depuração
+        console.error("Erro ao salvar cargo:", error);
+
+        // Verificamos se a mensagem de erro contém o nome da nossa restrição de chave única.
+        if (error && error.message.includes('cargos_empresa_id_nome_cargo_key')) {
+            // Se sim, mostramos a mensagem personalizada.
+            alert('Erro: Cargo já existente!');
+        } else {
+            // Se não, mostramos a mensagem de erro genérica.
+            alert('Erro ao salvar cargo: ' + error.message);
+        }
+        
+        // --- FIM DA CORREÇÃO ---
     }
 }
 
@@ -915,7 +1000,8 @@ async function handleDeleteCargo(cargoId, cargoName) {
     if (confirm(`Tem certeza que deseja excluir o cargo "${cargoName}"?`)) {
         try {
             await api.deleteCargoInDB(cargoId);
-            initializeApp();
+            sessionStorage.setItem('lastActiveView', 'admin-view');
+            location.reload();
         } catch (error) {
             if(error.code === '23503'){
                 alert('Impossível excluir! Este cargo está vinculado a um ou mais usuários.');
@@ -980,7 +1066,8 @@ async function handleUpdateCondo(event) {
             render.renderCondoList(state.condominios, state.allGroups);
         } else {
             // Se não encontrou, recarrega tudo por segurança
-            initializeApp();
+            sessionStorage.setItem('lastActiveView', 'admin-view');
+            location.reload();
         }
 
     } catch(error) {
@@ -1057,13 +1144,10 @@ async function handleUpdatePassword(event) {
     }
 }
 
-async function handleOpenCreateCondoModal() {
-  const { data: grupos, error } = await supabaseClient.from('grupos').select('*');
-  if (error) {
-    alert("Erro ao carregar grupos: " + error.message);
-    return;
-  }
-  ui.openCreateCondoModal(grupos); // ou direto openCreateCondoModal(grupos)
+function handleOpenCreateCondoModal() {
+  // A correção é usar a lista de grupos que já está no estado da aplicação ('state.allGroups'),
+  // que já foi filtrada corretamente pela empresa do usuário logado.
+  ui.openCreateCondoModal(state.allGroups);
 }
 
 async function handleCreateCondo(event) {
@@ -1095,7 +1179,8 @@ async function handleCreateCondo(event) {
         await api.createCondoInDB(condoData);
         alert("Condomínio criado com sucesso!");
         ui.closeCreateCondoModal();
-        initializeApp(); // Recarrega os dados para mostrar o novo condomínio na lista
+        sessionStorage.setItem('lastActiveView', 'admin-view');
+        location.reload(); // Recarrega os dados para mostrar o novo condomínio na lista
     } catch (error) {
         console.error("Erro ao criar condomínio:", error);
         alert("Erro ao criar condomínio: " + error.message);
@@ -1207,8 +1292,17 @@ async function startApp() {
             state.tasksToDisplayForPdf = render.renderTasks(state);
 
             ui.show('main-container');
-            ui.showView('tasks-view');
 
+            const lastView = sessionStorage.getItem('lastActiveView');
+            if (lastView) {
+                // Se encontrarmos uma anotação, abra a tela que estava salva.
+                ui.showView(lastView);
+                // Limpa a anotação para não ficar preso nessa tela para sempre.
+                sessionStorage.removeItem('lastActiveView');
+            } else {
+                // Se não houver anotação, abra na tela padrão de tarefas.
+                ui.showView('tasks-view');
+            }
         } catch (error) {
             console.error("Erro crítico durante a inicialização:", error);
             alert(`Ocorreu um erro crítico ao carregar a aplicação: ${error.message}`);

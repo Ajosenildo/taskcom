@@ -134,7 +134,7 @@ export async function exportTasksToPDF(tasksToExport, CONDOMINIOS, TASK_TYPES, S
                 new Date(task.data_conclusao_prevista).toLocaleDateString('pt-BR', {timeZone: 'UTC'})
             ];
             if (!reportOwnerName) {
-                row.splice(4, 0, task.responsavel?.nome_completo || 'N/A');
+                row.splice(4, 0, task.responsavel_nome || 'N/A');
             }
             if (includeDesc) {
                 row.push(task.descricao || '');

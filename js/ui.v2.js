@@ -184,7 +184,7 @@ export function openEditModal(task, allUsers, currentUserProfile) {
     document.getElementById('edit-task-due-date').value = task.data_conclusao_prevista;
     document.getElementById('edit-task-type').value = task.tipo_tarefa_id;
     document.getElementById('edit-task-condominio').value = task.condominio_id;
-    document.getElementById('edit-task-condominio').disabled = true;
+    // document.getElementById('edit-task-condominio').disabled = true;   
 
     const assigneeSelect = document.getElementById('edit-task-assignee');
     assigneeSelect.innerHTML = '';

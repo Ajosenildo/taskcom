@@ -81,8 +81,11 @@ export async function createTaskInDB(newTaskData) {
     if (error) throw error;
 }
 export async function updateTaskInDB(taskId, updatedTaskData) {
-    const { error } = await supabaseClient.from('tarefas').update(updatedTaskData).eq('id', taskId);
-    if (error) throw error;
+    // Retorna o objeto { data, error } inteiro em vez de apenas jogar o erro
+    return await supabaseClient
+        .from('tarefas')
+        .update(updatedTaskData)
+        .eq('id', taskId);
 }
 export async function toggleStatusInDB(taskId, currentStatus) {
     const newStatus = currentStatus === 'pending' ? 'completed' : 'pending';

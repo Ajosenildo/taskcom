@@ -54,7 +54,7 @@ serve(async (req) => {
 
     // Etapa 2: Insere o perfil na tabela 'public.usuarios', já como ativo
     const { error: insertProfileError } = await supabaseAdmin.from('usuarios').insert({ 
-      id: newAuthUserId, nome_completo, empresa_id, cargo_id, ativo: false
+      id: newAuthUserId, nome_completo, empresa_id, cargo_id, ativo: true
     });
     if (insertProfileError) {
       await supabaseAdmin.auth.admin.deleteUser(newAuthUserId);
