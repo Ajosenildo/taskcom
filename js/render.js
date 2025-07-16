@@ -26,103 +26,7 @@ function getVisualStatus(task, STATUSES) {
     return null;
 }
 
-/* export function renderTasks(state) {
-    const { tasks, condominios, taskTypes, STATUSES, activeFilters } = state;
-    const list = document.getElementById('task-list');
-    if (!list) return [];
-    list.innerHTML = '';
-    
-    const processedTasks = tasks.map(task => ({ ...task, visualStatus: getVisualStatus(task, STATUSES) }));
-    
-    let tasksToDisplay = processedTasks;
-    if (activeFilters.status === 'deleted') {
-        tasksToDisplay = processedTasks.filter(t => t.status === 'deleted');
-    } else {
-        tasksToDisplay = processedTasks.filter(t => t.status !== 'deleted');
-        if (activeFilters.status !== 'active') {
-            tasksToDisplay = tasksToDisplay.filter(t => t.visualStatus && t.visualStatus.key === activeFilters.status);
-        }
-    }
-
-    if (activeFilters.condominioId) {
-        tasksToDisplay = tasksToDisplay.filter(t => t.condominio_id == activeFilters.condominioId);
-    }
-    if (activeFilters.assigneeId) {
-        tasksToDisplay = tasksToDisplay.filter(t => t.responsavel_id == activeFilters.assigneeId);
-    }
-
-    if (activeFilters.taskTypeId) {
-        tasksToDisplay = tasksToDisplay.filter(t => t.tipo_tarefa_id == activeFilters.taskTypeId);
-    }
-
-    if (activeFilters.groupId) {
-
-        const condosInGroup = condominios
-            .filter(c => c.grupo_id == activeFilters.groupId)
-            .map(c => c.id); // Pega apenas os IDs dos condomínios
-
-        // Depois, filtra as tarefas que pertencem a um desses condomínios
-        tasksToDisplay = tasksToDisplay.filter(t => condosInGroup.includes(t.condominio_id));
-    }
-    
-    if (activeFilters.dateStart) {
-        const startDate = new Date(activeFilters.dateStart + "T00:00:00");
-        tasksToDisplay = tasksToDisplay.filter(t => new Date(t.data_conclusao_prevista + "T00:00:00") >= startDate);
-    }
-    if (activeFilters.dateEnd) {
-        const endDate = new Date(activeFilters.dateEnd + "T00:00:00");
-        tasksToDisplay = tasksToDisplay.filter(t => new Date(t.data_conclusao_prevista + "T00:00:00") <= endDate);
-    }
-    
-    tasksToDisplay.sort((a, b) => new Date(a.data_conclusao_prevista) - new Date(b.data_conclusao_prevista) || b.id - a.id);
-
-    if (tasksToDisplay.length === 0) {
-        list.innerHTML = '<p style="text-align:center; color:#6b7280;">Nenhuma tarefa encontrada.</p>';
-    } else {
-        tasksToDisplay.forEach(task => {
-            const condominio = condominios.find(c => c.id == task.condominio_id);
-            const type = taskTypes.find(t => t.id == task.tipo_tarefa_id);
-            const visualStatus = task.visualStatus;
-            const card = document.createElement('div');
-            card.className = `task-card ${task.status}`;
-            if (visualStatus) {
-                card.style.borderLeft = `5px solid ${visualStatus.color}`;
-            }
-            const condoDisplayName = condominio ? (condominio.nome_fantasia || condominio.nome) : 'N/A';
-
-            // CÓDIGO HTML COMPLETO DO CARD
-            card.innerHTML = `
-                <div class="task-card-header">
-                  <div class="task-card-title-wrapper">
-                      <strong>${task.titulo}</strong>
-                      ${visualStatus ? `<div class="task-card-visual-status" style="color: ${visualStatus.color};">${visualStatus.icon} <span>${visualStatus.text}</span></div>` : ''}
-                  </div>
-                  <span class="task-card-type" style="background-color: ${type ? type.cor : '#6b7280'};">${type ? type.nome_tipo : 'N/A'}</span>
-                </div>
-                <div class="task-card-details">
-                  <span>Criado em: <strong>${new Date(task.data_criacao).toLocaleDateString('pt-BR', { timeZone: 'UTC' })} por ${task.criador?.nome_completo || 'Sistema'}</strong></span>
-                  <span>Concluir até: <strong>${new Date(task.data_conclusao_prevista).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</strong></span>
-                </div>
-                <div class="task-card-assignee">Responsável: <strong>${task.responsavel ? task.responsavel.nome_completo : 'Não definido'}</strong></div>
-                <p>${task.descricao || 'Nenhuma descrição.'}</p>
-                <div class="task-card-condo">${condoDisplayName}</div>
-                <div class="task-card-actions">
-                  <button class="task-action-btn btn-edit" data-action="edit-task" data-taskid="${task.id}">Editar</button>
-                  <button class="task-action-btn btn-status ${task.status === 'completed' ? 'reopen' : ''}" data-action="toggle-task-status" data-taskid="${task.id}">${task.status === 'pending' ? 'Concluir' : 'Reabrir'}</button>
-                  <button class="task-action-btn btn-delete" data-action="delete-task" data-taskid="${task.id}">Excluir</button>
-                </div>
-            `;
-            if (task.status === 'deleted' || task.status === 'completed') {
-                card.querySelector('.btn-edit')?.remove();
-                if (task.status === 'deleted') card.querySelector('.task-card-actions')?.remove();
-            }
-            list.appendChild(card);
-        });
-    }
-    return tasksToDisplay;
-}*/
-
- export function renderTasks(state) {
+export function renderTasks(state) {
     const { tasks, condominios, taskTypes, STATUSES, activeFilters } = state;
     const list = document.getElementById('task-list');
     if (!list) return [];
@@ -200,7 +104,7 @@ function getVisualStatus(task, STATUSES) {
                   <span>Criado em: <strong>${new Date(task.data_criacao).toLocaleDateString('pt-BR', { timeZone: 'UTC' })} por ${task.criador?.nome_completo || 'Sistema'}</strong></span>
                   <span>Concluir até: <strong>${new Date(task.data_conclusao_prevista).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</strong></span>
                 </div>
-                <div class="task-card-assignee">Responsável: <strong>${task.responsavel ? task.responsavel.nome_completo : 'Não definido'}</strong></div>
+                <div class="task-card-assignee">Responsável: <strong>${task.responsavel_nome || 'Não definido'}</strong></div>
                 <p>${task.descricao || 'Nenhuma descrição.'}</p>
                 <div class="task-card-condo">${condoDisplayName}</div>
                 <div class="task-card-actions">
@@ -219,7 +123,6 @@ function getVisualStatus(task, STATUSES) {
     return tasksToDisplay;
 }
 
-
 export function renderUserList(allUsers, currentUserProfile, allCargos, allGroups, userGroupAssignments) {
     const userListDiv = document.getElementById('user-list');
     if (!userListDiv) return;
@@ -230,24 +133,14 @@ export function renderUserList(allUsers, currentUserProfile, allCargos, allGroup
     }
 
     allUsers.forEach(user => {
-        let cargoInfo = { nome: 'Desconhecido', classe: '' };
+        const cargo = (allCargos || []).find(c => c.id === user.cargo_id);
+        // Define o nome e a classe CSS do cargo
+        const cargoInfo = cargo 
+            ? { nome: cargo.nome_cargo, classe: `user-role-${cargo.nome_cargo.toLowerCase().replace(/\s+/g, '-')}` }
+            : { nome: 'Desconhecido', classe: '' };
 
-        // --- INÍCIO DA CORREÇÃO ---
-        // Verifica primeiro se o cargo é de Administrador pelo ID
-        if (user.cargo_id === 1) {
-            cargoInfo = { nome: 'Administrador', classe: 'user-role-admin' };
-        } else {
-            // Se não for admin, procura o cargo na lista da empresa
-            const cargo = (allCargos || []).find(c => c.id === user.cargo_id);
-            if (cargo) {
-                cargoInfo = { nome: cargo.nome_cargo, classe: `user-role-${cargo.nome_cargo.toLowerCase().replace(/\s+/g, '-')}` };
-                // Aplica a classe de gerente se o nome contiver "Gerente"
-                if (cargo.nome_cargo.toLowerCase().includes('gerente')) {
-                    cargoInfo.classe = 'user-role-gerente';
-                }
-            }
-        }
-        // --- FIM DA CORREÇÃO ---
+        // Garante que o Administrador sempre tenha a classe correta para a cor vermelha
+        if (cargo?.nome_cargo === 'Administrador') cargoInfo.classe = 'user-role-admin';
 
         const userGroups = (userGroupAssignments || [])
             .filter(assignment => assignment.usuario_id === user.id)
@@ -264,6 +157,7 @@ export function renderUserList(allUsers, currentUserProfile, allCargos, allGroup
 
         let actionsHtml = '';
         if (currentUserProfile && currentUserProfile.id !== user.id) {
+            // CORREÇÃO: Agrupa os botões dentro de um único container
             actionsHtml = `
                 <div class="user-card-actions">
                     <button class="task-action-btn btn-edit" data-action="edit-user" data-userid="${user.id}">Editar</button>
@@ -424,16 +318,18 @@ export function renderCargoList(cargos) {
     const listDiv = document.getElementById('cargo-list');
     if (!listDiv) return;
     listDiv.innerHTML = '';
-    if (!cargos || cargos.length <= 1) { // Mostra a msg se tiver apenas o admin
+
+    // Filtra primeiro os cargos que NÃO são de admin para depois renderizar
+    const cargosParaExibir = cargos.filter(cargo => !cargo.is_admin);
+
+    if (cargosParaExibir.length === 0) {
         listDiv.innerHTML = '<p>Nenhum cargo customizado cadastrado.</p>';
         return;
     }
-    cargos.forEach(cargo => {
-        // Não mostra o cargo 'Administrador' na lista de edição
-        if (cargo.id === 1) return;
 
+    cargosParaExibir.forEach(cargo => {
         const card = document.createElement('div');
-        card.className = 'condo-card'; // Reutilizando estilo
+        card.className = 'condo-card';
         card.innerHTML = `
             <div class="condo-info">
                 <strong>${cargo.nome_cargo}</strong>

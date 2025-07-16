@@ -31,19 +31,7 @@ serve(async (req) => {
     if (profileFetchError) throw new Error("Perfil do administrador não encontrado.");
     const empresa_id = adminProfile?.empresa_id;
     if (!empresa_id) throw new Error("Administrador não está associado a uma empresa.");
-
-    /* const { data: adminProfile, error: profileFetchError } = await supabaseAdmin
-      .from('usuarios')
-      .select('empresa_id, cargo: cargos (is_admin)')
-      .eq('id', adminAuthUser.id)
-      .single();
-
-      if (profileFetchError) throw new Error("Perfil do administrador não encontrado.");
-      if (!adminProfile?.cargo?.is_admin) throw new Error("Apenas administradores podem criar usuários.");
-
-      const empresa_id = adminProfile.empresa_id;
-      if (!empresa_id) throw new Error("Administrador não está associado a uma empresa.");*/
-
+    
     // Etapa 1: Cria o usuário na autenticação com a senha provisória
     const { data: authResponse, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
       email: email,
@@ -54,9 +42,19 @@ serve(async (req) => {
     if (createUserError) throw createUserError;
     newAuthUserId = authResponse.user.id;
 
+    const { error: updateUserError } = await supabaseAdmin.auth.admin.updateUserById(
+      newAuthUserId,
+      { app_metadata: { ...authResponse.user.app_metadata, 'empresa_id': empresa_id, 'cargo_id': cargo_id, 'is_admin': false } }
+    );
+    if (updateUserError) {
+        // Se a atualização falhar, delete o usuário recém-criado para não deixar lixo
+        await supabaseAdmin.auth.admin.deleteUser(newAuthUserId);
+        throw updateUserError;
+    }
+
     // Etapa 2: Insere o perfil na tabela 'public.usuarios', já como ativo
     const { error: insertProfileError } = await supabaseAdmin.from('usuarios').insert({ 
-      id: newAuthUserId, nome_completo, empresa_id, cargo_id, ativo: true
+      id: newAuthUserId, nome_completo, empresa_id, cargo_id, ativo: false
     });
     if (insertProfileError) {
       await supabaseAdmin.auth.admin.deleteUser(newAuthUserId);

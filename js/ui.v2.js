@@ -24,18 +24,22 @@ export function showView(viewId) {
 export function setupRoleBasedUI(currentUserProfile) {
     const adminFeatures = document.querySelectorAll('.admin-feature');
     
-    if (currentUserProfile && currentUserProfile.cargo?.is_admin) {
+    if (currentUserProfile && currentUserProfile.cargo?.is_admin === true) {
         adminFeatures.forEach(el => {
-            el.style.display = 'flex';
+            el.style.display = 'flex'; // Mostra as funcionalidades de admin
         });
     } else {
         adminFeatures.forEach(el => {
-            el.style.display = 'none';
+            el.style.display = 'none'; // Esconde as funcionalidades de admin
         });
     }
 }
 
 export function populateDropdowns(CONDOMINIOS, TASK_TYPES, allUsers, allGroups) {
+     // PONTO DE VERIFICAÇÃO 3: A FUNÇÃO DE RENDERIZAÇÃO FOI CHAMADA?
+    console.log("--- DENTRO DE ui.populateDropdowns ---");
+    console.log("Recebido para renderizar TASK_TYPES:", TASK_TYPES);
+    // ==============================================================
     const filterGroupSelect = document.getElementById('filter-group');
     const createTaskAssigneeSelect = document.getElementById('task-assignee');
     const filterAssigneeSelect = document.getElementById('filter-assignee');
@@ -145,11 +149,11 @@ export function populateTemplatesDropdown(taskTemplates) {
 
 // --- LÓGICA DE MODAIS ATUALIZADA ---
 
-export function openEditModal(task, allUsers, currentUserProfile) {
+/* export function openEditModal(task, allUsers, currentUserProfile) {
     const modal = document.getElementById('edit-task-modal');
     if (!task || !modal) return;
 
-    const canDelegate = (currentUserProfile && currentUserProfile.cargo?.is_admin) || (currentUserProfile.id === task.criador_id);
+    const canDelegate = (currentUserProfile && currentUserProfile.cargo?.is_admin) || (currentUserProfile.id == task.criador_id);
 
     document.getElementById('edit-task-id').value = task.id;
     document.getElementById('edit-task-title').value = task.titulo;
@@ -172,6 +176,65 @@ export function openEditModal(task, allUsers, currentUserProfile) {
     assigneeSelect.disabled = !canDelegate;
 
     // CORREÇÃO: Usando style.display para garantir que o modal seja exibido.
+    modal.style.display = 'flex';
+}*/
+
+export function openEditModal(task, allUsers, currentUserProfile) {
+    // --- INÍCIO DO DIAGNÓSTICO ---
+    console.log("--- DIAGNÓSTICO DO MODAL 'EDITAR TAREFA' ---");
+
+    // 1. O que a função recebeu como entrada?
+    console.log("Objeto 'task' recebido:", task);
+    console.log("Objeto 'currentUserProfile' recebido:", currentUserProfile);
+
+    // 2. Vamos isolar os valores que estamos comparando.
+    const loggedInUserId = currentUserProfile ? currentUserProfile.id : 'PERFIL DO USUÁRIO É NULO';
+    const taskCreatorId = task ? task.criador_id : 'TAREFA É NULA';
+    const isAdmin = currentUserProfile ? (currentUserProfile.cargo?.is_admin || false) : false;
+
+    console.log(`ID do Usuário Logado: ${loggedInUserId} (Tipo: ${typeof loggedInUserId})`);
+    console.log(`ID do Criador da Tarefa: ${taskCreatorId} (Tipo: ${typeof taskCreatorId})`);
+    console.log(`O usuário é admin?: ${isAdmin}`);
+
+    // 3. Como a condição principal está sendo avaliada?
+    const isCreator = loggedInUserId == taskCreatorId;
+    console.log(`A condição 'é o criador?' (id == criador_id) resulta em: ${isCreator}`);
+    
+    // 4. Qual o resultado final da permissão?
+    const canDelegate = isAdmin || isCreator;
+    console.log(`Resultado final de 'canDelegate': ${canDelegate}`);
+    // --- FIM DO DIAGNÓSTICO ---
+
+
+    const modal = document.getElementById('edit-task-modal');
+    if (!task || !modal) return;
+
+    // O resto da função continua como antes...
+    document.getElementById('edit-task-id').value = task.id;
+    document.getElementById('edit-task-title').value = task.titulo;
+    document.getElementById('edit-task-desc').value = task.descricao;
+    document.getElementById('edit-task-due-date').value = task.data_conclusao_prevista;
+    document.getElementById('edit-task-type').value = task.tipo_tarefa_id;
+    document.getElementById('edit-task-condominio').value = task.condominio_id;
+    document.getElementById('edit-task-condominio').disabled = true;
+
+    const assigneeSelect = document.getElementById('edit-task-assignee');
+    assigneeSelect.innerHTML = '';
+    allUsers.forEach(u => {
+        const option = document.createElement('option');
+        option.value = u.id;
+        option.textContent = u.nome_completo;
+        assigneeSelect.appendChild(option);
+    });
+
+    assigneeSelect.value = task.responsavel_id;
+    assigneeSelect.disabled = !canDelegate;
+    
+    // Log final para confirmar o que foi feito na tela
+    console.log(`O dropdown de designar foi DEFINIDO como 'disabled': ${!canDelegate}`);
+    console.log("-------------------------------------------------");
+
+
     modal.style.display = 'flex';
 }
 
@@ -412,4 +475,14 @@ export function setupPWAInstallHandlers() {
             if (iosBanner) iosBanner.style.display = 'none';
         });
     }
+}
+
+export function openInstructionsModal() {
+    const modal = document.getElementById('instructions-modal');
+    if (modal) modal.style.display = 'flex';
+}
+
+export function closeInstructionsModal() {
+    const modal = document.getElementById('instructions-modal');
+    if (modal) modal.style.display = 'none';
 }

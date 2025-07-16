@@ -201,7 +201,7 @@
       </div>
     </div>
   </div>
-<!-- ADICIONADO GPT -->
+  <!-- ADICIONADO GPT -->
   <div id="create-condo-modal" class="modal-container">
   <div class="modal-content">
     <button id="create-condo-modal-close-btn" class="modal-close-btn">&times;</button>
@@ -217,8 +217,8 @@
         <button type="submit" class="task-action-btn btn-save">Salvar</button>
       </div>
     </form>
+    </div>
   </div>
-</div>
 
   <div id="edit-task-modal" class="modal-container">
       <div class="modal-content">
@@ -262,10 +262,10 @@
         <button type="button" id="create-user-modal-cancel-btn" class="task-action-btn btn-cancel">Cancelar</button>
         <button type="submit" class="task-action-btn btn-save">Criar Usuário</button>
     </div>
-</form>
+  </form>
 
+    </div>
   </div>
-</div>
   <div id="edit-user-modal" class="modal-container">
     <div class="modal-content">
         <button id="edit-user-modal-close-btn" class="modal-close-btn">&times;</button>
@@ -315,10 +315,10 @@
                 <button type="submit" class="task-action-btn btn-save">Salvar Alterações</button>
             </div>
         </form>
-    </div>
-  </div>
-  <div id="change-password-modal" class="modal-container">
-  <div class="modal-content">
+      </div>
+      </div>
+      <div id="change-password-modal" class="modal-container">
+      <div class="modal-content">
       <button id="change-password-close-btn" class="modal-close-btn">&times;</button>
       <h3>Alterar Minha Senha</h3>
       <form id="change-password-form">
@@ -331,25 +331,82 @@
               <button type="submit" class="task-action-btn btn-save">Salvar Nova Senha</button>
           </div>
       </form>
-  </div>
-  </div>
+    </div>
+    </div>
 
-  <!--<script src="js/config.js"></script>-->
-  <script type="module" src="js/config.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
-  <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
-  <script src="https://unpkg.com/jspdf-autotable@3.5.23/dist/jspdf.plugin.autotable.js"></script>
-  <script type="module" src="js/app.v2.js"></script>
+    <!--<script src="js/config.js"></script>-->
+    <script type="module" src="js/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+    <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/jspdf-autotable@3.5.23/dist/jspdf.plugin.autotable.js"></script>
+    <script type="module" src="js/app.v2.js"></script>
 
-  <footer style="text-align: center; padding: 2rem 1rem; font-size: 0.8rem; color: #6b7280;">
+    <footer style="text-align: center; padding: 2rem 1rem; font-size: 0.8rem; color: #6b7280;">
     <p>&copy; 2025 TasKCom by AS.dev (iadev.app) Todos os direitos reservados.</p>
     <p>
-        <a href="instrucoes.html" style="color: #4f46e5;">Instruções de Uso</a> | 
+        <a href="#" id="open-instructions-link" style="color: #4f46e5;">Instruções de Uso</a> | 
         <a href="mailto:ajosenildosilva@gmail.com?subject=Ajuda com o TasKCom" style="color: #4f46e5;">Clique aqui se precisar de ajuda</a>
     </p>
   </footer>
-</body>
+
+  <div id="instructions-modal" class="modal-container" style="display: none;">
+    <div class="modal-content" style="max-width: 800px; text-align: left; max-height: 80vh; overflow-y: auto;">
+      <button id="instructions-modal-close-btn" class="modal-close-btn">&times;</button>
+      
+      <h1>Instruções de Uso - TasKCom</h1>
+
+      <section id="admin-instructions">
+          <h2>Para Administradores</h2>
+          <p>Como Administrador, você tem controle total sobre o sistema. Suas principais responsabilidades são configurar a base de trabalho e gerenciar os acessos.</p>
+          
+          <h3>Cadastros Básicos (Tela de Admin)</h3>
+          <ul>
+              <li><strong>Cargos:</strong> Crie os diferentes cargos da sua equipe (ex: "Eletricista", "Encanador", "Supervisor").</li>
+              <li><strong>Grupos:</strong> Crie os "Grupos de Condomínios" para organizar seus clientes (ex: "Filial Natal", "Clientes Zona Sul").</li>
+              <li><strong>Tipos de Tarefa:</strong> Cadastre as categorias de tarefas (ex: "Manutenção Preventiva", "Orçamento", "Visita Técnica") e associe uma cor a cada uma.</li>
+              <li><strong>Condomínios:</strong> Cadastre seus clientes. Você pode associar cada condomínio a um grupo e também importar uma lista de condomínios em massa usando uma planilha CSV.</li>
+          </ul>
+
+          <h3>Gerenciamento de Usuários</h3>
+          <ul>
+              <li><strong>Criar Usuário:</strong> Na tela "Admin", clique em "+ Novo Usuário", preencha o nome completo, e-mail, cargo e uma senha provisória. O novo usuário poderá logar imediatamente.</li>
+              <li><strong>Editar Usuário:</strong> Permite alterar o nome e o cargo de um usuário, além de associá-lo a um ou mais "Grupos de Condomínios".</li>
+              <li><strong>Desativar/Reativar:</strong> Um usuário desativado não consegue mais acessar o sistema, mas seu histórico de tarefas é mantido.</li>
+          </ul>
+      </section>
+
+      <hr style="margin: 2rem 0;">
+
+      <section id="user-instructions">
+          <h2>Para Gerentes e Outros Usuários</h2>
+          <p>Seu foco é a execução e o gerenciamento das tarefas do dia a dia.</p>
+          
+          <h3>Tela de Tarefas</h3>
+          <ul>
+              <li><strong>Criar Tarefa:</strong> Preencha o formulário para criar uma nova tarefa. Você pode designá-la para si mesmo ou para outro colega, dependendo da sua permissão.</li>
+              <li><strong>Filtros:</strong> Use a barra de filtros para encontrar tarefas por status (Ativas, Concluídas, etc.), tipo, responsável, condomínio ou período.</li>
+              <li><strong>Ações da Tarefa:</strong> Em cada tarefa, você pode clicar em "Editar" para alterar seus detalhes, "Concluir" para finalizá-la ou "Excluir" para removê-la da lista principal.</li>
+          </ul>
+
+          <h3>Tela de Dashboard</h3>
+          <ul>
+              <li>Acesse o Dashboard para ter uma visão geral e rápida da situação das suas tarefas, com gráficos que mostram o total de tarefas por status e por condomínio.</li>
+          </ul>
+
+          <h3>Segurança da Conta</h3>
+          <ul>
+              <li><strong>Alterar Senha:</strong> No topo da página, clique em "Alterar Senha" para definir uma nova senha de acesso a qualquer momento.</li>
+              <li><strong>Esqueci Minha Senha:</strong> Na tela de login, caso esqueça sua senha, use o link "Esqueci minha senha" para receber um e-mail de redefinição.</li>
+          </ul>
+      </section>
+      <div class="modal-actions" style="justify-content: flex-end; margin-top: 1.5rem;">
+        <button type="button" id="instructions-modal-ok-btn" class="task-action-btn btn-save">Entendi</button>
+      </div>
+    </div>
+  </div>
+
+  </body>
 </html>

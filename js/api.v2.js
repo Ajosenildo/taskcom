@@ -4,37 +4,67 @@ import { supabaseClient } from './supabaseClient.js';
 import { SUPABASE_URL } from './config.js';
 
 // --- FUNÇÃO PRINCIPAL DE BUSCA DE DADOS ---
-export async function fetchInitialData() {
-    const [tasksResult, condosResult, typesResult, templatesResult, usersResult, cargosResult, groupsResult] = await Promise.all([
-        supabaseClient.from('tarefas').select('*, responsavel:responsavel_id(nome_completo), criador:criador_id(nome_completo)'),
-        
-        // CORREÇÃO: Ordenação mais robusta para condomínios.
-        // Ordena primeiro por 'nome_fantasia' e depois por 'nome' como critério de desempate.
-        supabaseClient.from('condominios').select('*').order('nome_fantasia', { ascending: true }).order('nome', { ascending: true }),
-        
-        // A ordenação de tipos de tarefa já está correta e foi mantida.
-        supabaseClient.from('tipos_tarefa').select('*').order('nome_tipo', { ascending: true }),
+export async function fetchInitialData(empresaId) {
+    if (!empresaId) {
+        throw new Error("ID da empresa é necessário para buscar os dados.");
+    }
 
-        supabaseClient.from('modelos_tarefa').select('*'),
-        supabaseClient.from('usuarios').select('*'),
-        supabaseClient.from('cargos').select('*'),
-        supabaseClient.from('grupos').select('*')
+    /* const [
+        tasksResult, 
+        condosResult, 
+        typesResult, 
+        templatesResult, 
+        usersResult, 
+        cargosResult, 
+        groupsResult,
+        allAssignmentsResult
+    ] = await Promise.all([
+        // Todas as consultas agora usam .eq('empresa_id', empresaId)
+        supabaseClient.from('tarefas').select('*, responsavel:responsavel_id(nome_completo), criador:criador_id(nome_completo)').eq('empresa_id', empresaId),
+        supabaseClient.from('condominios').select('*').eq('empresa_id', empresaId).order('nome_fantasia', { ascending: true }).order('nome', { ascending: true }),
+        supabaseClient.from('tipos_tarefa').select('*').eq('empresa_id', empresaId).order('nome_tipo', { ascending: true }),
+        supabaseClient.from('modelos_tarefa').select('*').eq('empresa_id', empresaId),
+        supabaseClient.from('usuarios').select('*').eq('empresa_id', empresaId), 
+        supabaseClient.from('cargos').select('*').eq('empresa_id', empresaId),
+        supabaseClient.from('grupos').select('*').eq('empresa_id', empresaId),
+        // A tabela de associação (usuario_grupo) não tem empresa_id, então buscamos todos
+        // e filtramos na sequência.
+        supabaseClient.from('usuario_grupo').select('usuario_id, grupo_id')
+    ]);*/
+
+    const [tasksResult, condosResult, typesResult, templatesResult, usersResult, cargosResult, groupsResult, allAssignmentsResult] = await Promise.all([
+        supabaseClient.from('tarefas_detalhadas').select('*'),
+        supabaseClient.from('condominios').select('*').eq('empresa_id', empresaId).order('nome_fantasia', { ascending: true }).order('nome', { ascending: true }),
+        supabaseClient.from('tipos_tarefa').select('*').eq('empresa_id', empresaId).order('nome_tipo', { ascending: true }),
+        supabaseClient.from('modelos_tarefa').select('*').eq('empresa_id', empresaId),
+        supabaseClient.from('usuarios').select('*').eq('empresa_id', empresaId), 
+        supabaseClient.from('cargos').select('*').eq('empresa_id', empresaId),
+        supabaseClient.from('grupos').select('*').eq('empresa_id', empresaId),
+        // A tabela de associação (usuario_grupo) não tem empresa_id, então buscamos todos
+        // e filtramos na sequência.
+        supabaseClient.from('usuario_grupo').select('usuario_id, grupo_id')
     ]);
 
-    const error = tasksResult.error || condosResult.error || typesResult.error || templatesResult.error || usersResult.error || cargosResult.error || groupsResult.error;
+    const error = tasksResult.error || condosResult.error || typesResult.error || templatesResult.error || usersResult.error || cargosResult.error || groupsResult.error || allAssignmentsResult.error;
     if (error) {
-        console.error("Erro ao buscar dados:", error);
+        console.error("Erro ao buscar dados filtrados:", error);
         throw new Error("Não foi possível carregar os dados do sistema.");
     }
+
+    // Filtra as associações de grupo para pertencerem apenas aos usuários da empresa atual
+    const usersInCompany = usersResult.data || [];
+    const userIdsInCompany = new Set(usersInCompany.map(u => u.id));
+    const filteredAssignments = (allAssignmentsResult.data || []).filter(a => userIdsInCompany.has(a.usuario_id));
 
     return {
         tasks: tasksResult.data || [],
         condominios: condosResult.data || [],
         taskTypes: typesResult.data || [],
         taskTemplates: templatesResult.data || [],
-        allUsers: usersResult.data || [],
+        allUsers: usersInCompany, // <--- Lista de usuários agora é segura
         allCargos: cargosResult.data || [],
-        allGroups: groupsResult.data || []
+        allGroups: groupsResult.data || [],
+        userGroupAssignments: filteredAssignments // <--- Associações também são seguras
     };
 }
 
@@ -221,5 +251,16 @@ export async function fetchAllUserGroupAssignments() {
         .from('usuario_grupo')
         .select('usuario_id, grupo_id');
     if (error) throw error;
+    return data || [];
+}
+
+export async function fetchAllUsersForAssignment() {
+    const { data, error } = await supabaseClient.rpc('get_usuarios_da_empresa');
+    
+    if (error) {
+        console.error("Erro ao buscar usuários para designação:", error);
+        throw error;
+    }
+    
     return data || [];
 }
