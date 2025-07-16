@@ -9,29 +9,6 @@ export async function fetchInitialData(empresaId) {
         throw new Error("ID da empresa é necessário para buscar os dados.");
     }
 
-    /* const [
-        tasksResult, 
-        condosResult, 
-        typesResult, 
-        templatesResult, 
-        usersResult, 
-        cargosResult, 
-        groupsResult,
-        allAssignmentsResult
-    ] = await Promise.all([
-        // Todas as consultas agora usam .eq('empresa_id', empresaId)
-        supabaseClient.from('tarefas').select('*, responsavel:responsavel_id(nome_completo), criador:criador_id(nome_completo)').eq('empresa_id', empresaId),
-        supabaseClient.from('condominios').select('*').eq('empresa_id', empresaId).order('nome_fantasia', { ascending: true }).order('nome', { ascending: true }),
-        supabaseClient.from('tipos_tarefa').select('*').eq('empresa_id', empresaId).order('nome_tipo', { ascending: true }),
-        supabaseClient.from('modelos_tarefa').select('*').eq('empresa_id', empresaId),
-        supabaseClient.from('usuarios').select('*').eq('empresa_id', empresaId), 
-        supabaseClient.from('cargos').select('*').eq('empresa_id', empresaId),
-        supabaseClient.from('grupos').select('*').eq('empresa_id', empresaId),
-        // A tabela de associação (usuario_grupo) não tem empresa_id, então buscamos todos
-        // e filtramos na sequência.
-        supabaseClient.from('usuario_grupo').select('usuario_id, grupo_id')
-    ]);*/
-
     const [tasksResult, condosResult, typesResult, templatesResult, usersResult, cargosResult, groupsResult, allAssignmentsResult] = await Promise.all([
         supabaseClient.from('tarefas_detalhadas').select('*'),
         supabaseClient.from('condominios').select('*').eq('empresa_id', empresaId).order('nome_fantasia', { ascending: true }).order('nome', { ascending: true }),

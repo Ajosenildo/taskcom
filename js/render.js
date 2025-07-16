@@ -27,19 +27,25 @@ function getVisualStatus(task, STATUSES) {
 }
 
 export function renderTasks(state) {
-    const { tasks, condominios, taskTypes, STATUSES, activeFilters } = state;
+    const { tasks, condominios, taskTypes, STATUSES, activeFilters, currentUserProfile } = state; // Adicionado currentUserProfile
     const list = document.getElementById('task-list');
     if (!list) return [];
     list.innerHTML = '';
 
     const processedTasks = tasks.map(task => ({ ...task, visualStatusInfo: getVisualStatus(task, STATUSES) }));
-
+    
     let tasksToDisplay = processedTasks;
+
+   
+    if (currentUserProfile && !currentUserProfile.cargo?.is_admin) {
+        const userId = currentUserProfile.id;
+        tasksToDisplay = tasksToDisplay.filter(t => t.criador_id === userId || t.responsavel_id === userId);
+    }
     
     if (activeFilters.status === 'deleted') {
-        tasksToDisplay = processedTasks.filter(t => t.status === 'deleted');
+        tasksToDisplay = tasksToDisplay.filter(t => t.status === 'deleted');
     } else {
-        tasksToDisplay = processedTasks.filter(t => t.status !== 'deleted');
+        tasksToDisplay = tasksToDisplay.filter(t => t.status !== 'deleted');
         if (activeFilters.status !== 'active') {
             tasksToDisplay = tasksToDisplay.filter(t => t.visualStatusInfo && t.visualStatusInfo.status.key === activeFilters.status);
         }
@@ -71,6 +77,7 @@ export function renderTasks(state) {
 
     tasksToDisplay.sort((a, b) => new Date(a.data_conclusao_prevista) - new Date(b.data_conclusao_prevista) || b.id - a.id);
 
+    // O resto da função de renderização continua igual...
     if (tasksToDisplay.length === 0) {
         list.innerHTML = '<p style="text-align:center; color:#6b7280;">Nenhuma tarefa encontrada.</p>';
     } else {
@@ -92,6 +99,10 @@ export function renderTasks(state) {
                 overdueText = ` (${visualStatusInfo.days} dia${visualStatusInfo.days > 1 ? 's' : ''} de atraso)`;
             }
 
+            // Garante que o nome do criador e responsável venham dos campos corretos da VIEW
+            const criadorNome = task.criador_nome || 'Sistema';
+            const responsavelNome = task.responsavel_nome || 'Não definido';
+
             card.innerHTML = `
                 <div class="task-card-header">
                   <div class="task-card-title-wrapper">
@@ -101,10 +112,10 @@ export function renderTasks(state) {
                   <span class="task-card-type" style="background-color: ${type ? type.cor : '#6b7280'};">${type ? type.nome_tipo : 'N/A'}</span>
                 </div>
                 <div class="task-card-details">
-                  <span>Criado em: <strong>${new Date(task.data_criacao).toLocaleDateString('pt-BR', { timeZone: 'UTC' })} por ${task.criador?.nome_completo || 'Sistema'}</strong></span>
+                  <span>Criado em: <strong>${new Date(task.data_criacao).toLocaleDateString('pt-BR', { timeZone: 'UTC' })} por ${criadorNome}</strong></span>
                   <span>Concluir até: <strong>${new Date(task.data_conclusao_prevista).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</strong></span>
                 </div>
-                <div class="task-card-assignee">Responsável: <strong>${task.responsavel_nome || 'Não definido'}</strong></div>
+                <div class="task-card-assignee">Responsável: <strong>${responsavelNome}</strong></div>
                 <p>${task.descricao || 'Nenhuma descrição.'}</p>
                 <div class="task-card-condo">${condoDisplayName}</div>
                 <div class="task-card-actions">
@@ -389,9 +400,6 @@ export function renderTaskHistory(events) {
             details = `de <strong>${de}</strong> para <strong>${para}</strong>`;
         }
         
-        // No futuro, podemos adicionar mais 'else if' para outros eventos
-        // else if (event.evento === 'Alteração de Status') { ... }
-
         return `<p><small>${eventDate} - ${userName}: ${event.evento} ${details}</small></p>`;
     }).join('');
 }
