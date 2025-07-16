@@ -36,6 +36,10 @@ export function renderTasks(state) {
     
     let tasksToDisplay = processedTasks;
 
+    if (currentUserProfile && currentUserProfile.empresa_id) {
+        tasksToDisplay = tasksToDisplay.filter(t => t.empresa_id === currentUserProfile.empresa_id);
+    }
+
    
     if (currentUserProfile && !currentUserProfile.cargo?.is_admin) {
         const userId = currentUserProfile.id;
