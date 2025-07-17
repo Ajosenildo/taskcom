@@ -200,10 +200,21 @@ export function renderUserList(allUsers, currentUserProfile, allCargos, allGroup
 
 
 export function renderDashboard(state) {
-    // CORREÇÃO: Desempacota o objeto 'state'
-    const { tasks, condominios, STATUSES, chartInstances } = state;
+    // Desempacotamos o currentUserProfile junto com o resto do estado
+    const { tasks, condominios, STATUSES, chartInstances, currentUserProfile } = state;
 
-    const activeTasks = tasks.filter(t => t.status === 'pending');
+    // --- INÍCIO DA CORREÇÃO DE SEGURANÇA ---
+    // Criamos uma lista de tarefas segura, contendo apenas as da empresa do usuário logado.
+    let tasksToRender = [];
+    if (currentUserProfile && currentUserProfile.empresa_id) {
+        tasksToRender = tasks.filter(t => t.empresa_id === currentUserProfile.empresa_id);
+    }
+    // --- FIM DA CORREÇÃO ---
+
+    // Agora, todas as lógicas abaixo usarão a lista 'tasksToRender' que é segura,
+    // em vez da lista 'tasks' original, que pode conter dados de outras empresas.
+
+    const activeTasks = tasksToRender.filter(t => t.status === 'pending');
     let inProgressCount = 0;
     let overdueCount = 0;
     const today = new Date();
@@ -218,7 +229,7 @@ export function renderDashboard(state) {
 
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-    const completedLastMonthCount = tasks.filter(task => {
+    const completedLastMonthCount = tasksToRender.filter(task => { // Usando tasksToRender
         if (task.status !== 'completed') return false;
         const completionDate = new Date(task.data_conclusao_prevista);
         return completionDate >= oneMonthAgo;
@@ -228,7 +239,7 @@ export function renderDashboard(state) {
     document.getElementById('kpi-overdue').textContent = overdueCount;
     document.getElementById('kpi-completed').textContent = completedLastMonthCount;
     
-    const allCompletedCount = tasks.filter(t => t.status === 'completed').length;
+    const allCompletedCount = tasksToRender.filter(t => t.status === 'completed').length; // Usando tasksToRender
     const statusData = {
         labels: ['Em Andamento', 'Atrasadas', 'Concluídas'],
         datasets: [{
@@ -258,8 +269,12 @@ export function renderDashboard(state) {
     activeTasks.forEach(task => {
         condoCounts[task.condominio_id] = (condoCounts[task.condominio_id] || 0) + 1;
     });
+    
+    // Precisamos filtrar os condomínios para pegar apenas os da empresa atual
+    const condosInCompany = condominios.filter(c => c.empresa_id === currentUserProfile.empresa_id);
+    
     const condoLabels = Object.keys(condoCounts).map(id => {
-        const condo = condominios.find(c => c.id == id);
+        const condo = condosInCompany.find(c => c.id == id);
         return condo ? (condo.nome_fantasia || condo.nome) : 'Desconhecido';
     });
     const condoData = {
