@@ -44,7 +44,9 @@ const state = {
         in_progress: { key: 'in_progress', text: 'Em Andamento', icon: '🔵', color: '#3b82f6' },
         overdue: { key: 'overdue', text: 'Atrasada', icon: '🟠', color: '#f59e0b' },
         deleted: { key: 'deleted', text: 'Excluída', icon: '❌', color: '#ef4444' }
-    }
+    },
+
+    unreadNotifications: 0 
 };
 
 /**
@@ -890,6 +892,67 @@ function setupEventListeners() {
         if (action === 'edit-cargo') handleEditCargo(cargoId, cargoName);
         if (action === 'delete-cargo') handleDeleteCargo(cargoId, cargoName);
     });
+
+   document.getElementById('notification-bell-container')?.addEventListener('click', async () => {
+        const modal = document.getElementById('notifications-modal');
+        const list = document.getElementById('notifications-list');
+        
+        if (!modal || !list) return;
+
+        // 1. ALTERAÇÃO: Removemos o filtro '.eq('lida', false)' para buscar
+        // as últimas 10 notificações, lidas ou não.
+        const { data: notifications, error } = await supabaseClient
+        .from('notificacoes')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+        if (error) return alert("Erro ao buscar notificações: " + error.message);
+
+        // 2. ALTERAÇÃO: Adicionamos uma lógica para aplicar a classe 'unread'
+        // se a notificação ainda não foi lida (n.lida === false).
+        list.innerHTML = notifications.length > 0
+        ? notifications.map(n => {
+            const isUnreadClass = n.lida === false ? 'unread' : '';
+            return `
+              <div class="notification-item ${isUnreadClass}" data-task-id="${n.tarefa_id}" data-notification-id="${n.id}" style="cursor: pointer;">
+                <p>${n.mensagem}</p>
+                <small>${new Date(n.created_at).toLocaleString('pt-BR')}</small>
+              </div>
+            `;
+          }).join('')
+        : '<p>Nenhuma notificação recente.</p>';
+    
+        modal.style.display = 'flex';
+        });
+
+    // ADICIONE este novo listener para a lista de notificações
+    document.getElementById('notifications-list')?.addEventListener('click', (event) => {
+        const notificationItem = event.target.closest('.notification-item');
+        if (!notificationItem) return;
+
+        const taskId = parseInt(notificationItem.dataset.taskId, 10);
+        const notificationId = parseInt(notificationItem.dataset.notificationId, 10);
+
+        if (taskId && notificationId) {
+            // 1. Marca a notificação específica como lida (sem esperar)
+            api.markNotificationAsRead(notificationId);
+
+            // 2. Fecha o modal de notificações
+            document.getElementById('notifications-modal').style.display = 'none';
+
+            // 3. Abre o modal da tarefa correspondente
+            handleOpenEditModal(taskId);
+
+            // 4. Roda a verificação de notificações novamente para atualizar o contador do sino
+            verificarNotificacoes();
+        }
+    });
+
+    // Adicione também o listener para fechar o novo modal
+    document.getElementById('notifications-modal-close-btn')?.addEventListener('click', () => {
+        document.getElementById('notifications-modal').style.display = 'none';
+    });
     
     // Listeners de eventos globais da janela/documento
     window.addEventListener('viewChanged', handleViewChange);
@@ -1191,6 +1254,33 @@ async function handleCreateCondo(event) {
 // Listener para evento personalizado
 window.addEventListener('showAdminView', () => render.renderUserList(state.allUsers, state.currentUserProfile));
 
+// Arquivo: js/app.v2.js -> Adicione esta nova função
+
+async function verificarNotificacoes() {
+    // Chama nossa nova função 'contadora' no banco
+    const { data: count, error } = await supabaseClient.rpc('contar_notificacoes_nao_lidas');
+
+    if (error) {
+        console.error("Erro ao verificar notificações:", error);
+        return;
+    }
+
+    console.log(`Verificação: ${count} notificações não lidas.`);
+    
+    // Atualiza o estado e o emblema visual do sino
+    state.unreadNotifications = count;
+    const badge = document.getElementById('notification-badge');
+
+    if (badge) {
+        if (count > 0) {
+            badge.textContent = count;
+            badge.style.display = 'block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+
 async function startApp() {
     setupEventListeners();
     ui.setupPWAInstallHandlers();
@@ -1303,6 +1393,12 @@ async function startApp() {
                 // Se não houver anotação, abra na tela padrão de tarefas.
                 ui.showView('tasks-view');
             }
+            // 2. Verificamos as notificações assim que a página carrega.
+            verificarNotificacoes();
+
+            // 3. Configuramos um 'timer' para verificar a cada 30 segundos.
+            setInterval(verificarNotificacoes, 30000); // 30000 milissegundos = 30 segundos
+
         } catch (error) {
             console.error("Erro crítico durante a inicialização:", error);
             alert(`Ocorreu um erro crítico ao carregar a aplicação: ${error.message}`);

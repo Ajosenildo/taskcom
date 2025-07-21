@@ -845,3 +845,47 @@ body {
     color: #FFFFFF;
     font-weight: bold;
 }
+.notification-bell {
+  position: relative; /* Necessário para o emblema de notificação */
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  margin-right: 1rem; /* Espaçamento antes do botão "Alterar Senha" */
+}
+
+/* O ícone do sino em si, criado com CSS */
+#notification-icon::before {
+  content: '🔔'; /* Usamos o caractere de sino */
+  font-size: 20px;
+  color: #6b7280; /* Cor cinza, como você pediu */
+  -webkit-text-stroke: 0.5px black; /* Contorno fino preto para navegadores Webkit (Chrome, Safari) */
+  text-stroke: 0.5px black; /* Contorno fino preto padrão */
+  transition: color 0.2s ease-in-out;
+}
+
+/* Efeito ao passar o mouse por cima */
+.notification-bell:hover #notification-icon::before {
+  color: #374151; /* Deixa o sino um pouco mais escuro */
+}
+
+/* O emblema vermelho com o número de notificações */
+.notification-badge {
+  position: absolute;
+  top: 10px;   /* <--- Ajustado para ficar mais para baixo */
+  right: -4px; /* <--- Ajustado para ficar mais para a esquerda */
+  background-color: red;
+  color: white;
+  border-radius: 50%;
+  padding: 1px 5px;
+  font-size: 8px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid white;
+}
+
+.notification-item.unread p {
+  font-weight: bold;
+  color: #1f2937; /* Um pouco mais escuro para destaque */
+}

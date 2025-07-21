@@ -44,12 +44,16 @@
 
     <div id="main-container" class="screen">
       <div class="main-header">
-        <img src="assets/logo-taskcom.png" alt="Logo TasKCom" class="header-logo">
-        <div class="header-actions">
-          
+      <img src="assets/logo-taskcom.png" alt="Logo TasKCom" class="header-logo">
+      <div class="header-actions">
+        
+        <div id="notification-bell-container" class="notification-bell">
+          <span id="notification-icon"></span> <span id="notification-badge" class="notification-badge" style="display: none;"></span>
+        </div>
+        
         <button id="change-password-btn" class="btn-secondary">Alterar Senha</button>
         <button id="logout-btn">Sair</button>
-        </div>
+      </div>
       </div>
            <div id="first-access-banner" style="display: none; background-color: #fff3cd; padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid #ffeeba;">
         <p style="margin: 0; color: #856404;"><strong>Este é seu primeiro acesso!</strong> Para liberar todas as funcionalidades, por favor, crie sua senha pessoal.</p>
@@ -61,10 +65,10 @@
           <button id="nav-tasks" class="nav-btn active">Tarefas</button>
           <button id="nav-dashboard" class="nav-btn">Dashboard</button>
           <button id="nav-admin" class="nav-btn admin-feature">Admin</button>
+
           
       </nav>
-
-      <div id="ios-install-banner" class="install-banner" style="display: none;">
+        <div id="ios-install-banner" class="install-banner" style="display: none;">
         <p>Para a melhor experiência, adicione o TasKCom à sua Tela de Início! Toque no ícone de "Compartilhar" (o quadrado com uma seta para cima) e depois em "Adicionar à Tela de Início".</p>
         <button id="ios-install-close-btn">&times;</button>
       </div>
@@ -343,6 +347,7 @@
     <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
     <script src="https://unpkg.com/jspdf-autotable@3.5.23/dist/jspdf.plugin.autotable.js"></script>
     <script type="module" src="js/app.v2.js"></script>
+    <audio id="notification-sound" src="assets/notification.mp3" preload="auto"></audio>
 
     <footer style="text-align: center; padding: 2rem 1rem; font-size: 0.8rem; color: #6b7280;">
     <p>&copy; 2025 TasKCom by AS.dev (iadev.app) Todos os direitos reservados.</p>
@@ -405,6 +410,14 @@
       <div class="modal-actions" style="justify-content: flex-end; margin-top: 1.5rem;">
         <button type="button" id="instructions-modal-ok-btn" class="task-action-btn btn-save">Entendi</button>
       </div>
+    </div>
+  </div>
+  <div id="notifications-modal" class="modal-container">
+    <div class="modal-content">
+      <button id="notifications-modal-close-btn" class="modal-close-btn">&times;</button>
+      <h3>Notificações</h3>
+      <div id="notifications-list">
+        </div>
     </div>
   </div>
 

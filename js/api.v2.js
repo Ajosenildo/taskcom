@@ -244,3 +244,14 @@ export async function fetchAllUsersForAssignment() {
     
     return data || [];
 }
+
+export async function markNotificationAsRead(notificationId) {
+    const { error } = await supabaseClient
+        .from('notificacoes')
+        .update({ lida: true })
+        .eq('id', notificationId);
+    
+    if (error) {
+        console.error("Erro ao marcar notificação como lida:", error);
+    }
+}
