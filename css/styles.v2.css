@@ -850,7 +850,7 @@ body {
   display: flex;
   align-items: center;
   cursor: pointer;
-  margin-right: 1rem; /* Espaçamento antes do botão "Alterar Senha" */
+  margin-right: 0rem; /* Espaçamento antes do botão "Alterar Senha" */
 }
 
 /* O ícone do sino em si, criado com CSS */
