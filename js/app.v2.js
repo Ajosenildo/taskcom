@@ -1281,9 +1281,21 @@ async function verificarNotificacoes() {
     }
 }
 
+function unlockAudio() {
+    const sound = document.getElementById('notification-sound');
+    if (sound && sound.paused) {
+        sound.play().catch(() => {}); // Tenta tocar
+        sound.pause(); // Pausa imediatamente
+        console.log("Contexto de áudio inicializado pela interação do usuário.");
+    }
+    // O listener será removido automaticamente após o primeiro clique (ver Passo 2).
+}
+
 async function startApp() {
     setupEventListeners();
     ui.setupPWAInstallHandlers();
+    window.addEventListener('click', unlockAudio, { once: true });
+    window.addEventListener('touchend', unlockAudio, { once: true });
 
     const { data: { session } } = await supabaseClient.auth.getSession();
 
