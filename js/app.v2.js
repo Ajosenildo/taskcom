@@ -196,7 +196,7 @@ async function handleCreateTask(event) {
 
 function handleViewChange(event) {
     const { viewId } = event.detail;
-    console.log(`Renderizando conteúdo para a view: ${viewId}`);
+   // console.log(`Renderizando conteúdo para a view: ${viewId}`);
 
     try {
         if (viewId === 'tasks-view') {
@@ -284,6 +284,7 @@ async function handleUpdateTask(event) {
         // Este código só será executado se NÃO houver erro.
         alert('Tarefa atualizada com sucesso!');
         ui.closeEditModal();
+        sessionStorage.setItem('lastActiveView', 'tasks-view');
         location.reload();
 
     } catch (error) {
@@ -1265,7 +1266,7 @@ async function verificarNotificacoes() {
         return;
     }
 
-    console.log(`Verificação: ${count} notificações não lidas.`);
+   //  console.log(`Verificação: ${count} notificações não lidas.`);
     
     // Atualiza o estado e o emblema visual do sino
     state.unreadNotifications = count;
@@ -1282,21 +1283,21 @@ async function verificarNotificacoes() {
 }
 
 function unlockAudio() {
-    const sound = document.getElementById('notification-sound');
-    if (sound && sound.paused) {
-        sound.play().catch(() => {}); // Tenta tocar
-        sound.pause(); // Pausa imediatamente
-        console.log("Contexto de áudio inicializado pela interação do usuário.");
-    }
-    // O listener será removido automaticamente após o primeiro clique (ver Passo 2).
+  const sound = document.getElementById('notification-sound');
+  if (sound && sound.paused) {
+    sound.play().catch(() => {}); // Tenta tocar para "acordar" o áudio
+    sound.pause(); // Pausa imediatamente, o usuário não vai ouvir
+  }
+  console.log("Contexto de áudio ativado pela interação do usuário.");
+  // O listener que chama esta função será removido automaticamente.
 }
 
 async function startApp() {
-    setupEventListeners();
-    ui.setupPWAInstallHandlers();
     window.addEventListener('click', unlockAudio, { once: true });
     window.addEventListener('touchend', unlockAudio, { once: true });
-
+    setupEventListeners();
+    ui.setupPWAInstallHandlers();
+    
     const { data: { session } } = await supabaseClient.auth.getSession();
 
     if (session) {
@@ -1327,8 +1328,8 @@ async function startApp() {
 
             // =======================================================================
             // PONTO DE VERIFICAÇÃO 1: O QUE VEIO DA API?
-            console.log("--- VERIFICANDO DADOS RECEBIDOS DA API ---");
-            console.log("Tipos de Tarefa recebidos:", initialData.taskTypes);
+           // console.log("--- VERIFICANDO DADOS RECEBIDOS DA API ---");
+           // console.log("Tipos de Tarefa recebidos:", initialData.taskTypes);
             // =======================================================================
 
             state.currentUserProfile = userProfile;
@@ -1337,8 +1338,8 @@ async function startApp() {
 
             // =======================================================================
             // PONTO DE VERIFICAÇÃO 2: O QUE ESTÁ NO ESTADO ANTES DE RENDERIZAR?
-            console.log("--- VERIFICANDO ESTADO ANTES DE RENDERIZAR ---");
-            console.log("state.taskTypes:", state.taskTypes);
+           // console.log("--- VERIFICANDO ESTADO ANTES DE RENDERIZAR ---");
+           // console.log("state.taskTypes:", state.taskTypes);
             // =======================================================================
 
             console.log("Dados carregados. Renderizando a aplicação...");
@@ -1349,7 +1350,7 @@ async function startApp() {
             // =======================================================================
             // INÍCIO DA CORREÇÃO - CONFIGURAÇÃO DOS DROPDOWNS
             // =======================================================================
-            console.log("Configurando todos os dropdowns da aplicação...");
+           //  console.log("Configurando todos os dropdowns da aplicação...");
 
             // 1. Popula os dropdowns simples (Tipos de Tarefa, Responsáveis, etc.)
             ui.populateDropdowns(state.condominios, state.taskTypes, state.allUsers, state.allGroups);
@@ -1416,14 +1417,60 @@ async function startApp() {
             alert(`Ocorreu um erro crítico ao carregar a aplicação: ${error.message}`);
             await logout();
         }
-    } else {
+        
+        const notificationChannel = supabaseClient
+      .channel('public:notificacoes:user_id=eq.' + state.currentUserProfile.id)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notificacoes' },
+        (payload) => {
+          console.log('Nova notificação recebida!', payload);
+          
+          // ======================================================
+          // INÍCIO DO BLOCO QUE TOCA O SOM E VIBRA
+          // Verifique se o seu código tem esta parte.
+          // ======================================================
+          
+          // 1. Encontra o elemento de áudio
+          const sound = document.getElementById('notification-sound');
+          if (sound) {
+              // Garante que o som toque do início
+              sound.currentTime = 0;
+              // Toca o som
+              sound.play().catch(e => console.error("Erro ao tocar som:", e));
+          }
+
+          // 2. Vibra o dispositivo (se suportado)
+          if (navigator.vibrate) {
+            navigator.vibrate(200); // Vibra por 200ms
+          }
+          
+          // ======================================================
+          // FIM DO BLOCO QUE TOCA O SOM E VIBRA
+          // ======================================================
+
+          // 3. Atualiza o contador e o emblema visual do sino
+          // Esta parte deve continuar como está
+          state.unreadNotifications++;
+          const badge = document.getElementById('notification-badge');
+          if (badge) {
+            badge.textContent = state.unreadNotifications;
+            badge.style.display = 'block';
+          }
+        }
+      )
+      .subscribe((status) => {
+        // ... (resto do seu código)
+      });
+
+        } else {
         appInitialized = false;
         sessionStorage.clear();
         ui.show('login-screen');
-    }
+        }
 
-    // Listener para eventos futuros de login/logout após a carga inicial
-    supabaseClient.auth.onAuthStateChange((_event, newSession) => {
+        // Listener para eventos futuros de login/logout após a carga inicial
+        supabaseClient.auth.onAuthStateChange((event, newSession) => {
         if (event === 'SIGNED_OUT' && appInitialized) {
             console.log("Sessão encerrada pelo servidor ou outra aba. Recarregando a página.");
             
@@ -1432,7 +1479,53 @@ async function startApp() {
             // A página recarregada não terá sessão e o próprio startApp mostrará a tela de login.
             location.reload();
         }
-    });
+        });
+
+        /* const notificationChannel = supabaseClient
+      .channel('public:notificacoes:user_id=eq.' + userProfile.id)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notificacoes' },
+        (payload) => {
+          console.log('Nova notificação recebida!', payload);
+          
+          // ======================================================
+          // INÍCIO DO BLOCO QUE TOCA O SOM E VIBRA
+          // Verifique se o seu código tem esta parte.
+          // ======================================================
+          
+          // 1. Encontra o elemento de áudio
+          const sound = document.getElementById('notification-sound');
+          if (sound) {
+              // Garante que o som toque do início
+              sound.currentTime = 0;
+              // Toca o som
+              sound.play().catch(e => console.error("Erro ao tocar som:", e));
+          }
+
+          // 2. Vibra o dispositivo (se suportado)
+          if (navigator.vibrate) {
+            navigator.vibrate(200); // Vibra por 200ms
+          }
+          
+          // ======================================================
+          // FIM DO BLOCO QUE TOCA O SOM E VIBRA
+          // ======================================================
+
+          // 3. Atualiza o contador e o emblema visual do sino
+          // Esta parte deve continuar como está
+          state.unreadNotifications++;
+          const badge = document.getElementById('notification-badge');
+          if (badge) {
+            badge.textContent = state.unreadNotifications;
+            badge.style.display = 'block';
+          }
+        }
+      )
+      .subscribe((status) => {
+        // ... (resto do seu código)
+      });*/
+    
 }
 
 // Evento que dispara a aplicação

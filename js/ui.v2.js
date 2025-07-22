@@ -37,8 +37,8 @@ export function setupRoleBasedUI(currentUserProfile) {
 
 export function populateDropdowns(CONDOMINIOS, TASK_TYPES, allUsers, allGroups) {
      // PONTO DE VERIFICAÇÃO 3: A FUNÇÃO DE RENDERIZAÇÃO FOI CHAMADA?
-    console.log("--- DENTRO DE ui.populateDropdowns ---");
-    console.log("Recebido para renderizar TASK_TYPES:", TASK_TYPES);
+    // console.log("--- DENTRO DE ui.populateDropdowns ---");
+    // console.log("Recebido para renderizar TASK_TYPES:", TASK_TYPES);
     // ==============================================================
     const filterGroupSelect = document.getElementById('filter-group');
     const createTaskAssigneeSelect = document.getElementById('task-assignee');
@@ -149,28 +149,28 @@ export function populateTemplatesDropdown(taskTemplates) {
 
 export function openEditModal(task, allUsers, currentUserProfile) {
     // --- INÍCIO DO DIAGNÓSTICO ---
-    console.log("--- DIAGNÓSTICO DO MODAL 'EDITAR TAREFA' ---");
+    // console.log("--- DIAGNÓSTICO DO MODAL 'EDITAR TAREFA' ---");
 
     // 1. O que a função recebeu como entrada?
-    console.log("Objeto 'task' recebido:", task);
-    console.log("Objeto 'currentUserProfile' recebido:", currentUserProfile);
+    // console.log("Objeto 'task' recebido:", task);
+    // console.log("Objeto 'currentUserProfile' recebido:", currentUserProfile);
 
     // 2. Vamos isolar os valores que estamos comparando.
     const loggedInUserId = currentUserProfile ? currentUserProfile.id : 'PERFIL DO USUÁRIO É NULO';
     const taskCreatorId = task ? task.criador_id : 'TAREFA É NULA';
     const isAdmin = currentUserProfile ? (currentUserProfile.cargo?.is_admin || false) : false;
 
-    console.log(`ID do Usuário Logado: ${loggedInUserId} (Tipo: ${typeof loggedInUserId})`);
-    console.log(`ID do Criador da Tarefa: ${taskCreatorId} (Tipo: ${typeof taskCreatorId})`);
-    console.log(`O usuário é admin?: ${isAdmin}`);
+    // console.log(`ID do Usuário Logado: ${loggedInUserId} (Tipo: ${typeof loggedInUserId})`);
+    // console.log(`ID do Criador da Tarefa: ${taskCreatorId} (Tipo: ${typeof taskCreatorId})`);
+    // console.log(`O usuário é admin?: ${isAdmin}`);
 
     // 3. Como a condição principal está sendo avaliada?
     const isCreator = loggedInUserId == taskCreatorId;
-    console.log(`A condição 'é o criador?' (id == criador_id) resulta em: ${isCreator}`);
+   // console.log(`A condição 'é o criador?' (id == criador_id) resulta em: ${isCreator}`);
     
     // 4. Qual o resultado final da permissão?
     const canDelegate = isAdmin || isCreator;
-    console.log(`Resultado final de 'canDelegate': ${canDelegate}`);
+    // console.log(`Resultado final de 'canDelegate': ${canDelegate}`);
     // --- FIM DO DIAGNÓSTICO ---
 
 
@@ -199,8 +199,8 @@ export function openEditModal(task, allUsers, currentUserProfile) {
     assigneeSelect.disabled = !canDelegate;
     
     // Log final para confirmar o que foi feito na tela
-    console.log(`O dropdown de designar foi DEFINIDO como 'disabled': ${!canDelegate}`);
-    console.log("-------------------------------------------------");
+   // console.log(`O dropdown de designar foi DEFINIDO como 'disabled': ${!canDelegate}`);
+    // console.log("-------------------------------------------------");
 
 
     modal.style.display = 'flex';
