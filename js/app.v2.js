@@ -1280,6 +1280,8 @@ async function verificarNotificacoes() {
             badge.style.display = 'none';
         }
     }
+
+    updateFavicon(count);
 }
 
 function unlockAudio() {
@@ -1290,6 +1292,63 @@ function unlockAudio() {
   }
   console.log("Contexto de áudio ativado pela interação do usuário.");
   // O listener que chama esta função será removido automaticamente.
+}
+
+function updateFavicon(count) {
+    const favicon = document.getElementById('favicon');
+    const originalIconUrl = '/favicon/favicon-96x96.png';
+
+    if (!favicon) {
+        console.error("[Favicon] Elemento com id='favicon' não encontrado.");
+        return;
+    }
+
+    // Parte 1 - Atualiza o ícone do atalho/PWA usando a Badging API (se suportado)
+    if (navigator.setAppBadge) {
+        if (count > 0) {
+            navigator.setAppBadge(count).catch(e => console.warn("Erro ao definir App Badge:", e));
+        } else {
+            navigator.clearAppBadge().catch(e => console.warn("Erro ao limpar App Badge:", e));
+        }
+    }
+
+    // Parte 2 - Atualiza o favicon da aba com canvas (para navegadores sem Badging API)
+    if (count === 0) {
+        favicon.href = originalIconUrl;
+        return;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 32;
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = originalIconUrl;
+
+    img.onload = () => {
+        // Desenha o ícone original
+        ctx.drawImage(img, 0, 0, 32, 32);
+
+        // Círculo vermelho
+        ctx.beginPath();
+        ctx.arc(24, 8, 8, 0, 2 * Math.PI);
+        ctx.fillStyle = 'red';
+        ctx.fill();
+        
+        // Número branco
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 18px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(count > 9 ? '9+' : String(count), 24, 8);
+
+        favicon.href = canvas.toDataURL('image/png');
+    };
+
+    img.onerror = () => {
+        console.error("Erro ao carregar o ícone original:", originalIconUrl);
+    };
 }
 
 async function startApp() {
@@ -1452,11 +1511,14 @@ async function startApp() {
           // 3. Atualiza o contador e o emblema visual do sino
           // Esta parte deve continuar como está
           state.unreadNotifications++;
-          const badge = document.getElementById('notification-badge');
-          if (badge) {
-            badge.textContent = state.unreadNotifications;
-            badge.style.display = 'block';
-          }
+            const badge = document.getElementById('notification-badge');
+            if (badge) {
+                badge.textContent = state.unreadNotifications;
+                badge.style.display = 'block';
+            }
+
+            // ✅ Atualiza também o favicon
+            updateFavicon(state.unreadNotifications);
         }
       )
       .subscribe((status) => {
