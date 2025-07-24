@@ -46,7 +46,8 @@ const state = {
         deleted: { key: 'deleted', text: 'Excluída', icon: '❌', color: '#ef4444' }
     },
 
-    unreadNotifications: 0 
+    unreadNotifications: 0, 
+    audioUnlocked: true
 };
 
 /**
@@ -1257,7 +1258,7 @@ window.addEventListener('showAdminView', () => render.renderUserList(state.allUs
 
 // Arquivo: js/app.v2.js -> Adicione esta nova função
 
-async function verificarNotificacoes() {
+/* async function verificarNotificacoes() {
     // Chama nossa nova função 'contadora' no banco
     const { data: count, error } = await supabaseClient.rpc('contar_notificacoes_nao_lidas');
 
@@ -1270,6 +1271,7 @@ async function verificarNotificacoes() {
     
     // Atualiza o estado e o emblema visual do sino
     state.unreadNotifications = count;
+
     const badge = document.getElementById('notification-badge');
 
     if (badge) {
@@ -1282,17 +1284,131 @@ async function verificarNotificacoes() {
     }
 
     updateFavicon(count);
+
+    if (count > 0 && state.lastNotifiedCount !== count) {
+    const sound = document.getElementById('notification-sound');
+    if (sound) {
+        sound.currentTime = 0;
+        sound.play().catch(e => console.warn("Erro ao tocar som de notificação:", e));
+    }
+    }
+
+    if (count > 0 && state.lastNotifiedCount !== count && state.audioUnlocked) {
+    const sound = document.getElementById('notification-sound');
+    if (sound) {
+        sound.currentTime = 0;
+        sound.play().catch(e => console.warn("Erro ao tocar som de notificação:", e));
+    }
+    }
+
+    // Atualiza o controle da última contagem
+    state.lastNotifiedCount = count;
+}*/
+
+async function verificarNotificacoes() {
+    const { data: count, error } = await supabaseClient.rpc('contar_notificacoes_nao_lidas');
+
+    if (error) {
+        console.error("Erro ao verificar notificações:", error);
+        return;
+    }
+
+    const badge = document.getElementById('notification-badge');
+    state.unreadNotifications = count;
+
+    if (badge) {
+        if (count > 0) {
+            badge.textContent = count;
+            badge.style.display = 'block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+
+    updateFavicon(count);
+
+    // 🔔 Somente toca o som se aumentou o número e se o áudio foi desbloqueado
+    if (
+        typeof state.lastNotifiedCount === 'number' &&
+        count > state.lastNotifiedCount &&
+        state.audioUnlocked
+    ) {
+        const sound = document.getElementById('notification-sound');
+        if (sound) {
+            sound.currentTime = 0;
+            sound.play().catch(e => console.warn("Erro ao tocar som de notificação:", e));
+        }
+    }
+
+    // Atualiza o contador de referência
+    state.lastNotifiedCount = count;
 }
 
+/* async function verificarNotificacoes() {
+  try {
+    const { data: novasNotificacoes, error } = await supabaseClient
+      .from('notificacoes')
+      .select('*')
+      .eq('usuario_id', state.currentUserProfile.id)
+      .eq('lida', false);
+
+    if (error) {
+      console.error("[Notificações] Erro ao verificar novas notificações:", error);
+      return;
+    }
+
+    const count = novasNotificacoes.length;
+    console.log(`[Notificações] ${count} notificações não lidas.`);
+
+    // Atualiza badge e favicon
+    state.unreadNotifications = count;
+
+    const badge = document.getElementById('notification-badge');
+    if (badge) {
+      if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = 'block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    updateFavicon(count);
+
+    // ✅ TOCA O SOM se novas notificações não lidas (somente se mudou o número)
+    if (count > 0 && state.lastNotifiedCount !== count) {
+      const sound = document.getElementById('notification-sound');
+      if (sound) {
+        sound.currentTime = 0;
+        sound.play().catch(e => console.warn("Erro ao tocar som de notificação:", e));
+      }
+    }
+
+    // Atualiza controle de última notificação contada
+    state.lastNotifiedCount = count;
+
+  } catch (err) {
+    console.error("[Notificações] Erro inesperado:", err);
+  }
+}*/ 
+
+   
 function unlockAudio() {
   const sound = document.getElementById('notification-sound');
-  if (sound && sound.paused) {
-    sound.play().catch(() => {}); // Tenta tocar para "acordar" o áudio
-    sound.pause(); // Pausa imediatamente, o usuário não vai ouvir
+  if (sound) {
+    sound.play().then(() => {
+      sound.pause(); // 🔇 Imediatamente pausa
+      sound.currentTime = 0;
+      console.log("Áudio desbloqueado com sucesso.");
+      state.audioUnlocked = true;
+    }).catch(e => {
+      console.warn("Falha ao desbloquear áudio:", e);
+    });
   }
-  console.log("Contexto de áudio ativado pela interação do usuário.");
-  // O listener que chama esta função será removido automaticamente.
 }
+
+window.addEventListener('click', unlockAudio, { once: true });
+window.addEventListener('touchend', unlockAudio, { once: true });
 
 function updateFavicon(count) {
     const favicon = document.getElementById('favicon');
@@ -1352,8 +1468,7 @@ function updateFavicon(count) {
 }
 
 async function startApp() {
-    window.addEventListener('click', unlockAudio, { once: true });
-    window.addEventListener('touchend', unlockAudio, { once: true });
+    
     setupEventListeners();
     ui.setupPWAInstallHandlers();
     
@@ -1484,21 +1599,13 @@ async function startApp() {
         { event: 'INSERT', schema: 'public', table: 'notificacoes' },
         (payload) => {
           console.log('Nova notificação recebida!', payload);
-          
-          // ======================================================
-          // INÍCIO DO BLOCO QUE TOCA O SOM E VIBRA
-          // Verifique se o seu código tem esta parte.
-          // ======================================================
-          
-          // 1. Encontra o elemento de áudio
-          const sound = document.getElementById('notification-sound');
-          if (sound) {
-              // Garante que o som toque do início
-              sound.currentTime = 0;
-              // Toca o som
-              sound.play().catch(e => console.error("Erro ao tocar som:", e));
-          }
 
+          const sound = document.getElementById('notification-sound');
+            if (sound) {
+                sound.currentTime = 0;
+                sound.play().catch(e => console.warn("Erro ao tocar som de notificação:", e));
+            }
+          
           // 2. Vibra o dispositivo (se suportado)
           if (navigator.vibrate) {
             navigator.vibrate(200); // Vibra por 200ms
