@@ -91,6 +91,7 @@ export async function toggleStatusInDB(taskId, currentStatus) {
     const newStatus = currentStatus === 'pending' ? 'completed' : 'pending';
     const { error } = await supabaseClient.from('tarefas').update({ status: newStatus }).eq('id', taskId);
     if (error) throw error;
+    return true;
 }
 export async function deleteTaskInDB(taskId) {
     const { error } = await supabaseClient.from('tarefas').update({ status: 'deleted' }).eq('id', taskId);

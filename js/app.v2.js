@@ -47,7 +47,7 @@ const state = {
     },
 
     unreadNotifications: 0, 
-    audioUnlocked: true
+    audioUnlocked: false
 };
 
 /**
@@ -220,43 +220,6 @@ function handleViewChange(event) {
     }
 }
 
-/* async function handleUpdateTask(event) {
-    event.preventDefault();
-    const form = event.target;
-    const taskId = form.elements['edit-task-id'].value;
-    try {
-        await api.updateTaskInDB(taskId, {
-            titulo: form.elements['edit-task-title'].value,
-            descricao: form.elements['edit-task-desc'].value,
-            data_conclusao_prevista: form.elements['edit-task-due-date'].value,
-            tipo_tarefa_id: parseInt(form.elements['edit-task-type'].value),
-            condominio_id: parseInt(form.elements['edit-task-condominio'].value),
-            responsavel_id: form.elements['edit-task-assignee'].value
-        });
-
-        // --- INÍCIO DA CORREÇÃO ---
-        
-        // 1. Dê um feedback positivo para o usuário
-        alert('Tarefa atualizada com sucesso!');
-        
-        // 2. Feche o modal
-        ui.closeEditModal();
-        
-        // 3. Recarregue a página para mostrar os dados atualizados de forma confiável
-        location.reload();
-
-        // --- FIM DA CORREÇÃO ---
-
-    } catch (error) {
-        // Adicionamos um log de erro mais detalhado para nós
-        console.error("Erro ao tentar atualizar a tarefa:", error);
-        alert('Erro ao salvar alterações: ' + error.message);
-    }
-}
-*/
-
-// Arquivo: js/app.v2.js -> Substitua pela versão de diagnóstico
-
 async function handleUpdateTask(event) {
     event.preventDefault();
     const form = event.target;
@@ -276,7 +239,6 @@ async function handleUpdateTask(event) {
         // Agora a chamada à API nos retorna o objeto completo
         const { error } = await api.updateTaskInDB(taskId, dadosParaAtualizar);
 
-        // VERIFICAÇÃO CRÍTICA: Esta é a lógica que faltava!
         // Se o Supabase retornou um objeto de erro, nós o tratamos aqui.
         if (error) {
             throw error; // Joga o erro para que o bloco CATCH o pegue e exiba.
@@ -295,7 +257,7 @@ async function handleUpdateTask(event) {
     }
 }
 
-async function handleToggleStatus(taskId) {
+/* async function handleToggleStatus(taskId) {
     const task = state.tasks.find(t => t.id === taskId);
     if (!task) return;
     try {
@@ -304,6 +266,24 @@ async function handleToggleStatus(taskId) {
         location.reload();
     } catch (error) {
         alert('Erro ao atualizar status: ' + error.message);
+    }
+}*/
+
+async function handleToggleStatus(taskId) {
+    const task = state.tasks.find(t => t.id === taskId);
+    if (!task) return;
+    try {
+        await api.toggleStatusInDB(taskId, task.status);
+        sessionStorage.setItem('lastActiveView', 'tasks-view');
+        location.reload(); 
+    } catch (error) {
+        // Ignora erros de rede/fetch se a ação foi concluída
+        if (error.message.includes('Failed to fetch')) {
+            console.log('Ação concluída, mas a resposta do servidor não foi recebida.'); // Opcional: log silencioso
+            location.reload(); // Força recarregar para sincronizar
+        } else {
+            alert('Erro ao atualizar status: ' + error.message); // Mostra outros erros reais
+        }
     }
 }
 
@@ -1256,55 +1236,6 @@ async function handleCreateCondo(event) {
 // Listener para evento personalizado
 window.addEventListener('showAdminView', () => render.renderUserList(state.allUsers, state.currentUserProfile));
 
-// Arquivo: js/app.v2.js -> Adicione esta nova função
-
-/* async function verificarNotificacoes() {
-    // Chama nossa nova função 'contadora' no banco
-    const { data: count, error } = await supabaseClient.rpc('contar_notificacoes_nao_lidas');
-
-    if (error) {
-        console.error("Erro ao verificar notificações:", error);
-        return;
-    }
-
-   //  console.log(`Verificação: ${count} notificações não lidas.`);
-    
-    // Atualiza o estado e o emblema visual do sino
-    state.unreadNotifications = count;
-
-    const badge = document.getElementById('notification-badge');
-
-    if (badge) {
-        if (count > 0) {
-            badge.textContent = count;
-            badge.style.display = 'block';
-        } else {
-            badge.style.display = 'none';
-        }
-    }
-
-    updateFavicon(count);
-
-    if (count > 0 && state.lastNotifiedCount !== count) {
-    const sound = document.getElementById('notification-sound');
-    if (sound) {
-        sound.currentTime = 0;
-        sound.play().catch(e => console.warn("Erro ao tocar som de notificação:", e));
-    }
-    }
-
-    if (count > 0 && state.lastNotifiedCount !== count && state.audioUnlocked) {
-    const sound = document.getElementById('notification-sound');
-    if (sound) {
-        sound.currentTime = 0;
-        sound.play().catch(e => console.warn("Erro ao tocar som de notificação:", e));
-    }
-    }
-
-    // Atualiza o controle da última contagem
-    state.lastNotifiedCount = count;
-}*/
-
 async function verificarNotificacoes() {
     const { data: count, error } = await supabaseClient.rpc('contar_notificacoes_nao_lidas');
 
@@ -1344,55 +1275,6 @@ async function verificarNotificacoes() {
     state.lastNotifiedCount = count;
 }
 
-/* async function verificarNotificacoes() {
-  try {
-    const { data: novasNotificacoes, error } = await supabaseClient
-      .from('notificacoes')
-      .select('*')
-      .eq('usuario_id', state.currentUserProfile.id)
-      .eq('lida', false);
-
-    if (error) {
-      console.error("[Notificações] Erro ao verificar novas notificações:", error);
-      return;
-    }
-
-    const count = novasNotificacoes.length;
-    console.log(`[Notificações] ${count} notificações não lidas.`);
-
-    // Atualiza badge e favicon
-    state.unreadNotifications = count;
-
-    const badge = document.getElementById('notification-badge');
-    if (badge) {
-      if (count > 0) {
-        badge.textContent = count;
-        badge.style.display = 'block';
-      } else {
-        badge.style.display = 'none';
-      }
-    }
-
-    updateFavicon(count);
-
-    // ✅ TOCA O SOM se novas notificações não lidas (somente se mudou o número)
-    if (count > 0 && state.lastNotifiedCount !== count) {
-      const sound = document.getElementById('notification-sound');
-      if (sound) {
-        sound.currentTime = 0;
-        sound.play().catch(e => console.warn("Erro ao tocar som de notificação:", e));
-      }
-    }
-
-    // Atualiza controle de última notificação contada
-    state.lastNotifiedCount = count;
-
-  } catch (err) {
-    console.error("[Notificações] Erro inesperado:", err);
-  }
-}*/ 
-
-   
 function unlockAudio() {
   const sound = document.getElementById('notification-sound');
   if (sound) {
@@ -1502,8 +1384,6 @@ async function startApp() {
 
             // =======================================================================
             // PONTO DE VERIFICAÇÃO 1: O QUE VEIO DA API?
-           // console.log("--- VERIFICANDO DADOS RECEBIDOS DA API ---");
-           // console.log("Tipos de Tarefa recebidos:", initialData.taskTypes);
             // =======================================================================
 
             state.currentUserProfile = userProfile;
@@ -1512,8 +1392,6 @@ async function startApp() {
 
             // =======================================================================
             // PONTO DE VERIFICAÇÃO 2: O QUE ESTÁ NO ESTADO ANTES DE RENDERIZAR?
-           // console.log("--- VERIFICANDO ESTADO ANTES DE RENDERIZAR ---");
-           // console.log("state.taskTypes:", state.taskTypes);
             // =======================================================================
 
             console.log("Dados carregados. Renderizando a aplicação...");
@@ -1524,8 +1402,6 @@ async function startApp() {
             // =======================================================================
             // INÍCIO DA CORREÇÃO - CONFIGURAÇÃO DOS DROPDOWNS
             // =======================================================================
-           //  console.log("Configurando todos os dropdowns da aplicação...");
-
             // 1. Popula os dropdowns simples (Tipos de Tarefa, Responsáveis, etc.)
             ui.populateDropdowns(state.condominios, state.taskTypes, state.allUsers, state.allGroups);
             ui.populateTemplatesDropdown(state.taskTemplates);
@@ -1615,9 +1491,7 @@ async function startApp() {
           // FIM DO BLOCO QUE TOCA O SOM E VIBRA
           // ======================================================
 
-          // 3. Atualiza o contador e o emblema visual do sino
-          // Esta parte deve continuar como está
-          state.unreadNotifications++;
+            state.unreadNotifications++;
             const badge = document.getElementById('notification-badge');
             if (badge) {
                 badge.textContent = state.unreadNotifications;
@@ -1642,59 +1516,12 @@ async function startApp() {
         supabaseClient.auth.onAuthStateChange((event, newSession) => {
         if (event === 'SIGNED_OUT' && appInitialized) {
             console.log("Sessão encerrada pelo servidor ou outra aba. Recarregando a página.");
-            
-            // CORREÇÃO:
-            // NÃO chame logout() aqui. Apenas recarregue a página.
+           
             // A página recarregada não terá sessão e o próprio startApp mostrará a tela de login.
             location.reload();
         }
         });
 
-        /* const notificationChannel = supabaseClient
-      .channel('public:notificacoes:user_id=eq.' + userProfile.id)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'notificacoes' },
-        (payload) => {
-          console.log('Nova notificação recebida!', payload);
-          
-          // ======================================================
-          // INÍCIO DO BLOCO QUE TOCA O SOM E VIBRA
-          // Verifique se o seu código tem esta parte.
-          // ======================================================
-          
-          // 1. Encontra o elemento de áudio
-          const sound = document.getElementById('notification-sound');
-          if (sound) {
-              // Garante que o som toque do início
-              sound.currentTime = 0;
-              // Toca o som
-              sound.play().catch(e => console.error("Erro ao tocar som:", e));
-          }
-
-          // 2. Vibra o dispositivo (se suportado)
-          if (navigator.vibrate) {
-            navigator.vibrate(200); // Vibra por 200ms
-          }
-          
-          // ======================================================
-          // FIM DO BLOCO QUE TOCA O SOM E VIBRA
-          // ======================================================
-
-          // 3. Atualiza o contador e o emblema visual do sino
-          // Esta parte deve continuar como está
-          state.unreadNotifications++;
-          const badge = document.getElementById('notification-badge');
-          if (badge) {
-            badge.textContent = state.unreadNotifications;
-            badge.style.display = 'block';
-          }
-        }
-      )
-      .subscribe((status) => {
-        // ... (resto do seu código)
-      });*/
-    
 }
 
 // Evento que dispara a aplicação

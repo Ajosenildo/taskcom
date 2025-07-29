@@ -149,20 +149,10 @@ export function populateTemplatesDropdown(taskTemplates) {
 
 export function openEditModal(task, allUsers, currentUserProfile) {
     // --- INÍCIO DO DIAGNÓSTICO ---
-    // console.log("--- DIAGNÓSTICO DO MODAL 'EDITAR TAREFA' ---");
-
-    // 1. O que a função recebeu como entrada?
-    // console.log("Objeto 'task' recebido:", task);
-    // console.log("Objeto 'currentUserProfile' recebido:", currentUserProfile);
-
     // 2. Vamos isolar os valores que estamos comparando.
     const loggedInUserId = currentUserProfile ? currentUserProfile.id : 'PERFIL DO USUÁRIO É NULO';
     const taskCreatorId = task ? task.criador_id : 'TAREFA É NULA';
     const isAdmin = currentUserProfile ? (currentUserProfile.cargo?.is_admin || false) : false;
-
-    // console.log(`ID do Usuário Logado: ${loggedInUserId} (Tipo: ${typeof loggedInUserId})`);
-    // console.log(`ID do Criador da Tarefa: ${taskCreatorId} (Tipo: ${typeof taskCreatorId})`);
-    // console.log(`O usuário é admin?: ${isAdmin}`);
 
     // 3. Como a condição principal está sendo avaliada?
     const isCreator = loggedInUserId == taskCreatorId;
