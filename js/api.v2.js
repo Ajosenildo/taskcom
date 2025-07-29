@@ -46,6 +46,20 @@ export async function fetchInitialData(empresaId) {
 }
 
 // --- FUNÇÕES DE USUÁRIOS ---
+/* export async function createUser(userData) {
+    const { data: sessionData } = await supabaseClient.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) throw new Error("Sessão de administrador inválida.");
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/create-user`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify(userData)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Erro desconhecido na Edge Function.');
+    return result;
+}*/
+
 export async function createUser(userData) {
     const { data: sessionData } = await supabaseClient.auth.getSession();
     const accessToken = sessionData.session?.access_token;
