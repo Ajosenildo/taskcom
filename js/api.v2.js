@@ -63,15 +63,26 @@ export async function fetchInitialData(empresaId) {
 export async function createUser(userData) {
     const { data: sessionData } = await supabaseClient.auth.getSession();
     const accessToken = sessionData.session?.access_token;
-    if (!accessToken) throw new Error("Sessão de administrador inválida.");
+    
+    if (!accessToken) {
+        throw new Error("Sessão inválida. Faça login novamente.");
+    }
+
     const response = await fetch(`${SUPABASE_URL}/functions/v1/create-user`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+        headers: { 
+            'Content-Type': 'application/json', 
+            'Authorization': `Bearer ${accessToken}` 
+        },
         body: JSON.stringify(userData)
     });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || 'Erro desconhecido na Edge Function.');
-    return result;
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao criar usuário');
+    }
+
+    return await response.json();
 }
 
 export async function activateUser(userId) {
