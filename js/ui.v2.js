@@ -347,10 +347,16 @@ export function createSearchableDropdown(inputId, optionsId, hiddenInputId, item
 
     const renderOptions = (filter = '') => {
         optionsContainer.innerHTML = '';
-        const filteredItems = items.filter(item => 
+        /* const filteredItems = items.filter(item => 
             (item.nome_fantasia || '').toLowerCase().includes(filter.toLowerCase()) || 
             (item.nome || '').toLowerCase().includes(filter.toLowerCase())
-        ).slice(0, 5);
+        ).slice(0, 5);*/
+
+        const filteredItems = items.filter(item => 
+            (item.nome_fantasia || item.nome || item.nome_completo || item.label || '')
+                .toLowerCase()
+                .includes(filter.toLowerCase())
+        );
 
         if (filteredItems.length === 0 && filter) {
             optionsContainer.innerHTML = `<div class="option-item disabled">Nenhum resultado</div>`;
@@ -360,7 +366,9 @@ export function createSearchableDropdown(inputId, optionsId, hiddenInputId, item
         filteredItems.forEach(item => {
             const optionElement = document.createElement('div');
             optionElement.className = 'option-item';
-            optionElement.textContent = item.nome_fantasia || item.nome;
+            // optionElement.textContent = item.nome_fantasia || item.nome;
+            //optionElement.textContent = item.nome_fantasia || item.nome || item.label;
+            optionElement.textContent = item.nome_fantasia || item.nome || item.nome_completo || item.label;
             optionElement.dataset.value = item.id;
             
             optionElement.addEventListener('mousedown', (e) => {
