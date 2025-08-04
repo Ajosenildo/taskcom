@@ -35,7 +35,7 @@ export function setupRoleBasedUI(currentUserProfile) {
     }
 }
 
-export function populateDropdowns(CONDOMINIOS, TASK_TYPES, allUsers, allGroups) {
+export function populateDropdowns(CONDOMINIOS, TASK_TYPES, allUsers, allGroups, currentUserProfile) {
      // PONTO DE VERIFICAÇÃO 3: A FUNÇÃO DE RENDERIZAÇÃO FOI CHAMADA?
     // console.log("--- DENTRO DE ui.populateDropdowns ---");
     // console.log("Recebido para renderizar TASK_TYPES:", TASK_TYPES);
@@ -117,7 +117,7 @@ export function populateDropdowns(CONDOMINIOS, TASK_TYPES, allUsers, allGroups) 
     const assigneeElements = [createTaskAssigneeSelect, filterAssigneeSelect];
     assigneeElements.forEach(select => {
         if (select) {
-            const currentUserId = JSON.parse(sessionStorage.getItem('userProfile'))?.id;
+            const currentUserId = currentUserProfile ? currentUserProfile.id : null;
             select.innerHTML = (select.id === 'filter-assignee') 
                 ? '<option value="">Todos</option>' 
                 : '<option value="">Selecione um Responsável...</option>';
@@ -134,6 +134,8 @@ export function populateDropdowns(CONDOMINIOS, TASK_TYPES, allUsers, allGroups) 
         }
     });
 }
+
+
 
 export function populateTemplatesDropdown(taskTemplates) {
     const templateSelect = document.getElementById('template-select');
@@ -347,10 +349,16 @@ export function createSearchableDropdown(inputId, optionsId, hiddenInputId, item
 
     const renderOptions = (filter = '') => {
         optionsContainer.innerHTML = '';
-        const filteredItems = items.filter(item => 
+        /* const filteredItems = items.filter(item => 
             (item.nome_fantasia || '').toLowerCase().includes(filter.toLowerCase()) || 
             (item.nome || '').toLowerCase().includes(filter.toLowerCase())
-        ).slice(0, 5);
+        ).slice(0, 5);*/
+
+        const filteredItems = items.filter(item => 
+            (item.nome_fantasia || item.nome || item.nome_completo || item.label || '')
+                .toLowerCase()
+                .includes(filter.toLowerCase())
+        );
 
         if (filteredItems.length === 0 && filter) {
             optionsContainer.innerHTML = `<div class="option-item disabled">Nenhum resultado</div>`;
@@ -360,7 +368,9 @@ export function createSearchableDropdown(inputId, optionsId, hiddenInputId, item
         filteredItems.forEach(item => {
             const optionElement = document.createElement('div');
             optionElement.className = 'option-item';
-            optionElement.textContent = item.nome_fantasia || item.nome;
+            // optionElement.textContent = item.nome_fantasia || item.nome;
+            //optionElement.textContent = item.nome_fantasia || item.nome || item.label;
+            optionElement.textContent = item.nome_fantasia || item.nome || item.nome_completo || item.label;
             optionElement.dataset.value = item.id;
             
             optionElement.addEventListener('mousedown', (e) => {

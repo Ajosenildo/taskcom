@@ -26,7 +26,7 @@ function getVisualStatus(task, STATUSES) {
     return null;
 }
 
-export function renderTasks(state) {
+ export function renderTasks(state) {
     const { tasks, condominios, taskTypes, STATUSES, activeFilters, currentUserProfile } = state; // Adicionado currentUserProfile
     const list = document.getElementById('task-list');
     if (!list) return [];

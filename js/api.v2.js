@@ -4,7 +4,7 @@ import { supabaseClient } from './supabaseClient.js';
 import { SUPABASE_URL } from './config.js';
 
 // --- FUNÇÃO PRINCIPAL DE BUSCA DE DADOS ---
-export async function fetchInitialData(empresaId) {
+/* export async function fetchInitialData(empresaId) {
     if (!empresaId) {
         throw new Error("ID da empresa é necessário para buscar os dados.");
     }
@@ -43,7 +43,137 @@ export async function fetchInitialData(empresaId) {
         allGroups: groupsResult.data || [],
         userGroupAssignments: filteredAssignments // <--- Associações também são seguras
     };
+} */
+
+    export async function fetchInitialData(empresaId, userId, isAdmin) {
+    if (!empresaId) throw new Error("ID da empresa é necessário");
+
+    // Buscamos os dados brutos do banco de dados
+    const [
+        tasksResult, condosResult, typesResult, templatesResult,
+        usersResult, cargosResult, groupsResult, 
+        // ALTERAÇÃO 1: Buscamos TODAS as associações de usuário-grupo da empresa, e não apenas do usuário logado.
+        // Para isso, faremos a busca através de uma RPC que já considera a empresa.
+        allAssignmentsResult 
+    ] = await Promise.all([
+        supabaseClient.from('tarefas_detalhadas').select('*'),
+        supabaseClient.from('condominios').select('*').eq('empresa_id', empresaId),
+        supabaseClient.from('tipos_tarefa').select('*').eq('empresa_id', empresaId),
+        supabaseClient.from('modelos_tarefa').select('*').eq('empresa_id', empresaId),
+        supabaseClient.from('usuarios').select('*').eq('empresa_id', empresaId),
+        supabaseClient.from('cargos').select('*').eq('empresa_id', empresaId),
+        supabaseClient.from('grupos').select('*').eq('empresa_id', empresaId),
+        // Esta é a chamada corrigida. Em vez de filtrar por 'userId', buscamos todas.
+        supabaseClient.from('usuario_grupo').select('usuario_id, grupo_id')
+    ]);
+
+    // Verificamos se ocorreu algum erro na busca
+    const error = tasksResult.error || condosResult.error || typesResult.error || templatesResult.error ||
+        usersResult.error || cargosResult.error || groupsResult.error || allAssignmentsResult.error;
+
+    if (error) {
+        console.error("Erro ao buscar dados:", error);
+        throw new Error("Falha ao carregar os dados do sistema.");
+    }
+
+    // Listas de dados brutos
+    const allCompanyCondos = condosResult.data || [];
+    const allCompanyTasks = tasksResult.data || [];
+    const allAssignments = allAssignmentsResult.data || [];
+    
+    // Filtramos os usuários da empresa para ter certeza que estamos lidando apenas com eles
+    const companyUserIds = new Set((usersResult.data || []).map(u => u.id));
+    const finalAssignments = allAssignments.filter(a => companyUserIds.has(a.usuario_id));
+
+    let finalCondos = [];
+    let finalTasks = [];
+
+    if (isAdmin) {
+        // Se for admin, ele vê todos os condomínios e tarefas da empresa
+        finalCondos = allCompanyCondos;
+        finalTasks = allCompanyTasks;
+    } else {
+        // Se NÃO for admin, filtramos os dados
+        
+        // ALTERAÇÃO 2: Buscamos os IDs de grupo do usuário logado a partir da lista COMPLETA de associações.
+        const grupoIdsDoUsuario = finalAssignments
+            .filter(a => a.usuario_id === userId)
+            .map(a => a.grupo_id);
+
+        // Filtramos a lista de condomínios para incluir apenas aqueles dos grupos do usuário
+        finalCondos = allCompanyCondos.filter(c => c.grupo_id && grupoIdsDoUsuario.includes(c.grupo_id));
+        
+        // Criamos uma lista com os IDs dos condomínios permitidos
+        const allowedCondoIds = new Set(finalCondos.map(c => c.id));
+
+        // Filtramos a lista de tarefas para incluir apenas tarefas dos condomínios permitidos
+        finalTasks = allCompanyTasks.filter(t => allowedCondoIds.has(t.condominio_id));
+    }
+
+    // Retornamos os dados para a aplicação
+    return {
+        tasks: finalTasks,
+        condominios: finalCondos,
+        taskTypes: typesResult.data || [],
+        taskTemplates: templatesResult.data || [],
+        allUsers: usersResult.data || [],
+        allCargos: cargosResult.data || [],
+        allGroups: groupsResult.data || [],
+        // Retornamos a lista COMPLETA de associações para ser usada na tela de Admin
+        userGroupAssignments: finalAssignments,
+    };
 }
+
+
+
+    /* export async function fetchInitialData(empresaId, userId, isAdmin) {
+    if (!empresaId) throw new Error("ID da empresa é necessário");
+
+    const [
+        tasksResult, condosResult, typesResult, templatesResult,
+        usersResult, cargosResult, groupsResult, allAssignmentsResult
+    ] = await Promise.all([
+        supabaseClient.from('tarefas_detalhadas').select('*'),
+        supabaseClient.from('condominios').select('*').eq('empresa_id', empresaId),
+        supabaseClient.from('tipos_tarefa').select('*').eq('empresa_id', empresaId),
+        supabaseClient.from('modelos_tarefa').select('*').eq('empresa_id', empresaId),
+        supabaseClient.from('usuarios').select('*').eq('empresa_id', empresaId),
+        supabaseClient.from('cargos').select('*').eq('empresa_id', empresaId),
+        supabaseClient.from('grupos').select('*').eq('empresa_id', empresaId),
+        supabaseClient.from('usuario_grupo').select('usuario_id, grupo_id').eq('usuario_id', userId)
+    ]);
+
+    const error = tasksResult.error || condosResult.error || typesResult.error || templatesResult.error ||
+        usersResult.error || cargosResult.error || groupsResult.error || allAssignmentsResult.error;
+
+    if (error) {
+        console.error("Erro ao buscar dados:", error);
+        throw new Error("Falha ao carregar os dados do sistema.");
+    }
+
+    const grupoIdsDoUsuario = allAssignmentsResult.data.map(a => a.grupo_id);
+
+    // 🔁 Filtra condomínios conforme a regra
+    let condominios = [];
+    if (isAdmin) {
+        condominios = condosResult.data || [];
+    } else {
+        condominios = (condosResult.data || []).filter(c => grupoIdsDoUsuario.includes(c.grupo_id));
+    }
+
+    return {
+        tasks: tasksResult.data || [],
+        condominios,
+        taskTypes: typesResult.data || [],
+        taskTemplates: templatesResult.data || [],
+        allUsers: usersResult.data || [],
+        allCargos: cargosResult.data || [],
+        allGroups: groupsResult.data || [],
+        userGroupAssignments: allAssignmentsResult.data || [],
+        grupo_ids: grupoIdsDoUsuario
+    };
+}*/
+
 
 // --- FUNÇÕES DE USUÁRIOS ---
 /* export async function createUser(userData) {
@@ -280,4 +410,18 @@ export async function markNotificationAsRead(notificationId) {
     if (error) {
         console.error("Erro ao marcar notificação como lida:", error);
     }
+}
+
+export async function fetchTaskById(taskId) {
+    const { data, error } = await supabaseClient
+        .from('tarefas_detalhadas') // Usando a view que já tem os nomes do criador/responsável
+        .select('*')
+        .eq('id', taskId)
+        .single(); // .single() para buscar apenas um registro
+
+    if (error) {
+        console.error(`Erro ao buscar a tarefa ${taskId}:`, error);
+        throw error;
+    }
+    return data;
 }
