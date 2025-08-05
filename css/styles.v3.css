@@ -1,0 +1,576 @@
+/* ==========================================================================
+   TasKCom - Stylesheet Final Mesclada v2.3
+   ========================================================================== */
+
+/* ===== GLOBAIS E LAYOUT BASE ===== */
+body {
+    font-family: sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #f3f4f6;
+}
+
+#app {
+    max-width: 600px; /* Restaurado para centralizar o conteúdo */
+    margin: 0 auto;
+    padding: 1rem;
+    background-color: #fff;
+    min-height: 100vh;
+}
+
+.screen {
+    display: none;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.screen.is-visible {
+    display: flex;
+}
+
+.view {
+    display: none;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* ===== TELA DE LOGIN (Estilos Originais Mantidos) ===== */
+#login-screen {
+    gap: 0.7rem; 
+}
+
+.login-logo {
+    width: 250px;
+    max-width: 80%;
+    margin-bottom: 1.5rem;
+    align-self: center;
+}
+
+.login-tagline {
+    text-align: center;
+    margin-top: -1.5rem;
+    margin-bottom: 2rem;
+}
+
+.login-tagline p {
+    margin: 0;
+    font-size: 1rem;
+    color: #374151;
+    font-weight: 500;
+}
+
+.login-tagline small {
+    font-size: 0.9rem;
+    color: #6b7280;
+    font-style: italic;
+}
+
+.password-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-container input { padding-right: 2.5rem; }
+
+.toggle-password-icon {
+  position: absolute;
+  right: 10px;
+  cursor: pointer;
+  user-select: none;
+  color: #6b7280;
+}
+
+.forgot-password-link {
+    text-align: center;
+    margin-top: 0.1rem;
+    color: #4f46e5;
+    font-size: 0.9rem;
+    text-decoration: none;
+}
+.forgot-password-link:hover { text-decoration: underline; }
+
+
+/* ===== NOVO LAYOUT PRINCIPAL (REDESIGN) ===== */
+
+.main-header-redesigned {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: -1rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.header-logo {
+    height: 50px;
+    width: auto;
+}
+
+.user-display {
+    text-align: left;
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: #4b5563;
+    margin-top: 1rem;
+}
+
+.navigation-wrapper {
+    text-align: center;
+    padding: 1.5rem 0;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 1rem;
+}
+
+.main-title {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.5rem;
+    color: #111827;
+    letter-spacing: 0.2em;
+    font-weight: 500;
+}
+
+.main-nav-redesigned {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.utility-nav {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1rem 0;
+    margin-top: 2rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.content-area {
+    flex-grow: 1; /* Ocupa o espaço restante */
+}
+
+/* ===== ELEMENTOS GENÉRICOS (Formulários, Botões, etc.) ===== */
+
+h3 {
+    color: #1e3a8a;
+    text-align: center;
+    margin: 0;
+}
+
+form {
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: .75rem;
+}
+
+input, textarea, select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: .75rem;
+    font-size: 1rem;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-family: sans-serif;
+}
+
+button {
+    background-color: #1e3a8a;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-family: sans-serif;
+    padding: .75rem;
+    font-size: 1rem;
+    border-radius: 6px;
+    transition: background-color .2s;
+}
+
+button:hover {
+    background-color: #2563eb;
+}
+
+/* Aplicando o estilo original aos novos botões de navegação */
+.main-nav-redesigned .nav-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: bold;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    background-color: #e0e7ff;
+    color: #4338ca;
+}
+
+.main-nav-redesigned .nav-btn:hover {
+    background-color: #c7d2fe;
+}
+
+.main-nav-redesigned .nav-btn.active {
+    background-color: #4f46e5;
+    color: white;
+}
+
+.utility-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 0.9rem;
+    color: #6b7280;
+}
+.utility-btn:hover { color: #1e3a8a; text-decoration: underline; }
+
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .5rem 0;
+}
+.checkbox-container input[type="checkbox"] { width: auto; height: 1.2rem; }
+form label, .admin-feature label, .date-range-filter label {
+    font-size: .9rem;
+    color: #374151;
+    font-weight: 700;
+    margin-bottom: -5px;
+}
+
+
+/* ===== COMPONENTES ESPECÍFICOS (Filtros, Cards, etc.) ===== */
+
+#filter-bar {
+    background: #e0e7ff;
+    padding: 1rem;
+    border-radius: 8px;
+}
+#filter-bar h3 { text-align: left; padding-bottom: 0.5rem; }
+#filter-bar button { background-color: #6b7280; }
+#filter-bar button:hover { background-color: #4b5563; }
+.btn-export { background-color: #1d4ed8 !important; }
+
+.date-range-filter { display: flex; gap: 1rem; }
+.date-range-filter > div { flex: 1; }
+
+.task-card, .user-card, .condo-card {
+    background-color: #fff;
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    margin-bottom: 1rem;
+}
+
+/* ... Todos os outros estilos de .task-card, .user-card, modais, etc., do seu arquivo original ... */
+/* A maioria deles não precisa de alteração e foi mantida implicitamente ao restaurar */
+.task-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: .5rem; }
+.task-card-title-wrapper strong { font-size: 1.1rem; }
+.task-card.completed .task-card-title-wrapper strong { text-decoration: line-through; color: #6b7280; }
+.task-card.deleted { opacity: .6; }
+.task-card-visual-status { display: flex; align-items: center; gap: .5rem; font-size: .8rem; font-weight: 700; }
+.task-card-type { padding: 3px 8px; border-radius: 12px; font-size: .75rem; font-weight: 700; color: #fff; align-self: center; }
+.task-card-details, .task-card-assignee { font-size: .8rem; color: #6b7280; }
+.task-card-condo { font-weight: 700; color: #1e3a8a; margin-top: .75rem; padding-top: .5rem; border-top: 1px solid #eee; }
+.task-card-actions { display: flex; gap: .5rem; margin-top: 1rem; padding-top: .75rem; border-top: 1px solid #eee; }
+.task-action-btn { padding: 6px 12px; font-size: .8rem; font-weight: 700; color: #fff !important; }
+.btn-status { background-color: #059669; }
+.btn-status.reopen { background-color: #d97706; }
+.btn-delete { background-color: #ef4444; }
+.btn-edit { background-color: #f59e0b; }
+
+/* MODAIS (Estilos Originais Mantidos) */
+.modal-container { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,.5); justify-content: center; align-items: center; }
+.modal-content { background-color: #fefefe; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; position: relative; box-shadow: 0 4px 8px 0 rgba(0,0,0,.2); }
+.modal-close-btn { position: absolute; top: 10px; right: 20px; font-size: 28px; font-weight: 700; border: none; background: none; cursor: pointer; color: #aaa; }
+.modal-close-btn:hover { color: #000; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.modal-actions button { width: auto; }
+.btn-cancel { background-color: #6b7280; }
+.btn-save { background-color: #1e3a8a; }
+
+/* CLASSES DE UTILIDADE */
+.admin-feature { display: none; }
+.notification-bell { position: relative; cursor: pointer; }
+#notification-icon::before { content: '🔔'; font-size: 24px; color: #6b7280; }
+.notification-bell:hover #notification-icon::before { color: #374151; }
+.notification-badge { position: absolute; top: -2px; right: -5px; background-color: red; color: white; border-radius: 50%; padding: 1px 5px; font-size: 10px; font-weight: bold; border: 1px solid white; }
+
+/* ===== ESTILOS PARA O NOVO MENU E SUBTELAS ADMIN ===== */
+
+.admin-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.admin-menu-btn {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    width: 100%;
+    text-align: left;
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #1f2937;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.admin-menu-btn:hover {
+    border-color: #4f46e5;
+    background-color: #eef2ff;
+    color: #4f46e5;
+}
+
+.admin-menu-icon {
+    font-size: 1.5rem;
+}
+
+.view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 1rem;
+}
+
+.view-header h3 {
+    border: none;
+    padding: 0;
+}
+
+.btn-back {
+    background: none;
+    border: 1px solid #d1d5db;
+    color: #4b5563;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+    border-radius: 6px;
+}
+
+.btn-back:hover {
+    background-color: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.btn-add-user, .btn-add {
+    width: auto;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: bold;
+    align-self: flex-start;
+    margin-bottom: 1rem;
+}
+
+/* ===== AJUSTE 1: Posição do Nome de Usuário ===== */
+/* Remove a margem superior para aproximá-lo da linha do cabeçalho */
+.user-display {
+    margin-top: 0.5rem;
+}
+
+
+/* ===== AJUSTE 2: Estilo do Título "TAREFAS" ===== */
+/* Reduz o espaçamento do container e estiliza o título */
+.navigation-wrapper {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+.main-title {
+    margin-bottom: 1rem;
+    font-weight: bold;      /* Texto em negrito */
+    color: #1e3a8a;         /* Cor azul primária do sistema */
+}
+
+
+/* ===== AJUSTE 3 e 4: Menu de Utilidades (Separadores e Hover) ===== */
+.utility-nav {
+    gap: 0; /* Remove o gap original para o separador controlar o espaço */
+}
+
+.utility-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    position: relative; /* Necessário para o separador */
+    transition: all 0.2s ease-in-out;
+}
+
+/* Adiciona a barra separadora em todos, menos no último botão */
+.utility-btn:not(:last-child)::after {
+    content: '|';
+    position: absolute;
+    right: -2px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #d1d5db; /* Cor cinza claro para o separador */
+    pointer-events: none; /* Garante que o separador não seja clicável */
+}
+
+/* Efeito Hover: fundo azul e texto branco, como solicitado */
+.utility-btn:hover {
+    text-decoration: none;      /* Remove o sublinhado antigo */
+    background-color: #1e3a8a;  /* Adiciona o fundo azul */
+    color: #ffffff;             /* Altera a cor do texto para branco */
+}
+
+/* Ajuste 1: Move o nome do usuário para cima */
+.user-display {
+    margin-top: -1rem; /* Define a distância exata de 2px da linha do cabeçalho */
+    margin-bottom: 0; /* Remove a margem inferior para o próximo ajuste */
+}
+
+/* Ajuste 2: Move o bloco do título "TAREFAS" e seus botões para cima */
+.navigation-wrapper {
+    padding-top: 0rem; /* Reduz drasticamente o espaço acima do título */
+}
+
+/* ===== ESTILOS PARA O COMPONENTE DE BUSCA (Dropdown) ===== */
+
+.searchable-select-container {
+    position: relative;
+}
+.searchable-select-container .search-input {
+    width: 100%;
+    box-sizing: border-box;
+}
+.searchable-select-container .options-container {
+    display: none;
+    position: absolute;
+    background-color: white;
+    border: 1px solid #ccc;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 10;
+}
+.searchable-select-container .options-container.is-visible {
+    display: block;
+}
+.searchable-select-container .option-item {
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+}
+.searchable-select-container .option-item:last-child {
+    border-bottom: none;
+}
+.searchable-select-container .option-item:hover, .searchable-select-container .option-item.highlighted {
+    background-color: #e0e7ff; /* <-- Este é o efeito de hover que faltava */
+}
+.searchable-select-container .option-item.disabled {
+    color: #9ca3af;
+    cursor: default;
+}
+
+.modal-content {
+    max-height: 85vh; /* Define a altura máxima como 85% da altura da janela */
+    overflow-y: auto; /* Adiciona uma barra de rolagem vertical SE o conteúdo for maior que a altura máxima */
+    display: flex;
+    flex-direction: column;
+}
+
+#edit-task-form {
+    overflow-y: visible; /* Garante que o conteúdo do formulário não seja cortado */
+    flex-grow: 1;
+}
+
+.notifications-list-container {
+    margin-top: 1rem;
+    max-height: 400px; /* Define uma altura máxima para a lista */
+    overflow-y: auto; /* Adiciona rolagem se a lista for muito grande */
+    border-top: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.notification-item {
+    padding: 1rem 0.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.notification-item:last-child {
+    border-bottom: none;
+}
+
+.notification-item:hover {
+    background-color: #f9fafb;
+}
+
+.notification-item.unread p {
+    font-weight: bold;
+    color: #1f2937;
+}
+
+.notification-item p {
+    margin: 0;
+}
+
+.notification-item small {
+    color: #6b7280;
+    font-size: 0.75rem;
+}
+
+/* Ajuste no botão "Fechar" para usar a cor secundária */
+.btn-secondary {
+    background-color: #6b7280;
+}
+.btn-secondary:hover {
+    background-color: #4b5563;
+}
+
+/* AJUSTES VISUAIS PARA KPIS DO DASHBOARD */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.kpi-card {
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-align: left;
+}
+
+.kpi-label {
+    font-weight: 500;
+    color: #4b5563;
+    font-size: 0.9rem;
+}
+
+.kpi-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #1e3a8a;
+}
+
+/* AJUSTE FINO PARA "COLAR" O SUBTÍTULO AO TÍTULO DO GRÁFICO */
+
+.chart-container h4 {
+    margin-bottom: 0.25rem; /* Reduz drasticamente o espaço abaixo do título */
+}
+
+.chart-subtitle {
+    margin-top: 0; /* Remove qualquer espaço acima do subtítulo */
+}
+
+/* EFEITO DE DESTAQUE PARA TAREFA AO CLICAR NA NOTIFICAÇÃO */
+.task-card.highlight {
+    animation: highlight-fade 2s ease-out;
+    box-shadow: 0 0 15px rgba(79, 70, 229, 0.5); /* Sombra roxa sutil */
+    border-left-color: #4f46e5 !important;
+}
+
+@keyframes highlight-fade {
+    0% { background-color: #eef2ff; } /* Fundo azul claro */
+    100% { background-color: #fff; }  /* Volta ao branco normal */
+}
