@@ -147,6 +147,8 @@ export function populateDropdowns(CONDOMINIOS, TASK_TYPES, allUsers, allGroups, 
     });
 }
 
+
+
 export function populateTemplatesDropdown(taskTemplates) {
     const templateSelect = document.getElementById('template-select');
     if (!templateSelect) return;
