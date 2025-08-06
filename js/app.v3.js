@@ -46,7 +46,8 @@ const state = {
         deleted: { key: 'deleted', text: 'Excluída', icon: '❌', color: '#ef4444' }
     },
     unreadNotifications: 0, 
-    audioUnlocked: false
+    audioUnlocked: false,
+    lastNotifiedCount: 0
 };
 
 // --- FUNÇÕES DE ORQUESTRAÇÃO E MANIPULADORES (HANDLERS) ---
@@ -862,15 +863,103 @@ async function handleCreateCondo(event) {
 }
 
 async function verificarNotificacoes() {
-    // ... (função não precisa de alteração)
+    const { data: count, error } = await supabaseClient.rpc('contar_notificacoes_nao_lidas');
+
+    if (error) {
+        console.error("Erro ao verificar notificações:", error);
+        return;
+    }
+
+    const badge = document.getElementById('notification-badge');
+    state.unreadNotifications = count;
+
+    if (badge) {
+        if (count > 0) {
+            badge.textContent = count;
+            badge.style.display = 'block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+
+    updateFavicon(count);
+
+    if (
+        typeof state.lastNotifiedCount === 'number' &&
+        count > state.lastNotifiedCount &&
+        state.audioUnlocked
+    ) {
+        const sound = document.getElementById('notification-sound');
+        if (sound) {
+            sound.currentTime = 0;
+            sound.play().catch(e => console.warn("Erro ao tocar som de notificação:", e));
+        }
+    }
+
+    // ADICIONE ESTA LINHA NO FINAL DA FUNÇÃO
+    state.lastNotifiedCount = count;
 }
 
 function unlockAudio() {
-    // ... (função não precisa de alteração)
+  const sound = document.getElementById('notification-sound');
+  if (sound) {
+    sound.play().then(() => {
+      sound.pause(); // 🔇 Imediatamente pausa
+      sound.currentTime = 0;
+      console.log("Áudio desbloqueado com sucesso.");
+      state.audioUnlocked = true;
+    }).catch(e => {
+      console.warn("Falha ao desbloquear áudio:", e);
+    });
+  }
 }
 
 function updateFavicon(count) {
-    // ... (função não precisa de alteração)
+    const favicon = document.getElementById('favicon');
+    if (!favicon) return;
+
+    // Se não houver notificações, restaura o ícone original e para a execução.
+    if (count === 0) {
+        favicon.href = '/favicon/favicon-96x96.png';
+        return;
+    }
+
+    // Cria um objeto de imagem para garantir que o favicon original seja carregado antes de desenharmos
+    const img = new Image();
+    img.src = '/favicon/favicon-96x96.png';
+
+    // Quando a imagem do favicon original for carregada, o desenho começa
+    img.onload = () => {
+        // Cria um canvas (uma tela de desenho) invisível
+        const canvas = document.createElement('canvas');
+        canvas.width = 32;
+        canvas.height = 32;
+        const ctx = canvas.getContext('2d');
+
+        // 1. Desenha a imagem original do favicon no canvas
+        ctx.drawImage(img, 0, 0, 32, 32);
+
+        // 2. Prepara o texto da notificação (ex: "1", "2", ..., "9+")
+        const text = count > 9 ? '9+' : count.toString();
+        
+        // 3. Configurações do círculo vermelho (badge)
+        ctx.beginPath();
+        ctx.arc(22, 10, 8, 0, 2 * Math.PI); // Posição (x,y), raio, etc.
+        ctx.fillStyle = 'red';
+        ctx.fill();
+
+        // 4. Configurações do texto do número
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // 5. Desenha o número sobre o círculo vermelho
+        ctx.fillText(text, 22, 10);
+
+        // 6. Converte o desenho do canvas em uma imagem e atualiza o favicon
+        favicon.href = canvas.toDataURL('image/png');
+    };
 }
 
 function handleTaskListClick(event) {
@@ -969,6 +1058,8 @@ function setupPasswordToggle(toggleId, inputId) {
 function setupEventListeners() {
     if (listenersInitialized) return;
     listenersInitialized = true;
+    
+    document.addEventListener('click', unlockAudio, { once: true });
     
     // --- Autenticação ---
     document.getElementById('login-btn')?.addEventListener('click', login);
@@ -1100,9 +1191,48 @@ function setupEventListeners() {
     document.getElementById('cargo-list')?.addEventListener('click', handleCargoListClick);
     
     // --- Listeners para o Modal de Notificações ---
-    document.getElementById('notification-bell-container')?.addEventListener('click', () => {
-        // A lógica para buscar e renderizar as notificações virá aqui no futuro
+    document.getElementById('notification-bell-container')?.addEventListener('click', async () => {
+        const { data: notifications, error } = await supabaseClient
+            .from('notificacoes_detalhadas')
+            .select('*')
+            .eq('user_id', state.currentUserProfile.id)
+            .order('created_at', { ascending: false })
+            .limit(10);
+
+        if (error) {
+            console.error("Erro ao buscar notificações:", error);
+            return;
+        }
+
+        const listContainer = document.getElementById('notifications-list');
+        if (!listContainer) return;
+
+        if (notifications && notifications.length > 0) {
+            listContainer.innerHTML = notifications.map(n => {
+                const data = new Date(n.created_at).toLocaleString('pt-BR');
+                return `
+                    <div class="notification-item ${n.lida ? '' : 'unread'}" data-task-id="${n.tarefa_id}" data-notification-id="${n.id}">
+                        <p>${n.mensagem}</p>
+                        <small>${data}</small>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            listContainer.innerHTML = '<p style="text-align: center; color: #6b7280;">Nenhuma notificação recente.</p>';
+        }
+
         ui.openNotificationsModal();
+
+        // Limpa o contador visual, marca como lidas E ATUALIZA O FAVICON
+        const badge = document.getElementById('notification-badge');
+        if (badge) badge.style.display = 'none';
+        state.unreadNotifications = 0;
+        updateFavicon(0); // <-- ATUALIZA O FAVICON PARA O NORMAL
+
+        const unreadIds = notifications.filter(n => !n.lida).map(n => n.id);
+        if (unreadIds.length > 0) {
+            await api.markNotificationAsRead(unreadIds);
+        }
     });
 
     document.getElementById('notifications-modal-close-btn')?.addEventListener('click', ui.closeNotificationsModal);
@@ -1218,6 +1348,12 @@ async function startApp() {
             );
             Object.assign(state, initialData);
 
+            state.unreadNotifications = initialData.unreadCount || 0;
+                updateFavicon(state.unreadNotifications);
+                if (state.unreadNotifications > 0) {
+                    // ... (código do badge) ...
+                }
+
             ui.setupRoleBasedUI(state.currentUserProfile);
             const userDisplayName = document.getElementById('user-display-name');
             if (userDisplayName) {
@@ -1265,6 +1401,7 @@ async function startApp() {
             if (lastView) sessionStorage.removeItem('lastActiveView');
             
             // ... (código de notificações e outros) ...
+            await verificarNotificacoes();
             // --- Listener de Notificações em Tempo Real ---
             const notificationChannel = supabaseClient
             .channel('public:notificacoes:user_id=eq.' + state.currentUserProfile.id)
@@ -1272,15 +1409,19 @@ async function startApp() {
               'postgres_changes',
               { event: 'INSERT', schema: 'public', table: 'notificacoes' },
               async (payload) => {
+
+                verificarNotificacoes();
     console.log('Nova notificação recebida!', payload);
 
     // Mostra o alerta visual e toca o som
     state.unreadNotifications++;
+    updateFavicon(state.unreadNotifications);
     const badge = document.getElementById('notification-badge');
     if (badge) {
         badge.textContent = state.unreadNotifications;
         badge.style.display = 'block';
     }
+    
     const sound = document.getElementById('notification-sound');
     if (sound && state.audioUnlocked) {
         sound.play().catch(e => console.warn("Erro ao tocar som:", e));
@@ -1306,12 +1447,14 @@ async function startApp() {
             state.tasksToDisplayForPdf = render.renderTasks(state);
         }
 
-    } catch (error) {
-        console.error("Falha ao recarregar dados em tempo real:", error);
+            } catch (error) {
+                console.error("Falha ao recarregar dados em tempo real:", error);
+            }
     }
-}
             )
             .subscribe();
+
+            setInterval(verificarNotificacoes, 60000); 
 
         } catch (error) {
             console.error("Erro crítico durante a inicialização:", error);
