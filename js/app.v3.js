@@ -91,8 +91,18 @@ async function handleCreateTask(event) {
         form.reset();
         document.getElementById('task-condo-search').value = '';
         alert('Tarefa criada com sucesso!');
-        sessionStorage.setItem('lastActiveView', 'tasks-view');
-        location.reload();
+
+        const freshData = await api.fetchInitialData(
+            state.currentUserProfile.empresa_id,
+            state.currentUserProfile.id,
+            state.currentUserProfile.cargo?.is_admin === true
+        );
+        // Atualiza o estado local com a nova tarefa e/ou modelo
+        Object.assign(state, freshData);
+
+        // Atualiza os menus de seleção que podem ter mudado (ex: modelos)
+        ui.populateTemplatesDropdown(state.taskTemplates);
+        
     } catch(error) {
         // ========================================================================
         // LÓGICA DE MENSAGEM DE ERRO APRIMORADA
