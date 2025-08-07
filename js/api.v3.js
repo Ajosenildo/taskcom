@@ -13,7 +13,7 @@ export async function fetchInitialData(empresaId, userId, isAdmin) {
     ] = await Promise.all([
         supabaseClient.from('tarefas_detalhadas').select('*'),
         supabaseClient.from('condominios').select('*').eq('empresa_id', empresaId),
-        supabaseClient.from('tipos_tarefa').select('*').eq('empresa_id', empresaId),
+        supabaseClient.from('tipos_tarefa').select('*').eq('empresa_id', empresaId).order('nome_tipo', { ascending: true }),
         supabaseClient.from('modelos_tarefa').select('*').eq('empresa_id', empresaId),
         supabaseClient.from('usuarios').select('*').eq('empresa_id', empresaId),
         supabaseClient.from('cargos').select('*').eq('empresa_id', empresaId),
