@@ -4,7 +4,7 @@ import { supabaseClient } from './supabaseClient.js';
 import { SUPABASE_URL } from './config.js';
 
 // --- FUNÇÃO PRINCIPAL DE BUSCA DE DADOS ---
-export async function fetchInitialData(empresaId, userId, isAdmin) {
+/*export async function fetchInitialData(empresaId, userId, isAdmin) {
     if (!empresaId) throw new Error("ID da empresa é necessário");
 
     const [
@@ -56,6 +56,84 @@ export async function fetchInitialData(empresaId, userId, isAdmin) {
         allCargos: cargosResult.data || [],
         allGroups: groupsResult.data || [],
         userGroupAssignments: finalAssignments,
+    };
+}*/
+
+// Em js/api.v3.js
+
+export async function fetchInitialData(empresaId, userId, isAdmin) {
+    if (!empresaId) throw new Error("ID da empresa é necessário");
+
+    const [
+        tasksResult, condosResult, typesResult, templatesResult,
+        usersResult, cargosResult, groupsResult, allAssignmentsResult,
+        unreadNotificationsResult
+    ] = await Promise.all([
+        supabaseClient.from('tarefas_detalhadas').select('*'),
+        supabaseClient.from('condominios').select('*').eq('empresa_id', empresaId),
+        supabaseClient.from('tipos_tarefa').select('*').eq('empresa_id', empresaId).order('nome_tipo', { ascending: true }),
+        supabaseClient.from('modelos_tarefa').select('*').eq('empresa_id', empresaId),
+        supabaseClient.from('usuarios').select('*').eq('empresa_id', empresaId).order('nome_completo', { ascending: true }),
+        supabaseClient.from('cargos').select('*').eq('empresa_id', empresaId),
+        supabaseClient.from('grupos').select('*').eq('empresa_id', empresaId),
+        supabaseClient.from('usuario_grupo').select('usuario_id, grupo_id'),
+        supabaseClient.from('notificacoes').select('id', { count: 'exact' }).eq('user_id', userId).eq('lida', false)
+    ]);
+
+    const error = tasksResult.error || condosResult.error || typesResult.error || templatesResult.error ||
+        usersResult.error || cargosResult.error || groupsResult.error || allAssignmentsResult.error || unreadNotificationsResult.error;
+
+    if (error) {
+        console.error("Erro ao buscar dados:", error);
+        throw new Error("Falha ao carregar os dados do sistema.");
+    }
+
+    const allCompanyCondos = condosResult.data || [];
+    const allCompanyTasks = tasksResult.data || [];
+    const allAssignments = allAssignmentsResult.data || [];
+    
+    const companyUserIds = new Set((usersResult.data || []).map(u => u.id));
+    const finalAssignments = allAssignments.filter(a => companyUserIds.has(a.usuario_id));
+
+    let finalCondos = [];
+    let finalTasks = [];
+
+    if (isAdmin) {
+        // Se for admin, ele vê todos os condomínios e tarefas da empresa
+        finalCondos = allCompanyCondos;
+        finalTasks = allCompanyTasks;
+    } else {
+        // ========================================================================
+        // LÓGICA DE FILTRO DE SEGURANÇA PARA NÃO-ADMINS (CORRIGIDA E UNIFICADA)
+        // ========================================================================
+        
+        // 1. Descobre a quais grupos o usuário logado pertence.
+        const grupoIdsDoUsuario = finalAssignments
+            .filter(a => a.usuario_id === userId)
+            .map(a => a.grupo_id);
+
+        // 2. Filtra a lista de condomínios, mostrando APENAS aqueles que pertencem aos grupos do usuário.
+        finalCondos = allCompanyCondos.filter(c => c.grupo_id && grupoIdsDoUsuario.includes(c.grupo_id));
+        
+        // 3. Cria uma lista de IDs dos condomínios que o usuário tem permissão para ver.
+        const allowedCondoIds = new Set(finalCondos.map(c => c.id));
+
+        // 4. Filtra a lista de tarefas, mostrando APENAS as tarefas que pertencem a esses condomínios permitidos.
+        finalTasks = allCompanyTasks.filter(t => allowedCondoIds.has(t.condominio_id));
+        
+        // ========================================================================
+    }
+
+    return {
+        tasks: finalTasks,
+        condominios: finalCondos,
+        taskTypes: typesResult.data || [],
+        taskTemplates: templatesResult.data || [],
+        allUsers: usersResult.data || [],
+        allCargos: cargosResult.data || [],
+        allGroups: groupsResult.data || [],
+        userGroupAssignments: finalAssignments,
+        unreadCount: unreadNotificationsResult.count
     };
 }
 
