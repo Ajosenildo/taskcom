@@ -15,7 +15,7 @@ export async function fetchInitialData(empresaId, userId, isAdmin) {
         supabaseClient.from('condominios').select('*').eq('empresa_id', empresaId),
         supabaseClient.from('tipos_tarefa').select('*').eq('empresa_id', empresaId).order('nome_tipo', { ascending: true }),
         supabaseClient.from('modelos_tarefa').select('*').eq('empresa_id', empresaId),
-        supabaseClient.from('usuarios').select('*').eq('empresa_id', empresaId),
+        supabaseClient.from('usuarios').select('*').eq('empresa_id', empresaId).order('nome_completo', { ascending: true }),
         supabaseClient.from('cargos').select('*').eq('empresa_id', empresaId),
         supabaseClient.from('grupos').select('*').eq('empresa_id', empresaId),
         supabaseClient.from('usuario_grupo').select('usuario_id, grupo_id')
