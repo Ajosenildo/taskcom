@@ -618,7 +618,7 @@ function handleDownloadTemplate() {
     document.body.removeChild(link);
 }
 
-async function handleForgotPassword(event) {
+/* async function handleForgotPassword(event) {
     event.preventDefault();
     const email = prompt("Por favor, digite o e-mail da sua conta para enviarmos o link de redefinição de senha:");
     if (!email) return;
@@ -626,6 +626,31 @@ async function handleForgotPassword(event) {
         await api.requestPasswordReset(email);
         alert("Se uma conta com este e-mail existir, um link para redefinir a senha foi enviado.");
     } catch (error) {
+        alert("Ocorreu um erro ao tentar enviar o e-mail de redefinição: " + error.message);
+    }
+}*/
+
+// Em js/app.v3.js
+
+async function handleForgotPassword(event) {
+    event.preventDefault();
+    const email = prompt("Por favor, digite o e-mail da sua conta para enviarmos o link de redefinição de senha:");
+    if (!email) return;
+
+    try {
+        // CORREÇÃO:
+        // Agora chamamos a nossa Edge Function 'send-reset-email' em vez da função padrão.
+        const { data, error } = await supabaseClient.functions.invoke('send-reset-email', {
+            body: { email: email }
+        });
+
+        if (error) throw error;
+        
+        // Mensagem de sucesso para o usuário.
+        alert("Se uma conta com este e-mail existir, um link para redefinir a senha foi enviado.");
+
+    } catch (error) {
+        console.error("Erro ao chamar a Edge Function de redefinição:", error);
         alert("Ocorreu um erro ao tentar enviar o e-mail de redefinição: " + error.message);
     }
 }
