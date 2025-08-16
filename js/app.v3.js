@@ -286,7 +286,66 @@ function handleTemplateSelect(e) {
     }
 }
 
+function loadScript(src) {
+    return new Promise((resolve, reject) => {
+        // Verifica se o script já não foi carregado
+        if (document.querySelector(`script[src="${src}"]`)) {
+            resolve();
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error(`Falha ao carregar o script: ${src}`));
+        document.head.appendChild(script);
+    });
+}
+
 async function handleExportToPDF() {
+    try {
+        if (state.tasksToDisplayForPdf.length === 0) {
+            return alert("Não há tarefas na lista atual para exportar.");
+        }
+
+        // Mostra um feedback para o usuário de que o PDF está sendo preparado
+        const exportBtn = document.getElementById('export-pdf-btn');
+        const originalText = exportBtn.textContent;
+        exportBtn.textContent = 'Gerando PDF...';
+        exportBtn.disabled = true;
+
+        // CARREGAMENTO DINÂMICO DOS SCRIPTS
+        await loadScript('https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js');
+        await loadScript('https://unpkg.com/jspdf-autotable@3.5.23/dist/jspdf.plugin.autotable.js');
+
+        const includeDesc = document.getElementById('pdf-include-desc').checked;
+        const includeHistory = document.getElementById('pdf-include-history').checked;
+        const empresaNome = state.currentUserProfile?.empresa?.nome_empresa || 'Relatório Geral';
+        let reportOwnerName = null;
+        if (state.currentUserProfile && !state.currentUserProfile.cargo?.is_admin) {
+            reportOwnerName = state.currentUserProfile.nome_completo;
+        }
+        const emitterName = state.currentUserProfile?.nome_completo || 'Usuário Desconhecido';
+        
+        // A chamada para a função de exportação continua a mesma
+        await utils.exportTasksToPDF(
+            state.tasksToDisplayForPdf, state.condominios, state.taskTypes,
+            state.STATUSES, includeDesc, includeHistory,
+            reportOwnerName, empresaNome, emitterName
+        );
+
+    } catch (error) {
+        alert("Ocorreu um erro crítico ao gerar o PDF: " + error.message);
+    } finally {
+        // Restaura o botão ao seu estado original, mesmo se houver erro
+        const exportBtn = document.getElementById('export-pdf-btn');
+        if (exportBtn) {
+            exportBtn.textContent = 'Exportar PDF';
+            exportBtn.disabled = false;
+        }
+    }
+}
+
+/* async function handleExportToPDF() {
     try {
         if (state.tasksToDisplayForPdf.length === 0) {
             return alert("Não há tarefas na lista atual para exportar.");
@@ -307,7 +366,7 @@ async function handleExportToPDF() {
     } catch (error) {
         alert("Ocorreu um erro crítico ao gerar o PDF: " + error.message);
     }
-}
+}*/ 
 
 async function handleUpdateUser(event) {
     event.preventDefault();
