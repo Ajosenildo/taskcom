@@ -41,10 +41,10 @@ function getVisualStatus(task, STATUSES) {
     }
 
    
-    if (currentUserProfile && !currentUserProfile.cargo?.is_admin) {
+    /*if (currentUserProfile && !currentUserProfile.cargo?.is_admin) {
         const userId = currentUserProfile.id;
         tasksToDisplay = tasksToDisplay.filter(t => t.criador_id === userId || t.responsavel_id === userId);
-    }
+    }*/
     
     if (activeFilters.status === 'deleted') {
         tasksToDisplay = tasksToDisplay.filter(t => t.status === 'deleted');

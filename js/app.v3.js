@@ -1296,7 +1296,7 @@ function setupEventListeners() {
     });
 
     // Listener para cliques DENTRO da lista de notificações
-    document.getElementById('notifications-list')?.addEventListener('click', (event) => {
+        document.getElementById('notifications-list')?.addEventListener('click', async (event) => {
         const item = event.target.closest('.notification-item');
         if (item && item.dataset.taskId) {
             const taskId = item.dataset.taskId;
@@ -1305,23 +1305,44 @@ function setupEventListeners() {
             ui.closeNotificationsModal();
             ui.showView('view-tasks-view');
             
-            // Encontra o card da tarefa correspondente na tela
-            const cardToFocus = document.querySelector(`.task-card .btn-edit[data-taskid="${taskId}"]`)?.closest('.task-card');
+            // ========================================================================
+            // INÍCIO DA CORREÇÃO DE SINCRONIA
+            // ========================================================================
 
-            if (cardToFocus) {
-                // Rola a tela até o card
-                cardToFocus.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-                // Adiciona a classe de destaque
-                cardToFocus.classList.add('highlight');
-
-                // Remove a classe após a animação para que possa ser usada novamente
-                setTimeout(() => {
-                    cardToFocus.classList.remove('highlight');
-                }, 2000); // 2000ms = 2 segundos, a duração da animação
-            } else {
-                console.warn(`Card da tarefa com ID ${taskId} não encontrado na tela.`);
+            // Forçamos uma nova busca de dados para garantir que a tarefa exista no estado local.
+            // Isso é importante caso a notificação chegue antes da atualização do estado.
+            try {
+                const freshData = await api.fetchInitialData(
+                    state.currentUserProfile.empresa_id,
+                    state.currentUserProfile.id,
+                    state.currentUserProfile.cargo?.is_admin === true
+                );
+                Object.assign(state, freshData);
+                // Redesenha a lista de tarefas com os dados mais recentes.
+                state.tasksToDisplayForPdf = render.renderTasks(state);
+            } catch (error) {
+                console.error("Falha ao recarregar dados após clique na notificação:", error);
             }
+            
+            // AGORA que a tela foi redesenhada, podemos procurar e destacar o card.
+            // Usamos um pequeno timeout para garantir que o DOM foi atualizado.
+            setTimeout(() => {
+                const cardToFocus = document.querySelector(`.task-card .btn-edit[data-taskid="${taskId}"]`)?.closest('.task-card');
+
+                if (cardToFocus) {
+                    cardToFocus.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    cardToFocus.classList.add('highlight');
+                    setTimeout(() => {
+                        cardToFocus.classList.remove('highlight');
+                    }, 2000);
+                } else {
+                    console.warn(`Card da tarefa com ID ${taskId} não encontrado na tela após a atualização.`);
+                }
+            }, 100); // 100ms de espera para o DOM renderizar.
+            
+            // ========================================================================
+            // FIM DA CORREÇÃO DE SINCRONIA
+            // ========================================================================
         }
     });
     
@@ -1329,7 +1350,6 @@ function setupEventListeners() {
     window.addEventListener('viewChanged', handleViewChange);
 }
 
-// --- FUNÇÃO PRINCIPAL DE INICIALIZAÇÃO ---
 async function startApp() {
     setupEventListeners();
     ui.setupPWAInstallHandlers();
@@ -1348,21 +1368,14 @@ async function startApp() {
                 .single();
 
             if (profileError) throw profileError;
-            if (!userProfile) throw new Error("Perfil de usuário não encontrado.");
-            
             state.currentUserProfile = userProfile;
+            
             const initialData = await api.fetchInitialData(
                 userProfile.empresa_id,
                 userProfile.id,
                 userProfile.cargo?.is_admin === true
             );
             Object.assign(state, initialData);
-
-            state.unreadNotifications = initialData.unreadCount || 0;
-                updateFavicon(state.unreadNotifications);
-                if (state.unreadNotifications > 0) {
-                    // ... (código do badge) ...
-                }
 
             ui.setupRoleBasedUI(state.currentUserProfile);
             const userDisplayName = document.getElementById('user-display-name');
@@ -1378,10 +1391,6 @@ async function startApp() {
                 state.condominios,
                 (selectedValue) => {
                     state.activeFilters.condominioId = selectedValue;
-                    console.log('%c[app.v2.js] DADOS ANTES DE RENDERIZAR:', 'color: blue; font-weight: bold;', {
-                totalTarefasNoEstado: state.tasks.length,
-                primeiraTarefa: state.tasks.length > 0 ? state.tasks[0] : 'NENHUMA TAREFA RECEBIDA'
-            });
                     state.tasksToDisplayForPdf = render.renderTasks(state);
                 }
             );
@@ -1400,70 +1409,54 @@ async function startApp() {
                     filterCondoDropdown.clear();
                 });
             }
-
-            // Renderização inicial
+            
             state.tasksToDisplayForPdf = render.renderTasks(state);
-
             ui.show('main-container');
             const lastView = sessionStorage.getItem('lastActiveView');
             ui.showView(lastView || 'create-task-view');
-
             if (lastView) sessionStorage.removeItem('lastActiveView');
-            
-            // ... (código de notificações e outros) ...
+
+            // ========================================================================
+            // LÓGICA DE NOTIFICAÇÃO FINAL E OTIMIZADA
+            // ========================================================================
+
+            // 1. Verifica as notificações ao carregar a página
             await verificarNotificacoes();
-            // --- Listener de Notificações em Tempo Real ---
+
+            // 2. Ativa o "ouvinte" de notificações em tempo real com lógica corrigida
             const notificationChannel = supabaseClient
             .channel('public:notificacoes:user_id=eq.' + state.currentUserProfile.id)
             .on(
               'postgres_changes',
               { event: 'INSERT', schema: 'public', table: 'notificacoes' },
               async (payload) => {
+                console.log('Notificação em tempo real recebida!', payload);
 
-                verificarNotificacoes();
-    console.log('Nova notificação recebida!', payload);
-
-    // Mostra o alerta visual e toca o som
-    state.unreadNotifications++;
-    updateFavicon(state.unreadNotifications);
-    const badge = document.getElementById('notification-badge');
-    if (badge) {
-        badge.textContent = state.unreadNotifications;
-        badge.style.display = 'block';
-    }
-    
-    const sound = document.getElementById('notification-sound');
-    if (sound && state.audioUnlocked) {
-        sound.play().catch(e => console.warn("Erro ao tocar som:", e));
-    }
-    
-    // ========================================================================
-    // LÓGICA ROBUSTA PARA ATUALIZAÇÃO EM TEMPO REAL
-    // Em vez de adicionar apenas uma tarefa, recarregamos todos os dados
-    // para garantir consistência total (tarefas, condomínios, etc.)
-    // ========================================================================
-    try {
-        const freshData = await api.fetchInitialData(
-            state.currentUserProfile.empresa_id,
-            state.currentUserProfile.id,
-            state.currentUserProfile.cargo?.is_admin === true
-        );
-        Object.assign(state, freshData); // Atualiza todo o estado local
-        
-        console.log("Dados atualizados em tempo real.");
-        
-        // Se o usuário estiver na tela de tarefas, redesenha a lista com os dados completos
-        if (document.getElementById('view-tasks-view').style.display === 'flex') {
-            state.tasksToDisplayForPdf = render.renderTasks(state);
-        }
-
-            } catch (error) {
-                console.error("Falha ao recarregar dados em tempo real:", error);
-            }
-    }
+                // PRIMEIRO, busca todos os dados mais recentes.
+                // Isso garante que o state.unreadCount seja o mais atual possível.
+                try {
+                    const freshData = await api.fetchInitialData(
+                        state.currentUserProfile.empresa_id,
+                        state.currentUserProfile.id,
+                        state.currentUserProfile.cargo?.is_admin === true
+                    );
+                    Object.assign(state, freshData);
+                    
+                    // AGORA, com os dados frescos, chama a função que atualiza a UI
+                    await verificarNotificacoes();
+                    
+                    // E por fim, redesenha a lista de tarefas se o usuário estiver na tela
+                    if (document.getElementById('view-tasks-view')?.style.display === 'flex') {
+                        state.tasksToDisplayForPdf = render.renderTasks(state);
+                    }
+                } catch (error) {
+                    console.error("Falha ao recarregar dados em tempo real:", error);
+                }
+              }
             )
             .subscribe();
 
+            // 3. Mantém a verificação periódica como um "plano B" confiável
             setInterval(verificarNotificacoes, 60000); 
 
         } catch (error) {
