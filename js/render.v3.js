@@ -26,35 +26,33 @@ function getVisualStatus(task, STATUSES) {
     return null;
 }
 
- export function renderTasks(state) {
-    const { tasks, condominios, taskTypes, STATUSES, activeFilters, currentUserProfile } = state; // Adicionado currentUserProfile
+ // Em js/render.v3.js
+
+// Em js/render.v3.js
+export function renderTasks(state) {
+    const { tasks, condominios, taskTypes, STATUSES, activeFilters, currentUserProfile, displayLimit } = state; // Adicionado displayLimit
     const list = document.getElementById('task-list');
     if (!list) return [];
     list.innerHTML = '';
 
-    const processedTasks = tasks.map(task => ({ ...task, visualStatusInfo: getVisualStatus(task, STATUSES) }));
+    // ... (toda a sua lógica de filtragem continua exatamente igual até a ordenação)
     
-    let tasksToDisplay = processedTasks;
-
+    let tasksToDisplay = tasks.map(task => ({ ...task, visualStatusInfo: getVisualStatus(task, STATUSES) }));
+    // (cole aqui toda a sua lógica de filtro, if/else if, etc., até a linha do sort)
     if (currentUserProfile && currentUserProfile.empresa_id) {
         tasksToDisplay = tasksToDisplay.filter(t => t.empresa_id === currentUserProfile.empresa_id);
     }
-
-   
-    /*if (currentUserProfile && !currentUserProfile.cargo?.is_admin) {
-        const userId = currentUserProfile.id;
-        tasksToDisplay = tasksToDisplay.filter(t => t.criador_id === userId || t.responsavel_id === userId);
-    }*/
     
     if (activeFilters.status === 'deleted') {
         tasksToDisplay = tasksToDisplay.filter(t => t.status === 'deleted');
+    } else if (activeFilters.status === 'active') { 
+        tasksToDisplay = tasksToDisplay.filter(t => t.status === 'pending');
     } else {
         tasksToDisplay = tasksToDisplay.filter(t => t.status !== 'deleted');
-        if (activeFilters.status !== 'active') {
+        if (activeFilters.status && activeFilters.status !== 'active') { 
             tasksToDisplay = tasksToDisplay.filter(t => t.visualStatusInfo && t.visualStatusInfo.status.key === activeFilters.status);
         }
     }
-
     if (activeFilters.condominioId) {
         tasksToDisplay = tasksToDisplay.filter(t => t.condominio_id == activeFilters.condominioId);
     }
@@ -65,9 +63,7 @@ function getVisualStatus(task, STATUSES) {
         tasksToDisplay = tasksToDisplay.filter(t => t.tipo_tarefa_id == activeFilters.taskTypeId);
     }
     if (activeFilters.groupId) {
-        const condosInGroup = condominios
-            .filter(c => c.grupo_id == activeFilters.groupId)
-            .map(c => c.id);
+        const condosInGroup = condominios.filter(c => c.grupo_id == activeFilters.groupId).map(c => c.id);
         tasksToDisplay = tasksToDisplay.filter(t => condosInGroup.includes(t.condominio_id));
     }
     if (activeFilters.dateStart) {
@@ -78,35 +74,31 @@ function getVisualStatus(task, STATUSES) {
         const endDate = new Date(activeFilters.dateEnd + "T00:00:00");
         tasksToDisplay = tasksToDisplay.filter(t => new Date(t.data_conclusao_prevista + "T00:00:00") <= endDate);
     }
-
     tasksToDisplay.sort((a, b) => new Date(a.data_conclusao_prevista) - new Date(b.data_conclusao_prevista) || b.id - a.id);
+    // Fim da lógica de filtragem
 
-    // O resto da função de renderização continua igual...
-    if (tasksToDisplay.length === 0) {
+    const tasksToRenderOnScreen = tasksToDisplay.slice(0, displayLimit);
+
+    if (tasksToRenderOnScreen.length === 0) {
         list.innerHTML = '<p style="text-align:center; color:#6b7280;">Nenhuma tarefa encontrada.</p>';
     } else {
-        tasksToDisplay.forEach(task => {
+        tasksToRenderOnScreen.forEach(task => {
+            // ... (toda a sua lógica de criar o card da tarefa continua igual)
             const condominio = condominios.find(c => c.id == task.condominio_id);
             const type = taskTypes.find(t => t.id == task.tipo_tarefa_id);
             const visualStatusInfo = task.visualStatusInfo;
             const card = document.createElement('div');
             card.className = `task-card ${task.status}`;
-            
             if (visualStatusInfo) {
                 card.style.borderLeft = `5px solid ${visualStatusInfo.status.color}`;
             }
-            
             const condoDisplayName = condominio ? (condominio.nome_fantasia || condominio.nome) : 'N/A';
-
             let overdueText = '';
             if (visualStatusInfo && visualStatusInfo.status.key === 'overdue' && visualStatusInfo.days > 0) {
                 overdueText = ` (${visualStatusInfo.days} dia${visualStatusInfo.days > 1 ? 's' : ''} de atraso)`;
             }
-
-            // Garante que o nome do criador e responsável venham dos campos corretos da VIEW
             const criadorNome = task.criador_nome || 'Sistema';
             const responsavelNome = task.responsavel_nome || 'Não definido';
-
             card.innerHTML = `
                 <div class="task-card-header">
                   <div class="task-card-title-wrapper">
@@ -135,6 +127,16 @@ function getVisualStatus(task, STATUSES) {
             list.appendChild(card);
         });
     }
+
+    // Adiciona o botão "Carregar Mais" se houver mais tarefas a serem exibidas
+    if (tasksToDisplay.length > tasksToRenderOnScreen.length) {
+        const loadMoreBtn = document.createElement('button');
+        loadMoreBtn.id = 'load-more-btn'; // Damos um ID para o botão
+        loadMoreBtn.className = 'load-more-btn';
+        loadMoreBtn.textContent = `Carregar Mais ${Math.min(20, tasksToDisplay.length - tasksToRenderOnScreen.length)} Tarefas`;
+        list.appendChild(loadMoreBtn);
+    }
+
     return tasksToDisplay;
 }
 

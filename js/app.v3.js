@@ -30,10 +30,11 @@ let listenersInitialized = false;
 let isPasswordUpdateInProgress = false;
 
 const state = {
+    displayLimit: 20,
     tasks: [], taskTemplates: [], condominios: [], taskTypes: [],
     allUsers: [], currentUserProfile: null, allCargos: [], allGroups: [], userGroupAssignments: [],
     activeFilters: {
-        condominioId: '', status: 'active',
+        condominioId: '', status: 'in_progress', // <-- ALTERADO AQUI
         dateStart: '', dateEnd: '', assigneeId: '',
         taskTypeId: '', groupId: ''
     },
@@ -1057,33 +1058,26 @@ function updateFavicon(count) {
 }
 
 function handleTaskListClick(event) {
-    console.log("--- Clique detectado na lista de tarefas ---");
-    
-    // Pega o botão mais próximo que foi clicado
-    const button = event.target.closest('.task-action-btn');
-    
-    if (!button) {
-        console.log("O clique não foi em um botão de ação. Ignorando.");
+    const button = event.target.closest('.task-action-btn, #load-more-btn');
+    if (!button) return;
+
+    // Ação para o botão "Carregar Mais"
+    if (button.id === 'load-more-btn') {
+        state.displayLimit += 20; // Aumenta o limite de exibição
+        state.tasksToDisplayForPdf = render.renderTasks(state); // Redesenha a lista
         return;
     }
-    
+
+    // Lógica existente para os outros botões
     const taskId = button.dataset.taskid;
     const action = button.dataset.action;
 
-    console.log(`Botão de ação clicado! Ação: '${action}', ID da Tarefa: '${taskId}'`);
-
-    // Estrutura if/else if para garantir que apenas uma ação seja executada
     if (action === 'edit-task') {
-        console.log("Ação 'edit-task' reconhecida. Chamando a função handleOpenEditModal...");
         handleOpenEditModal(parseInt(taskId, 10));
     } else if (action === 'toggle-task-status') {
-        console.log("Ação 'toggle-task-status' reconhecida. Chamando a função handleToggleStatus...");
         handleToggleStatus(parseInt(taskId, 10));
     } else if (action === 'delete-task') {
-        console.log("Ação 'delete-task' reconhecida. Chamando a função handleDeleteTask...");
         handleDeleteTask(parseInt(taskId, 10));
-    } else {
-        console.log("Ação não reconhecida no botão.");
     }
 }
 
@@ -1207,6 +1201,7 @@ function setupEventListeners() {
     const filters = ['filter-status', 'filter-assignee', 'filter-date-start', 'filter-date-end', 'filter-task-type', 'filter-group'];
     filters.forEach(id => {
         document.getElementById(id)?.addEventListener('change', (e) => {
+            state.displayLimit = 20;
             const filterMap = {
                 'filter-status': 'status', 
                 'filter-assignee': 'assigneeId', 
@@ -1221,13 +1216,14 @@ function setupEventListeners() {
     });
 
     document.getElementById('clear-filters')?.addEventListener('click', () => {
+        state.displayLimit = 20;
         const filterBarForm = document.getElementById('filter-bar')?.closest('div'); // Encontra o formulário ou div pai
         if (filterBarForm) {
             Array.from(filterBarForm.querySelectorAll('select, input[type="date"]')).forEach(input => input.value = '');
         }
         document.getElementById('filter-condo-search').value = '';
-        state.activeFilters = { condominioId: '', status: 'active', dateStart: '', dateEnd: '', assigneeId: '', taskTypeId: '', groupId: '' };
-        document.getElementById('filter-status').value = 'active'; // Força o status a voltar para "Ativas"
+        state.activeFilters = { condominioId: '', status: 'in_progress', dateStart: '', dateEnd: '', assigneeId: '', taskTypeId: '', groupId: '' };
+        document.getElementById('filter-status').value = 'in_progress'; // Força o status a voltar para "Ativas"
         state.tasksToDisplayForPdf = render.renderTasks(state);
     });
 
@@ -1461,6 +1457,8 @@ async function startApp() {
             );
             Object.assign(state, initialData);
 
+            document.getElementById('filter-status').value = state.activeFilters.status;
+
             ui.setupRoleBasedUI(state.currentUserProfile);
             const userDisplayName = document.getElementById('user-display-name');
             if (userDisplayName) {
@@ -1474,6 +1472,7 @@ async function startApp() {
                 'filter-condo-search', 'filter-condo-options', 'filter-condominio-id',
                 state.condominios,
                 (selectedValue) => {
+                    state.displayLimit = 20;
                     state.activeFilters.condominioId = selectedValue;
                     state.tasksToDisplayForPdf = render.renderTasks(state);
                 }

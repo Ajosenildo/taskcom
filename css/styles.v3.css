@@ -574,3 +574,32 @@ form label, .admin-feature label, .date-range-filter label {
     0% { background-color: #eef2ff; } /* Fundo azul claro */
     100% { background-color: #fff; }  /* Volta ao branco normal */
 }
+
+.task-list-info {
+  text-align: center;
+  padding: 10px;
+  margin-bottom: 15px;
+  background-color: #eef2ff; /* Um azul bem claro */
+  color: #4338ca; /* Um azul mais escuro */
+  border-radius: 8px;
+  font-size: 0.9em;
+  border: 1px solid #c7d2fe;
+}
+
+.load-more-btn {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  margin-top: 20px;
+  background-color: #f3f4f6; /* cinza claro */
+  color: #111827; /* cinza escuro */
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s;
+}
+
+.load-more-btn:hover {
+  background-color: #e5e7eb;
+}
