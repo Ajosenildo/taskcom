@@ -603,3 +603,202 @@ form label, .admin-feature label, .date-range-filter label {
 .load-more-btn:hover {
   background-color: #e5e7eb;
 }
+.admin-feature,
+.super-admin-feature,
+.condominio-feature { /* Adicionada a nova classe aqui */
+  display: none;
+}
+
+/* ==========================================================================
+   ESTILOS PARA O PAINEL DO SUPER ADMINISTRADOR (VERSÃO 2.0 - LARGURA FIXA)
+   ========================================================================== */
+
+.super-admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  /* MUDANÇA CRÍTICA: Força a tabela a obedecer nossas larguras definidas */
+  table-layout: fixed; 
+}
+
+/* Rebalanceado para 9 colunas */
+.super-admin-table thead th:nth-child(1) { width: 20%; } /* Empresa */
+.super-admin-table thead th:nth-child(2) { width: 8%; }  /* Status */
+.super-admin-table thead th:nth-child(3) { width: 8%; }  /* Plano */
+.super-admin-table thead th:nth-child(4) { width: 12%; } /* Segmento */
+.super-admin-table thead th:nth-child(5) { width: 10%; } /* Dt. Cadastro */
+.super-admin-table thead th:nth-child(6) { width: 20%; } /* Email */
+.super-admin-table thead th:nth-child(7) { width: 10%; } /* Fone */
+.super-admin-table thead th:nth-child(8) { width: 5%; }  /* Qtd. User */
+.super-admin-table thead th:nth-child(9) { width: 7%; }  /* Ações */
+
+/* Garante que textos longos (como emails) quebrem a linha se necessário */
+.super-admin-table td {
+  overflow-wrap: break-word;
+  word-wrap: break-word; /* Para navegadores mais antigos */
+}
+
+/* O resto do estilo continua o mesmo */
+.super-admin-table thead th {
+  background-color: #f3f4f6;
+  border-bottom: 2px solid #e5e7eb;
+  padding: 12px 8px;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+}
+
+.super-admin-table tbody td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: top; /* Alinha o conteúdo ao topo da célula */
+}
+
+.super-admin-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.super-admin-table tbody td:last-child {
+  text-align: right;
+}
+
+/* Estilo para o CNPJ/CPF (continua o mesmo) */
+.super-admin-table tbody td div {
+  font-weight: 600;
+}
+.super-admin-table small.text-muted {
+  color: #6b7280;
+  font-size: 0.8rem;
+}
+
+#access-denied-overlay {
+  position: fixed; z-index: 9999; top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex; align-items: center; justify-content: center;
+}
+.access-denied-box {
+  background-color: white; color: #333;
+  padding: 40px; border-radius: 8px; text-align: center;
+  max-width: 400px;
+}
+
+/* Botão para REATIVAR (usuário inativo) - Verde */
+.btn-status-reactivate {
+    background-color: #059669; /* Verde (mesma cor do "Concluir") */
+}
+.btn-status-reactivate:hover {
+    background-color: #047857; /* Verde mais escuro */
+}
+
+/* Botão para DESATIVAR (usuário ativo) - Laranja/Vermelho */
+.btn-status-deactivate {
+    background-color: #f97316; /* Laranja (alerta) */
+    /* Ou use vermelho: background-color: #ef4444; */ 
+}
+.btn-status-deactivate:hover {
+    background-color: #ea580c; /* Laranja mais escuro */
+    /* Ou vermelho mais escuro: background-color: #dc2626; */
+}
+
+#admin-condos-view .header-actions {
+    /* Garante que o container ocupe a largura e use flexbox */
+    display: flex; 
+    gap: 0.5rem; /* Espaço entre os botões de importar/baixar */
+    margin-bottom: 1rem;
+    /* Por padrão, escondemos via JS, então não precisamos de display: none aqui */
+}
+
+#admin-condos-view #add-condo-btn {
+    /* Garante que o botão +Novo fique em sua própria linha */
+    display: block; 
+    width: auto; /* Ajusta a largura ao conteúdo */
+    margin-bottom: 1.5rem; /* Aumenta o espaço abaixo dele */
+}
+
+/* --- ESTILO PARA BOTÃO DE AÇÃO SÓ COM ÍCONE --- */
+.task-action-btn.btn-icon {
+    padding: 6px 10px; /* Ajusta o padding para um ícone */
+    font-size: 1.1rem;  /* Aumenta um pouco o ícone */
+    line-height: 1;     /* Alinha o ícone verticalmente */
+    min-width: 36px;    /* Largura mínima */
+    text-align: center;
+}
+
+/* Cria um container para posicionar o botão dentro da textarea */
+.view form {
+  position: relative;
+}
+
+/* 1. O Wrapper: define a fronteira para o botão */
+.textarea-with-mic-wrapper {
+  position: relative;
+  width: 100%;
+  margin-bottom: 0.75rem;
+}
+
+/* (Usamos o seletor do wrapper para garantir a regra) */
+.textarea-with-mic-wrapper #task-desc {
+  padding-right: 60px !important; /* Adiciona espaço para o botão */
+  min-height: 100px;
+}
+
+#record-desc-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 1.3rem;
+  padding: 8px;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  line-height: 1.2;
+  background-color: #f3f4f6;
+  color: #1e3a8a;
+  border: 1px solid #d1d5db;
+  z-index: 10;
+  cursor: pointer;
+}
+
+#record-desc-btn:hover {
+  background-color: #e5e7eb;
+}
+
+/* Ajusta a <textarea> para não ter o texto sobreposto pelo botão */
+#task-desc {
+  padding-right: 60px !important; /* Adiciona espaço interno à direita */
+  min-height: 100px;
+}
+
+/* Estilo de gravação (pulsante) */
+#record-desc-btn.recording {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border-color: #fca5a5;
+  animation: pulse-red 1.5s infinite;
+}
+
+/* (Certifique-se que o keyframes ainda está no seu CSS) */
+@keyframes pulse-red {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* --- ESTILO PARA NOTA DE INFORMAÇÃO --- */
+.info-note {
+  background-color: #eef2ff; /* Fundo azul claro */
+  border-left: 4px solid #4f46e5; /* Borda roxa/azul */
+  padding: 12px 16px;
+  margin: 0; /* Remove a margem padrão do blockquote */
+  border-radius: 0 4px 4px 0;
+}
+.info-note p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #3730a3; /* Texto azul escuro */
+}
+.info-note p strong {
+  color: #1e1b4b; /* Texto azul mais escuro */
+}

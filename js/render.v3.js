@@ -1,6 +1,10 @@
 // js/render.js (Versão Definitiva e Corrigida)
+import { state } from './state.js';
+import * as utils from './utils.js';
+//import * as utils from './utils.js'; // Importa TUDO de utils.js como um objeto chamado 'utils'
+// import { createOrUpdateChart, getTermSingular } from './utils.js';
+// A linha de import do 'state' continua igual:
 
-import { createOrUpdateChart } from './utils.js';
 
 function getVisualStatus(task, STATUSES) {
     if (!task || !task.status) return null;
@@ -27,7 +31,53 @@ function getVisualStatus(task, STATUSES) {
 }
 
  // Em js/render.v3.js
+export function renderSuperAdminDashboard(empresas) {
+    const tableBody = document.getElementById('super-admin-table-body'); //
+    if (!tableBody) return; //
 
+    tableBody.innerHTML = ''; //
+
+    if (!empresas || empresas.length === 0) { //
+        // --- INÍCIO DA ALTERAÇÃO ---
+        // Colspan agora é 9
+        tableBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Nenhuma empresa encontrada.</td></tr>';
+        // --- FIM DA ALTERAÇÃO ---
+        return;
+    }
+
+    empresas.forEach(empresa => { //
+        const row = document.createElement('tr');
+
+        // Formata a data (lógica mantida)
+        let dataCadastroFormatada = 'N/A';
+        if (empresa.data_cadastro) {
+            dataCadastroFormatada = new Date(empresa.data_cadastro).toLocaleDateString('pt-BR', {
+                day: '2-digit', month: '2-digit', year: 'numeric'
+            });
+        }
+
+        // --- INÍCIO DA ALTERAÇÃO ---
+        // Adicionamos a nova célula para empresa.segmento_nome
+        row.innerHTML = `
+            <td>
+                <div>${empresa.nome_empresa}</div>
+                <small class="text-muted">${empresa.cnpj_cpf || 'N/A'}</small>
+            </td>
+            <td>${empresa.status_detalhado || 'N/A'}</td>
+            <td>${empresa.plano_nome || 'N/A'}</td>
+            <td>${empresa.segmento_nome || 'N/A'}</td> <td>${dataCadastroFormatada}</td>
+            <td>${empresa.admin_email || 'N/A'}</td>
+            <td>${empresa.admin_telefone || 'N/A'}</td>
+            <td>${empresa.qtd_usuarios || 0}</td>
+            <td>
+                <button class="task-action-btn btn-edit btn-icon" data-empresa-id="${empresa.id}">✏️</button>
+            </td>
+        `;
+        // --- FIM DA ALTERAÇÃO ---
+        
+        tableBody.appendChild(row); //
+    });
+}
 // Em js/render.v3.js
 export function renderTasks(state) {
     const { tasks, condominios, taskTypes, STATUSES, activeFilters, currentUserProfile, displayLimit } = state; // Adicionado displayLimit
@@ -140,7 +190,7 @@ export function renderTasks(state) {
     return tasksToDisplay;
 }
 
-export function renderUserList(allUsers, currentUserProfile, allCargos, allGroups, userGroupAssignments) {
+export function renderUserList(allUsers, currentUserProfile, allCargos, allGroups, userGroupAssignments, allCondos, allCondoAssignments) {
     const userListDiv = document.getElementById('user-list');
     if (!userListDiv) return;
     userListDiv.innerHTML = '';
@@ -150,36 +200,56 @@ export function renderUserList(allUsers, currentUserProfile, allCargos, allGroup
     }
 
     allUsers.forEach(user => {
-        const cargo = (allCargos || []).find(c => c.id === user.cargo_id);
-        // Define o nome e a classe CSS do cargo
+        // Busca o cargo (usamos 'allCargos' que já tem 'is_client_role' da API)
+        const cargo = user.cargo; // 'user.cargo' já é o objeto vindo da API
         const cargoInfo = cargo 
             ? { nome: cargo.nome_cargo, classe: `user-role-${cargo.nome_cargo.toLowerCase().replace(/\s+/g, '-')}` }
             : { nome: 'Desconhecido', classe: '' };
-
-        // Garante que o Administrador sempre tenha a classe correta para a cor vermelha
         if (cargo?.nome_cargo === 'Administrador') cargoInfo.classe = 'user-role-admin';
 
-        const userGroups = (userGroupAssignments || [])
-            .filter(assignment => assignment.usuario_id === user.id)
-            .map(assignment => {
-                const group = allGroups.find(g => g.id === assignment.grupo_id);
-                return group ? group.nome_grupo : '';
-            })
-            .filter(Boolean);
+        // --- INÍCIO DA ALTERAÇÃO (Lógica de Grupos e Condomínios) ---
+        let associationsHtml = '';
+
+        if (cargo && cargo.is_client_role) {
+            // Se for CLIENTE, mostra os CONDOMÍNIOS
+            const userCondos = (allCondoAssignments || [])
+                .filter(assignment => assignment.usuario_id === user.id)
+                .map(assignment => {
+                    const condo = allCondos.find(c => c.id === assignment.condominio_id);
+                    return condo ? (condo.nome_fantasia || condo.nome) : '';
+                })
+                .filter(Boolean);
+            
+            associationsHtml = `<div class="user-groups"><small>Condomínios: ${userCondos.length > 0 ? userCondos.join(', ') : 'Nenhum'}</small></div>`;
+        
+        } else {
+            // Se for funcionário, mostra os GRUPOS
+            const userGroups = (userGroupAssignments || [])
+                .filter(assignment => assignment.usuario_id === user.id)
+                .map(assignment => {
+                    const group = allGroups.find(g => g.id === assignment.grupo_id);
+                    return group ? group.nome_grupo : '';
+                })
+                .filter(Boolean);
+            
+            associationsHtml = `<div class="user-groups"><small>Grupos: ${userGroups.length > 0 ? userGroups.join(', ') : 'Nenhum'}</small></div>`;
+        }
+        // --- FIM DA ALTERAÇÃO ---
 
         const userCard = document.createElement('div');
-        userCard.className = `user-card ${!user.ativo ? 'inactive' : ''}`;
+        userCard.className = `user-card ${!user.ativo ? 'inactive' : ''}`; //
 
-        const groupsHtml = `<div class="user-groups"><small>Grupos: ${userGroups.length > 0 ? userGroups.join(', ') : 'Nenhum'}</small></div>`;
-
+        // Lógica dos botões (mantida)
         let actionsHtml = '';
-        if (currentUserProfile && currentUserProfile.id !== user.id) {
-            // CORREÇÃO: Agrupa os botões dentro de um único container
+        if (currentUserProfile && currentUserProfile.id !== user.id) { //
+            const buttonText = user.ativo ? 'Desativar' : 'Reativar'; //
+            const buttonClass = user.ativo ? 'btn-status-deactivate' : 'btn-status-reactivate'; //
+            
             actionsHtml = `
                 <div class="user-card-actions">
                     <button class="task-action-btn btn-edit" data-action="edit-user" data-userid="${user.id}">Editar</button>
-                    <button class="task-action-btn btn-status ${!user.ativo ? 'inactive' : ''}" data-action="toggle-user-status" data-userid="${user.id}">
-                        ${user.ativo ? 'Desativar' : 'Reativar'}
+                    <button class="task-action-btn ${buttonClass}" data-action="toggle-user-status" data-userid="${user.id}">
+                        ${buttonText}
                     </button>
                 </div>
             `;
@@ -189,8 +259,7 @@ export function renderUserList(allUsers, currentUserProfile, allCargos, allGroup
           <div class="user-info">
             <strong>${user.nome_completo || user.email}</strong>
             <small>Status: ${user.ativo ? 'Ativo' : 'Inativo'}</small>
-            ${groupsHtml}
-          </div>
+            ${associationsHtml} </div>
           <div class="user-role-actions-wrapper">
             <span class="user-role ${cargoInfo.classe}">${cargoInfo.nome}</span>
             ${actionsHtml}
@@ -253,7 +322,7 @@ export function renderDashboard(state) {
         labels: ['Em Andamento', 'Atrasadas', 'Concluídas (Período)'],
         datasets: [{ data: [inProgressCount, overdueCount, completedInPeriodCount], backgroundColor: [STATUSES.in_progress.color, STATUSES.overdue.color, STATUSES.completed.color] }]
     };
-    createOrUpdateChart('statusChart', 'doughnut', statusData, chartInstances, 'status');
+    utils.createOrUpdateChart('statusChart', 'doughnut', statusData, chartInstances, 'status');
 
     // NOVO: Lógica para Gráfico de Atrasadas por Responsável
     const assigneeCounts = {};
@@ -276,7 +345,7 @@ export function renderDashboard(state) {
             borderWidth: 1
         }]
     };
-    createOrUpdateChart('assigneeChart', 'bar', assigneeData, chartInstances, 'assignee', { indexAxis: 'y' });
+    utils.createOrUpdateChart('assigneeChart', 'bar', assigneeData, chartInstances, 'assignee', { indexAxis: 'y' });
 
     // Atualiza Gráfico de Condomínios
     const condoCounts = {};
@@ -292,25 +361,46 @@ export function renderDashboard(state) {
         labels: condoLabels,
         datasets: [{ label: 'Tarefas Ativas', data: Object.values(condoCounts), backgroundColor: 'rgba(30, 58, 138, 0.8)' }]
     };
-    createOrUpdateChart('condoChart', 'bar', condoData, chartInstances, 'condo');
+    utils.createOrUpdateChart('condoChart', 'bar', condoData, chartInstances, 'condo');
 }
 
+
 export function renderCondoList(condominios, grupos) {
+    console.log("[renderCondoList] Iniciando. Dados recebidos:", condominios); // DEBUG 1
+    
     const condoListDiv = document.getElementById('condo-list');
-    if (!condoListDiv) return;
-    condoListDiv.innerHTML = '';
-    if (!condominios || condominios.length === 0) {
-        condoListDiv.innerHTML = '<p>Nenhum condomínio cadastrado.</p>';
+    if (!condoListDiv) {
+        console.error("[renderCondoList] ERRO: Div 'condo-list' não encontrada!"); // DEBUG 2
         return;
     }
+
+    console.log("[renderCondoList] Limpando HTML anterior..."); // DEBUG 3
+    condoListDiv.innerHTML = ''; // Limpa a lista
+
+    if (!condominios || condominios.length === 0) {
+        const termoSingular = utils.getTermSingular(); // Assume que utils está importado
+        let mensagem = '';
+        if (termoSingular.endsWith('a')) {
+            mensagem = `<p>Nenhuma ${termoSingular} cadastrada.</p>`;
+        } else {
+            mensagem = `<p>Nenhum ${termoSingular} cadastrado.</p>`;
+        }
+        condoListDiv.innerHTML = mensagem;
+        console.log("[renderCondoList] Lista vazia, exibindo mensagem padrão."); // DEBUG 4
+        return;
+    }
+
+    console.log(`[renderCondoList] Renderizando ${condominios.length} itens...`); // DEBUG 5
     condominios.forEach(condo => {
-        // Encontra o nome do grupo a partir do ID
+        // DEBUG 6: Loga o nome de cada item antes de desenhar
+        console.log(`[renderCondoList] Desenhando item: ${condo.nome_fantasia || condo.nome} (ID: ${condo.id})`); 
+        
         const grupo = grupos.find(g => g.id === condo.grupo_id);
         const card = document.createElement('div');
         card.className = 'condo-card';
         card.innerHTML = `
             <div class="condo-info">
-                <strong>${condo.nome_fantasia}</strong>
+                <strong>${condo.nome_fantasia || condo.nome}</strong> 
                 <small>${grupo ? `Grupo: ${grupo.nome_grupo}` : 'Sem grupo'}</small>
             </div>
             <div class="user-card-actions">
@@ -320,6 +410,7 @@ export function renderCondoList(condominios, grupos) {
         `;
         condoListDiv.appendChild(card);
     });
+    console.log("[renderCondoList] Renderização concluída."); // DEBUG 7
 }
 
 export function renderTaskTypeList(taskTypes) {
@@ -402,25 +493,58 @@ export function renderGroupList(groups) {
 export function renderTaskHistory(events) {
     const historyListDiv = document.getElementById('task-history-list');
     if (!historyListDiv) return;
-    historyListDiv.innerHTML = '<p><small>Carregando histórico...</small></p>';
-
-    if (!events || events.length === 0) {
-        historyListDiv.innerHTML = '<p><small>Nenhum evento registrado para esta tarefa.</small></p>';
-        return;
-    }
+    historyListDiv.innerHTML = '<p><small>Nenhum evento registrado para esta tarefa.</small></p>';
+    if (!events || events.length === 0) return;
 
     historyListDiv.innerHTML = events.map(event => {
         const eventDate = new Date(event.created_at).toLocaleString('pt-BR');
-        const userName = event.usuario?.nome_completo || 'Usuário do Sistema';
-        let details = '';
+        const user = state.allUsers.find(u => u.id === event.usuario_id);
+        const actorName = user ? user.nome_completo : 'Usuário do Sistema'; // Quem realizou a ação
 
-        // CORREÇÃO: Sintaxe da string corrigida para montar os detalhes do evento
-        if (event.evento === 'Re-designação') {
-            const de = event.detalhes?.de || 'Ninguém';
-            const para = event.detalhes?.para || 'Não definido';
-            details = `de <strong>${de}</strong> para <strong>${para}</strong>`;
+        let fullEventDescription = '';
+
+        if (event.evento === 'Criação') {
+            const creatorName = event.detalhes?.criado_por || actorName;
+            const assigneeName = event.detalhes?.designado_para || 'Não definido';
+
+            // ========================================================================
+            // INÍCIO DA CORREÇÃO - LÓGICA CONDICIONAL
+            // ========================================================================
+            // Verifica se o criador e o designado são a mesma pessoa
+            if (creatorName === assigneeName) {
+                // Se forem iguais, mostra a frase simples
+                fullEventDescription = `${eventDate}: Tarefa criada por <strong>${creatorName}</strong>`;
+            } else {
+                // Se forem diferentes, mostra a frase completa
+                fullEventDescription = `${eventDate}: Tarefa criada por <strong>${creatorName}</strong> e designada para <strong>${assigneeName}</strong>`;
+            }
+            // ========================================================================
+            // FIM DA CORREÇÃO
+            // ========================================================================
+
+        } else {
+            // Lógica para os OUTROS eventos (continua a mesma)
+            let actionDetails = '';
+            if (event.evento === 'Re-designação') {
+                const de = event.detalhes?.de || 'Ninguém';
+                const para = event.detalhes?.para || 'Não definido';
+                actionDetails = `re-designada de <strong>${de}</strong> para <strong>${para}</strong>`;
+            } else if (event.evento === 'Alteração de Status') {
+                const statusKeyDe = event.detalhes?.de || null;
+                const statusKeyPara = event.detalhes?.para || 'desconhecido';
+                const statusTextDe = statusKeyDe ? (state.STATUSES[statusKeyDe]?.text || statusKeyDe) : null;
+                const statusTextPara = state.STATUSES[statusKeyPara]?.text || statusKeyPara;
+                if (statusTextDe) {
+                    actionDetails = `teve o status alterado de <strong>${statusTextDe}</strong> para <strong>${statusTextPara}</strong>`;
+                } else {
+                    actionDetails = `teve o status definido como <strong>${statusTextPara}</strong>`;
+                }
+            } else {
+                actionDetails = event.evento;
+            }
+            fullEventDescription = `${eventDate}: Tarefa ${actionDetails} por <strong>${actorName}</strong>`;
         }
         
-        return `<p><small>${eventDate} - ${userName}: ${event.evento} ${details}</small></p>`;
+        return `<p><small>${fullEventDescription}</small></p>`;
     }).join('');
 }

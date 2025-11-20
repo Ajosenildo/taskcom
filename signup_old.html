@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro - TasKCom</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Link para o arquivo CSS externo -->
+    <link rel="stylesheet" href="css/cad.css">
+</head>
+<body>
+    <div class="signup-container">
+        <h1>Crie sua Conta no TasKCom</h1>
+        <p class="subtitle">Escolha um plano e comece a organizar suas tarefas hoje mesmo.</p>
+
+        <form id="signup-form">
+            <div class="plans-selection">
+                <div class="plan-card selected" data-plan="Plano Gratuito">
+                    <h3>Plano Gratuito</h3>
+                    <p>R$ 0</p>
+                </div>
+                <div class="plan-card" data-plan="Plano Essencial">
+                    <h3>Plano Essencial</h3>
+                    <p>R$ 79</p>
+                </div>
+                <div class="plan-card" data-plan="Plano Profissional">
+                    <h3>Plano Profissional</h3>
+                    <p>R$ 149</p>
+                </div>
+                <div class="plan-card" data-plan="Plano Ilimitado">
+                    <h3>Plano Ilimitado</h3>
+                    <p>R$ 149+</p>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label for="company-name">Nome da Empresa</label>
+                        <input type="text" id="company-name" required>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="full-name">Seu Nome Completo</label>
+                        <input type="text" id="full-name" required>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="email">Seu E-mail de Acesso</label>
+                        <input type="email" id="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Crie uma Senha</label>
+                        <input type="password" id="password" minlength="6" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm-password">Confirme a Senha</label>
+                        <input type="password" id="confirm-password" minlength="6" required>
+                    </div>
+                </div>
+                <button type="submit" class="cta-button">Criar Conta</button>
+                <div id="status-message"></div>
+            </div>
+        </form>
+        <p class="login-link">Já tem uma conta? <a href="https://taskcom.iadev.app">Faça o login</a></p>
+    </div>
+
+    <!-- Link para o arquivo JavaScript externo -->
+    <script src="js/cadastro.js"></script>
+</body>
+</html>
+

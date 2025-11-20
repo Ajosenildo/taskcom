@@ -11,6 +11,16 @@
   <title>TasKCom - Gestão de Tarefas</title>
 </head>
 <body>
+
+  <div id="access-denied-overlay" style="display: none;">
+  <div class="access-denied-box">
+    <h2>Acesso Suspenso</h2>
+    <p>Para continuar utilizando o TaskCom, por favor, regularize sua assinatura.</p>
+    <p>Entre em contato com o suporte do sistema para mais informações.</p>
+    <button id="access-denied-logout-btn" class="cta-button" style="margin-top: 20px;">Sair</button>
+    </div>
+  </div>
+
   <div id="app">
     <div id="login-screen" class="screen">
       <img src="assets/logo-taskcom.png" alt="Logo TasKCom" class="login-logo">
@@ -69,7 +79,30 @@
       </div>
 
       <main class="content-area">
-        
+        <div id="super-admin-view" class="view">
+          <div class="view-header">
+            <h3>Painel Geral de Empresas</h3>
+            <button class="btn-back" data-view="view-tasks-view">← Voltar</button>
+          </div>
+          <div class="user-list-container"> <table class="super-admin-table">
+              <thead>
+                <tr>
+                  <th>Empresa <br>CNPJ/CPF</th>
+                  <th>Status</th>
+                  <th>Plano</th>
+                  <th>Segmento</th> 
+                  <th>Dt. Cadastro</th>
+                  <th>Admin (Email)</th>
+                  <th>Admin (Fone)</th>
+                  <th>Qtd. User</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="super-admin-table-body">
+                </tbody>
+            </table>
+          </div>
+        </div>
         <div id="create-task-view" class="view">
           <h3>Criar Nova Tarefa</h3>
           <form id="task-form">
@@ -81,12 +114,18 @@
             <select id="task-type" name="task-type" required><option value="">Selecione um Tipo...</option></select>
             
             <div class="searchable-select-container">
-              <input type="text" id="task-condo-search" class="search-input" placeholder="Selecione ou busque um condomínio..." autocomplete="off">
+              <input type="text" id="task-condo-search" class="search-input" placeholder="Selecione ou busque um..." data-term-placeholder="select_one">
               <input type="hidden" id="task-condominio" name="task-condominio" required>
               <div id="task-condo-options" class="options-container"></div>
             </div>
             
-            <textarea id="task-desc" name="task-desc" placeholder="Descrição"></textarea>
+            <div class="textarea-with-mic-wrapper">
+              <textarea id="task-desc" name="task-desc" placeholder="Digite a descrição..." rows="4"></textarea>
+              <button type="button" id="record-desc-btn" class="utility-btn" style="display: none;">
+                🎙️
+              </button>
+            </div>
+
             <label for="task-due-date">Data Prevista de Conclusão:</label>
             <input type="date" id="task-due-date" name="task-due-date" required/>
             <div class="checkbox-container"><input type="checkbox" id="create-as-completed" name="create-as-completed"/><label for="create-as-completed">Registrar como concluída</label></div>
@@ -98,6 +137,10 @@
         <div id="view-tasks-view" class="view">
             <h3>Ver Tarefas</h3>
             <div id="filter-bar">
+              <div class="search-bar-container">
+                <input type="text" id="search-term-input" placeholder="Buscar por palavra-chave... (ex: limpeza)">
+                <button id="search-tasks-btn" type="button">Buscar</button>
+              </div>
               <select id="filter-status"><option value="active">Ativas</option><option value="in_progress">Em Andamento</option><option value="overdue">Atrasadas</option><option value="completed">Concluídas</option><option value="deleted">Excluídas</option></select>
               <select id="filter-task-type"><option value="">Todos os Tipos</option></select>
               <select id="filter-group"><option value="">Todos os Grupos</option></select>
@@ -107,7 +150,7 @@
               </div>
               
               <div class="searchable-select-container">
-                <input type="text" id="filter-condo-search" class="search-input" placeholder="Filtrar por condomínio..." autocomplete="off">
+                <input type="text" id="filter-condo-search" class="search-input" placeholder="Filtrar por..." data-term-placeholder="filter_by">
                 <input type="hidden" id="filter-condominio-id">
                 <div id="filter-condo-options" class="options-container"></div>
               </div>
@@ -164,7 +207,7 @@
           <hr>
           <div class="chart-container"><h4>Tarefas por Status</h4><canvas id="statusChart"></canvas></div>
           <div class="chart-container"><h4>Tarefas Atrasadas por Responsável</h4><canvas id="assigneeChart"></canvas></div>
-          <div class="chart-container"><h4>Tarefas Ativas por Condomínio</h4><small class="chart-subtitle"><i>(Soma das tarefas em andamento e atrasadas)</i></small>
+          <div class="chart-container"><h4>Tarefas Ativas por <span data-term-singular="entidade_principal">Condomínio</span></h4><small class="chart-subtitle"><i>(Soma das tarefas em andamento e atrasadas)</i></small>
           <canvas id="condoChart"></canvas><canvas id="condoChart"></canvas></div>
         </div>
 
@@ -189,7 +232,7 @@
     </button>
     <button class="admin-menu-btn" data-view="admin-condos-view">
       <span class="admin-menu-icon">🏢</span>
-      <span class="admin-menu-text">Condomínios</span>
+      <span class="admin-menu-text" data-term-plural="entidade_principal">Condomínios</span>
     </button>
   </nav>
 </div>
@@ -200,6 +243,10 @@
     <button class="btn-back" data-view="admin-menu-view">← Voltar</button>
   </div>
   <button id="add-user-btn" class="btn-add-user">+ Novo Usuário</button>
+  <blockquote class="info-note">
+    <p><strong>Nota:</strong> Novos usuários são criados como <strong>Inativos</strong> e receberão um e-mail de confirmação.</p>
+    <p style="margin-top: 5px;">A confirmação do e-mail pelo usuário <strong>não ativa a conta</strong>. A ativação deve ser feita <strong>manualmente pelo administrador</strong>, clicando no botão <strong>'Reativar'</strong>.</p>
+  </blockquote>
   <div class="user-list-container">
     <div id="user-list"></div>
   </div>
@@ -212,7 +259,17 @@
   </div>
   <form id="cargo-form">
     <input type="hidden" id="cargo-id">
-    <input type="text" id="cargo-nome" placeholder="Nome do Cargo" required>      
+    <input type="text" id="cargo-nome" placeholder="Nome do Cargo" required>   
+
+    <div class="checkbox-container" style="margin-top: 0.5rem; margin-bottom: 0.5rem;">
+        <input type="checkbox" id="cargo-tem-permissoes-admin" name="cargo-tem-permissoes-admin"/>
+        <label for="cargo-tem-permissoes-admin">Este cargo tem permissões de administrador?</label>
+    </div>
+
+    <div class="checkbox-container" style="margin-top: 0; margin-bottom: 0.5rem;">
+        <input type="checkbox" id="cargo-is-client-role" name="cargo-is-client-role"/>
+        <label for="cargo-is-client-role">Este é um Cargo de Cliente (ex: Síndico)?</label>
+    </div>
     <button type="submit" id="cargo-submit-btn">Adicionar Cargo</button>
   </form>
   <div class="condo-list-container">
@@ -253,21 +310,25 @@
 
 <div id="admin-condos-view" class="view">
   <div class="view-header">
-    <h3>Gerenciamento de Condomínios</h3>
+    <h3>Gerenciamento de <span data-term-plural="entidade_principal">Condomínios</span></h3>
     <button class="btn-back" data-view="admin-menu-view">← Voltar</button>
   </div>
-  <div class="header-actions" style="margin-bottom: 1rem;">
-    <button type="button" id="download-template-btn" class="btn-secondary">Baixar Modelo</button>
-    <input type="file" id="condo-csv-input" accept=".csv" style="display: none;">
-    <button type="button" id="import-condo-btn" class="btn-import">Importar Planilha</button>
-  </div>
-  <button type="button" id="add-condo-btn" class="btn-add">+ Novo Condomínio</button>
-  <div class="condo-list-container" id="condo-list"></div>
-</div>
+  <div class="header-actions condominio-feature" style="margin-bottom: 1rem;"> 
+            <button type="button" id="download-template-btn" class="btn-secondary">Baixar Modelo</button>
+            <input type="file" id="condo-csv-input" accept=".csv" style="display: none;">
+            <button type="button" id="import-condo-btn" class="btn-import">Importar Planilha</button>
+            </div> 
+
+        <button type="button" id="add-condo-btn" class="btn-add" style="margin-bottom: 1.5rem;"> 
+            + Novo <span data-term-singular="entidade_principal">Condomínio</span>
+        </button>
+
+        <div class="condo-list-container" id="condo-list"></div>
 
       </main>
 
       <nav class="utility-nav">
+        <button id="nav-super-admin" class="utility-btn super-admin-feature">Super Admin</button>
         <button id="nav-admin" class="utility-btn admin-feature">Admin</button>
         <button id="change-password-btn" class="utility-btn">Alterar Senha</button>
         <button id="logout-btn" class="utility-btn">Sair</button>
@@ -277,22 +338,20 @@
     <p>&copy; 2025 TasKCom by AS.dev (iadev.app) Todos os direitos reservados.</p>
     <p>
         <a href="#" id="open-instructions-link" style="color: #4f46e5;">Instruções de Uso</a> | 
-        <a href="mailto:ajosenildosilva@gmail.com?subject=Ajuda com o TasKCom" style="color: #4f46e5;">Clique aqui se precisar de ajuda</a>
+        <a href="mailto:ajosenildosilva@gmail.com?subject=Ajuda com o TasKCom" style="color: #4f46e5;">Ajuda?</a>
     </p>
   </footer>
 
   <div id="create-condo-modal" class="modal-container">
   <div class="modal-content">
     <button id="create-condo-modal-close-btn" class="modal-close-btn">&times;</button>
-    <h3>Novo Condomínio</h3>
+    <h3>Novo <span data-term-singular="entidade_principal">Condomínio</span></h3>
     <form id="create-condo-form">
       <label for="create-condo-nome">Nome:</label>
       <input type="text" id="create-condo-nome" required>
       
       <label for="create-condo-nome-fantasia">Nome Fantasia:</label>
-      <input type="text" id="create-condo-nome-fantasia" required>
-      
-      <label for="create-condo-cnpj">CNPJ:</label>
+      <input type="text" id="create-condo-nome-fantasia"> <label for="create-condo-cnpj">CNPJ:</label>
       <input type="text" id="create-condo-cnpj">
       
       <label for="create-condo-group">Grupo:</label>
@@ -300,7 +359,7 @@
       
       <div class="modal-actions">
         <button type="button" id="create-condo-modal-cancel-btn" class="task-action-btn btn-cancel">Cancelar</button>
-        <button type="submit" class="task-action-btn btn-save">Criar Condomínio</button>
+        <button type="submit" class="task-action-btn btn-save">Criar <span data-term-singular="entidade_principal">Condomínio</span></button>
       </div>
     </form>
   </div>
@@ -322,7 +381,7 @@
         <label for="edit-task-type">Tipo:</label>
         <select id="edit-task-type" name="edit-task-type" required></select>
         
-        <label for="edit-task-condominio">Condomínio:</label>
+        <label for="edit-task-condominio"><span data-term-singular="entidade_principal">Condomínio</span>:</label>
         <select id="edit-task-condominio" name="edit-task-condominio" required></select>
         
         <label for="edit-task-desc">Descrição:</label>
@@ -360,6 +419,12 @@
       
       <label for="create-user-role">Cargo:</label>
       <select id="create-user-role" required></select>
+
+      <div id="create-condominio-associado-container" style="display: none;">
+        <label for="create-user-condominio">Associar ao Condomínio:</label>
+        <div id="create-user-condominios-list" class="checkbox-list" style="max-height: 150px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; border-radius: 5px;">
+          </div>
+      </div>
       
       <div class="modal-actions">
         <button type="button" id="create-user-modal-cancel-btn" class="task-action-btn btn-cancel">Cancelar</button>
@@ -384,6 +449,12 @@
       <label for="edit-user-role">Cargo:</label>
       <select id="edit-user-role" required></select>
 
+      <div id="edit-condominio-associado-container" style="display: none;">
+        <label for="edit-user-condominio">Associado ao Condomínio:</label>
+        <div id="edit-user-condominios-list" class="checkbox-list" style="max-height: 150px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; border-radius: 5px;">
+          </div>
+      </div>
+
       <fieldset class="associations-fieldset">
         <legend>Associação de Grupos</legend>
         <div id="edit-user-groups-list" class="checkbox-list">
@@ -400,7 +471,7 @@
   <div id="edit-condo-modal" class="modal-container">
   <div class="modal-content">
     <button id="edit-condo-modal-close-btn" class="modal-close-btn">&times;</button>
-    <h3>Editar Condomínio</h3>
+    <h3>Editar <span data-term-singular="entidade_principal">Condomínio</span></h3>
     <form id="edit-condo-form">
       <input type="hidden" id="edit-condo-id">
       
@@ -408,7 +479,7 @@
       <input type="text" id="edit-condo-nome" required>
       
       <label for="edit-condo-nome-fantasia">Nome Fantasia:</label>
-      <input type="text" id="edit-condo-nome-fantasia" required>
+      <input type="text" id="edit-condo-nome-fantasia">
       
       <label for="edit-condo-cnpj">CNPJ:</label>
       <input type="text" id="edit-condo-cnpj">
@@ -473,9 +544,9 @@
             <ul>
                 <li><strong>Usuários:</strong> Crie, edite, ative/desative e associe usuários a grupos.</li>
                 <li><strong>Cargos:</strong> Crie os diferentes cargos da sua equipe (ex: "Eletricista", "Supervisor").</li>
-                <li><strong>Grupos:</strong> Organize seus condomínios em grupos (ex: "Filial Natal").</li>
+                <li><strong>Grupos:</strong> Organize seus <span data-term-plural="entidade_principal"><span data-term-plural="entidade_principal">Condomínios</span></span> em grupos (ex: "Filial Natal").</li>
                 <li><strong>Tipos de Tarefa:</strong> Cadastre as categorias de tarefas (ex: "Manutenção Preventiva") e suas cores.</li>
-                <li><strong>Condomínios:</strong> Cadastre seus clientes e associe-os a grupos. É possível importar condomínios em massa via planilha (CSV).</li>
+                <li><strong><span data-term-plural="entidade_principal">Condomínios</span>:</strong> Cadastre seus clientes e associe-os a grupos. É possível importar <span data-term-plural="entidade_principal">condomínios</span> em massa via planilha (CSV).</li>
             </ul>
             <li><strong>Dashboard Completo:</strong> No Dashboard, você pode filtrar para ver os indicadores de um usuário específico ou de "Todos os Usuários".</li>
         </ul>
@@ -509,6 +580,42 @@
     <div class="modal-actions">
       <button type="button" id="notifications-modal-ok-btn" class="task-action-btn btn-secondary">Fechar</button>
     </div>
+  </div>
+</div>
+
+<div id="edit-empresa-modal" class="modal-container">
+  <div class="modal-content">
+    <button id="edit-empresa-modal-close-btn" class="modal-close-btn">&times;</button>
+    <h3>Editar Empresa</h3>
+    <form id="edit-empresa-form">
+      <input type="hidden" id="edit-empresa-id">
+      
+      <label for="edit-empresa-nome">Nome da Empresa:</label>
+      <input type="text" id="edit-empresa-nome" required>
+      
+      <label for="edit-empresa-cnpj">CNPJ/CPF:</label>
+      <input type="text" id="edit-empresa-cnpj" required>
+      
+      <label for="edit-empresa-status">Status da Assinatura:</label>
+      <select id="edit-empresa-status" required>
+        <option value="ativa">Ativa</option>
+        <option value="em_trial">Em Trial</option>
+        <option value="cancelada">Cancelada</option>
+        <option value="inadimplente">Inadimplente</option>
+        <option value="interno">Interno</option>
+      </select>
+      
+      <label for="edit-empresa-plano">Plano:</label>
+      <select id="edit-empresa-plano" required>
+        <option value="">Carregando planos...</option>
+      </select>
+      <label for="edit-empresa-logo-url">URL da Logo:</label>
+      <input type="text" id="edit-empresa-logo-url" placeholder="https://site.com/logo.png">
+      <div class="modal-actions">
+        <button type="button" id="edit-empresa-modal-cancel-btn" class="task-action-btn btn-cancel">Cancelar</button>
+        <button type="submit" class="task-action-btn btn-save">Salvar Alterações</button>
+      </div>
+    </form>
   </div>
 </div>
 

@@ -4,13 +4,13 @@ import { supabaseClient } from './supabaseClient.js';
 import { SUPABASE_URL } from './config.js';
 
 // --- FUNÇÃO PRINCIPAL DE BUSCA DE DADOS ---
-export async function fetchInitialData(empresaId, userId, isAdmin) {
+/* export async function fetchInitialData(empresaId, userId, isAdmin) {
     if (!empresaId) throw new Error("ID da empresa é necessário");
 
     const [
         tasksResult, condosResult, typesResult, templatesResult,
         usersResult, cargosResult, groupsResult, allAssignmentsResult,
-        unreadNotificationsResult
+        unreadNotificationsResult, empresaResult // <-- NOVA BUSCA
     ] = await Promise.all([
         supabaseClient.from('tarefas_detalhadas').select('*'),
         supabaseClient.from('condominios').select('*').eq('empresa_id', empresaId).order('nome_fantasia', { ascending: true }),
@@ -20,8 +20,36 @@ export async function fetchInitialData(empresaId, userId, isAdmin) {
         supabaseClient.from('cargos').select('*').eq('empresa_id', empresaId),
         supabaseClient.from('grupos').select('*').eq('empresa_id', empresaId),
         supabaseClient.from('usuario_grupo').select('usuario_id, grupo_id'),
-        supabaseClient.from('notificacoes').select('id', { count: 'exact' }).eq('user_id', userId).eq('lida', false)
+        supabaseClient.from('notificacoes').select('id', { count: 'exact' }).eq('user_id', userId).eq('lida', false),
+        supabaseClient.from('empresas').select('segmento_id').eq('id', empresaId).single() // <-- NOVA BUSCA
     ]);
+
+        let terminologia = {};
+            if (empresaResult.data && empresaResult.data.segmento_id) {
+            const { data: termos } = await supabaseClient
+                .from('terminologia_segmento')
+                .select('chave, singular, plural')
+                .eq('segmento_id', empresaResult.data.segmento_id);
+
+            if (termos) {
+                termos.forEach(termo => {
+                    terminologia[termo.chave] = {
+                        singular: termo.singular,
+                        plural: termo.plural
+                    };
+                });
+            }
+        }
+
+    // Busca todos os usuários da empresa
+    const allUsers = usersResult.data || [];
+    const currentUserProfile = allUsers.find(u => u.id === userId);
+
+    if (!currentUserProfile) {
+        console.error("Usuário logado não encontrado na tabela 'usuarios'.");
+        // Retorne um status especial para o frontend tratar
+        return { error: 'NO_PROFILE', message: 'Perfil de usuário não encontrado.' };
+    }
 
     const error = tasksResult.error || condosResult.error || typesResult.error || templatesResult.error ||
         usersResult.error || cargosResult.error || groupsResult.error || allAssignmentsResult.error || unreadNotificationsResult.error;
@@ -64,7 +92,223 @@ export async function fetchInitialData(empresaId, userId, isAdmin) {
         allCargos: cargosResult.data || [],
         allGroups: groupsResult.data || [],
         userGroupAssignments: finalAssignments,
-        unreadCount: unreadNotificationsResult.count
+        unreadCount: unreadNotificationsResult.count,
+        currentUserProfile,
+        terminologia: terminologia // <-- NOVA INFORMAÇÃO SENDO ENVIADA
+    };
+}*/
+
+export async function verificarStatusAcesso() {
+    const { data, error } = await supabaseClient.rpc('verificar_status_acesso');
+    if (error) {
+        console.error("Erro ao verificar status de acesso:", error);
+        return false; // Bloqueia o acesso em caso de erro
+    }
+    return data;
+}
+
+export async function fetchAllCompaniesForSuperAdmin() {
+    const { data, error } = await supabaseClient.rpc('get_all_companies_for_super_admin');
+    if (error) {
+        console.error("Erro ao buscar dados de Super Admin:", error);
+        throw error;
+    }
+    return data || [];
+}
+
+/*
+export async function fetchInitialData(empresaId, userId, isAdmin) {
+    if (!empresaId) throw new Error("ID da empresa é necessário");
+
+    const [
+        tasksResult, condosResult, typesResult, templatesResult,
+        usersResult, cargosResult, groupsResult, allAssignmentsResult,
+        unreadNotificationsResult, empresaResult
+    ] = await Promise.all([
+        supabaseClient.from('tarefas_detalhadas').select('*'),
+        supabaseClient.from('condominios').select('*').eq('empresa_id', empresaId).order('nome_fantasia', { ascending: true }),
+        supabaseClient.from('tipos_tarefa').select('*').eq('empresa_id', empresaId).order('nome_tipo', { ascending: true }),
+        supabaseClient.from('modelos_tarefa').select('*').eq('empresa_id', empresaId),
+        supabaseClient.from('usuarios').select('*').eq('empresa_id', empresaId).order('nome_completo', { ascending: true }),
+        supabaseClient.from('cargos').select('*').eq('empresa_id', empresaId),
+        supabaseClient.from('grupos').select('*').eq('empresa_id', empresaId),
+        supabaseClient.from('usuario_grupo').select('usuario_id, grupo_id'),
+        supabaseClient.from('notificacoes').select('id', { count: 'exact' }).eq('user_id', userId).eq('lida', false),
+        supabaseClient.from('empresas').select('segmento_id').eq('id', empresaId).single()
+    ]);
+
+    // ========================================================================
+    // INÍCIO DA LÓGICA AJUSTADA PARA TERMINOLOGIA
+    // ========================================================================
+    let terminologia = {};
+    if (empresaResult.data && empresaResult.data.segmento_id) {
+        // MUDANÇA 1: Buscando apenas 'chave' e 'valor'
+        const { data: termos } = await supabaseClient
+            .from('terminologia_segmento')
+            .select('chave, valor')
+            .eq('segmento_id', empresaResult.data.segmento_id);
+
+        if (termos) {
+            // MUDANÇA 2: Montando o objeto de terminologia de forma mais simples
+            termos.forEach(termo => {
+                terminologia[termo.chave] = termo.valor; // Ex: { entidade_principal: 'Loja' }
+            });
+        }
+    }
+    // ========================================================================
+    // FIM DA LÓGICA AJUSTADA
+    // ========================================================================
+    
+    // O resto da função continua igual...
+    const allUsers = usersResult.data || [];
+    const currentUserProfile = allUsers.find(u => u.id === userId);
+
+    if (!currentUserProfile) {
+        console.error("Usuário logado não encontrado na tabela 'usuarios'.");
+        return { error: 'NO_PROFILE', message: 'Perfil de usuário não encontrado.' };
+    }
+
+    const error = tasksResult.error || condosResult.error || typesResult.error || templatesResult.error ||
+        usersResult.error || cargosResult.error || groupsResult.error || allAssignmentsResult.error || unreadNotificationsResult.error || empresaResult.error;
+
+    if (error) {
+        console.error("Erro ao buscar dados:", error);
+        throw new Error("Falha ao carregar os dados do sistema.");
+    }
+    
+    // ...lógica de filtro de tarefas e condomínios continua igual...
+    const allCompanyCondos = condosResult.data || [];
+    const allCompanyTasks = tasksResult.data || [];
+    const allAssignments = allAssignmentsResult.data || [];
+    
+    const companyUserIds = new Set((usersResult.data || []).map(u => u.id));
+    const finalAssignments = allAssignments.filter(a => companyUserIds.has(a.usuario_id));
+
+    let finalCondos = allCompanyCondos;
+    let finalTasks = [];
+
+    if (isAdmin) {
+        finalTasks = allCompanyTasks;
+    } else {
+        finalTasks = allCompanyTasks.filter(t => t.criador_id === userId || t.responsavel_id === userId);
+        const grupoIdsDoUsuario = finalAssignments
+            .filter(a => a.usuario_id === userId)
+            .map(a => a.grupo_id);
+        finalCondos = allCompanyCondos.filter(c => c.grupo_id && grupoIdsDoUsuario.includes(c.grupo_id));
+    }
+
+
+    return {
+        tasks: finalTasks,
+        condominios: finalCondos,
+        taskTypes: typesResult.data || [],
+        taskTemplates: templatesResult.data || [],
+        allUsers: usersResult.data || [],
+        allCargos: cargosResult.data || [],
+        allGroups: groupsResult.data || [],
+        userGroupAssignments: finalAssignments,
+        unreadCount: unreadNotificationsResult.count,
+        currentUserProfile,
+        terminologia: terminologia // <-- Enviando a terminologia ajustada
+    };
+}
+    */
+
+export async function fetchInitialData(empresaId, userId, hasAdminPermissions, isClientRole) {
+    if (!empresaId) throw new Error("ID da empresa é necessário");
+
+    // 1. Busca todos os dados (Lógica mantida)
+    const [
+        tasksResult, condosResult, typesResult, templatesResult,
+        usersResult, cargosResult, groupsResult, allGroupAssignmentsResult,
+        unreadNotificationsResult, empresaResult,
+        allCondoAssignmentsResult
+    ] = await Promise.all([
+        Promise.resolve({ data: [] }), // Tarefas não são mais carregadas aqui
+        supabaseClient.from('condominios').select('*').eq('empresa_id', empresaId).order('nome_fantasia', { ascending: true }), //
+        supabaseClient.from('tipos_tarefa').select('*').eq('empresa_id', empresaId).order('nome_tipo', { ascending: true }), //
+        supabaseClient.from('modelos_tarefa').select('*').eq('empresa_id', empresaId), //
+        supabaseClient.from('usuarios').select('*, cargo: cargo_id(nome_cargo, is_admin, tem_permissoes_admin, is_client_role)').eq('empresa_id', empresaId).order('nome_completo', { ascending: true }), //
+        supabaseClient.from('cargos').select('*').eq('empresa_id', empresaId), //
+        supabaseClient.from('grupos').select('*').eq('empresa_id', empresaId), //
+        supabaseClient.from('usuario_grupo').select('usuario_id, grupo_id'), //
+        supabaseClient.from('notificacoes').select('id', { count: 'exact' }).eq('user_id', userId).eq('lida', false), //
+        supabaseClient.from('empresas').select('segmento_id, plano:plano_id ( nome, limite_usuarios )').eq('id', empresaId).single(), //
+        supabaseClient.from('usuario_condominio').select('usuario_id, condominio_id') //
+    ]);
+
+    // --- INÍCIO DA CORREÇÃO (LÓGICA DA TERMINOLOGIA) ---
+
+    // 2. Lógica da Terminologia (RE-ADICIONADA)
+    let terminologia = {};
+    if (empresaResult.data && empresaResult.data.segmento_id) {
+        // Busca os termos (ex: "entidade_principal" -> "Loja")
+        const { data: termos } = await supabaseClient
+            .from('terminologia_segmento')
+            .select('chave, valor')
+            .eq('segmento_id', empresaResult.data.segmento_id);
+            
+        if (termos) {
+            termos.forEach(termo => {
+                terminologia[termo.chave] = termo.valor;
+            });
+        }
+    }
+    // --- FIM DA CORREÇÃO ---
+    
+    // 3. Verificações de erro e perfil (mantidas)
+    const allUsers = usersResult.data || [];
+    const currentUserProfile = allUsers.find(u => u.id === userId);
+    if (!currentUserProfile) return { error: 'NO_PROFILE' };
+    
+    const error = tasksResult.error || condosResult.error || /* ... etc ... */ allCondoAssignmentsResult.error;
+    if (error) throw new Error("Falha ao carregar dados do sistema: " + error.message);
+    
+    const allCompanyCondos = condosResult.data || [];
+    const allCompanyTasks = tasksResult.data || [];
+    const allGroupAssignments = allGroupAssignmentsResult.data || [];
+    const allCondoAssignments = allCondoAssignmentsResult.data || [];
+    
+    const companyUserIds = new Set(allUsers.map(u => u.id));
+    const finalGroupAssignments = allGroupAssignments.filter(a => companyUserIds.has(a.usuario_id));
+
+    // 4. Lógica de Filtragem (mantida)
+    let finalCondos = [];
+    let finalTasks = [];
+
+    if (hasAdminPermissions) {
+        finalTasks = allCompanyTasks;
+        finalCondos = allCompanyCondos;
+    } else if (isClientRole) {
+        const condoIdsDoCliente = allCondoAssignments
+            .filter(a => a.usuario_id === userId)
+            .map(a => a.condominio_id);
+        
+        finalCondos = allCompanyCondos.filter(c => condoIdsDoCliente.includes(c.id));
+        finalTasks = allCompanyTasks.filter(t => condoIdsDoCliente.includes(t.condominio_id));
+    } else {
+        finalTasks = allCompanyTasks.filter(t => t.criador_id === userId || t.responsavel_id === userId);
+        const grupoIdsDoUsuario = finalGroupAssignments
+            .filter(a => a.usuario_id === userId)
+            .map(a => a.grupo_id);
+        finalCondos = allCompanyCondos.filter(c => c.grupo_id === null || grupoIdsDoUsuario.includes(c.grupo_id));
+    }
+
+    // 5. Retorno dos dados (agora incluindo 'terminologia')
+    return {
+        tasks: finalTasks,
+        condominios: finalCondos,
+        taskTypes: typesResult.data || [],
+        taskTemplates: templatesResult.data || [],
+        allUsers: allUsers,
+        allCargos: cargosResult.data || [],
+        allGroups: groupsResult.data || [],
+        userGroupAssignments: finalGroupAssignments,
+        allCondoAssignments: allCondoAssignments,
+        unreadCount: unreadNotificationsResult.count,
+        currentUserProfile,
+        terminologia: terminologia, // <<<--- DADO CORRIGIDO
+        plano: empresaResult.data?.plano
     };
 }
 
@@ -109,10 +353,28 @@ export async function toggleUserStatusInDB(userId, currentStatus) {
 }
 
 // --- FUNÇÕES DE TAREFAS ---
-export async function createTaskInDB(newTaskData) {
+/* export async function createTaskInDB(newTaskData) {
     const { error } = await supabaseClient.from('tarefas').insert(newTaskData);
     if (error) throw error;
+}*/
+
+export async function createTaskInDB(newTaskData) {
+    // const { error } = await supabaseClient.from('tarefas').insert(newTaskData);
+    // if (error) throw error;
+    
+    // --- INÍCIO DA ALTERAÇÃO ---
+    // Agora pedimos ao Supabase para retornar a linha que foi criada
+    const { data, error } = await supabaseClient
+        .from('tarefas') //
+        .insert(newTaskData) //
+        .select() // Pede ao Supabase para retornar o que foi inserido
+        .single(); // Esperamos apenas um objeto de tarefa
+
+    if (error) throw error; //
+    return data; // Retorna a nova tarefa (ex: {id: 123, titulo: '...', ...})
+    // --- FIM DA ALTERAÇÃO ---
 }
+
 export async function updateTaskInDB(taskId, updatedTaskData) {
     // Retorna o objeto { data, error } inteiro em vez de apenas jogar o erro
     return await supabaseClient
@@ -164,10 +426,46 @@ export async function createCondoInDB(newCondoData) {
     const { error } = await supabaseClient.from('condominios').insert(newCondoData);
     if (error) throw error;
 }
-export async function updateCondoInDB(condoId, updatedCondoData) {
+
+export async function createCondoInDBAndReturn(newCondoData) {
+    const { data, error } = await supabaseClient
+        .from('condominios')
+        .insert(newCondoData)
+        .select() // <-- Pede ao Supabase para retornar os dados inseridos
+        .single(); // <-- Pega apenas o objeto único que foi criado
+
+    // Retorna um objeto contendo os dados OU o erro
+    return { data, error }; 
+}
+
+// Sua função antiga createCondoInDB (pode manter ou remover se não for mais usada)
+/* export async function createCondoInDB(newCondoData) {
+    const { error } = await supabaseClient.from('condominios').insert(newCondoData);
+    if (error) throw error;
+}*/
+
+/* export async function updateCondoInDB(condoId, updatedCondoData) {
     const { error } = await supabaseClient.from('condominios').update(updatedCondoData).eq('id', condoId);
     if (error) throw error;
+}*/
+
+export async function updateCondoInDB(condoId, updatedCondoData) {
+    // const { error } = await supabaseClient.from('condominios').update(updatedCondoData).eq('id', condoId);
+    // if (error) throw error;
+
+    // --- INÍCIO DA ALTERAÇÃO ---
+    const { data, error } = await supabaseClient
+        .from('condominios') //
+        .update(updatedCondoData) //
+        .eq('id', condoId) //
+        .select() // Pede para retornar o objeto atualizado
+        .single(); // Esperamos apenas um
+
+    if (error) throw error; //
+    return data; // Retorna o objeto atualizado
+    // --- FIM DA ALTERAÇÃO ---
 }
+
 export async function deleteCondoInDB(condoId) {
     const { error } = await supabaseClient.from('condominios').delete().eq('id', condoId);
     if (error) throw error;
@@ -178,15 +476,51 @@ export async function bulkInsertCondos(condosToInsert) {
 }
 
 // --- FUNÇÕES DE TIPOS DE TAREFA ---
-export async function createTaskTypeInDB(newTaskTypeData) {
+/* export async function createTaskTypeInDB(newTaskTypeData) {
     // A função já recebe a empresa_id do app.js
     const { error } = await supabaseClient.from('tipos_tarefa').insert(newTaskTypeData);
     if (error) throw error;
+}*/
+
+export async function createTaskTypeInDB(newTaskTypeData) {
+    // A função já recebe a empresa_id do app.js
+    // const { error } = await supabaseClient.from('tipos_tarefa').insert(newTaskTypeData);
+    // if (error) throw error;
+
+    // --- INÍCIO DA ALTERAÇÃO ---
+    const { data, error } = await supabaseClient
+        .from('tipos_tarefa') //
+        .insert(newTaskTypeData) //
+        .select() // Pede para retornar o objeto criado
+        .single(); // Esperamos apenas um
+
+    if (error) throw error; //
+    return data; // Retorna o novo tipo de tarefa
+    // --- FIM DA ALTERAÇÃO ---
 }
-export async function updateTaskTypeInDB(typeId, updatedTaskTypeData) {
+
+/* export async function updateTaskTypeInDB(typeId, updatedTaskTypeData) {
     const { error } = await supabaseClient.from('tipos_tarefa').update(updatedTaskTypeData).eq('id', typeId);
     if (error) throw error;
+}*/
+
+export async function updateTaskTypeInDB(typeId, updatedTaskTypeData) {
+    // const { error } = await supabaseClient.from('tipos_tarefa').update(updatedTaskTypeData).eq('id', typeId);
+    // if (error) throw error;
+
+    // --- INÍCIO DA ALTERAÇÃO ---
+    const { data, error } = await supabaseClient
+        .from('tipos_tarefa') //
+        .update(updatedTaskTypeData) //
+        .eq('id', typeId) //
+        .select() // Pede para retornar o objeto atualizado
+        .single(); // Esperamos apenas um
+
+    if (error) throw error; //
+    return data; // Retorna o tipo de tarefa atualizado
+    // --- FIM DA ALTERAÇÃO ---
 }
+
 export async function deleteTaskTypeInDB(typeId) {
     const { error } = await supabaseClient.from('tipos_tarefa').delete().eq('id', typeId);
     if (error) throw error;
@@ -198,15 +532,53 @@ export async function fetchRoles() {
     if (error) throw error;
     return data || [];
 }
-export async function createCargoInDB(newCargoData) {
-    // A função já recebe a empresa_id do app.js
+/* export async function createCargoInDB(newCargoData) {
+    // A função já recebe o objeto completo com 'tem_permissoes_admin'
     const { error } = await supabaseClient.from('cargos').insert(newCargoData);
     if (error) throw error;
+}*/
+
+export async function createCargoInDB(newCargoData) {
+    // A função já recebe o objeto completo com 'tem_permissoes_admin'
+    // const { error } = await supabaseClient.from('cargos').insert(newCargoData);
+    // if (error) throw error;
+
+    // --- INÍCIO DA ALTERAÇÃO ---
+    const { data, error } = await supabaseClient
+        .from('cargos') //
+        .insert(newCargoData) //
+        .select() // Pede para retornar o objeto criado
+        .single(); // Esperamos apenas um
+
+    if (error) throw error; //
+    return data; // Retorna o novo cargo
+    // --- FIM DA ALTERAÇÃO ---
 }
-export async function updateCargoInDB(cargoId, updatedCargoData) {
+
+/* export async function updateCargoInDB(cargoId, updatedCargoData) {
+    // A função já recebe o objeto completo com 'tem_permissoes_admin'
     const { error } = await supabaseClient.from('cargos').update(updatedCargoData).eq('id', cargoId);
     if (error) throw error;
+}*/
+
+export async function updateCargoInDB(cargoId, updatedCargoData) {
+    // A função já recebe o objeto completo com 'tem_permissoes_admin'
+    // const { error } = await supabaseClient.from('cargos').update(updatedCargoData).eq('id', cargoId);
+    // if (error) throw error;
+
+    // --- INÍCIO DA ALTERAÇÃO ---
+    const { data, error } = await supabaseClient
+        .from('cargos') //
+        .update(updatedCargoData) //
+        .eq('id', cargoId) //
+        .select() // Pede para retornar o objeto atualizado
+        .single(); // Esperamos apenas um
+
+    if (error) throw error; //
+    return data; // Retorna o cargo atualizado
+    // --- FIM DA ALTERAÇÃO ---
 }
+
 export async function deleteCargoInDB(cargoId) {
     const { error } = await supabaseClient.from('cargos').delete().eq('id', cargoId);
     if (error) throw error;
@@ -218,14 +590,49 @@ export async function fetchGroups() {
     if (error) throw error;
     return data || [];
 }
-export async function createGroupInDB(newGroupData) {
+/* export async function createGroupInDB(newGroupData) {
     const { error } = await supabaseClient.from('grupos').insert(newGroupData);
     if (error) throw error;
+}*/
+
+export async function createGroupInDB(newGroupData) {
+    // const { error } = await supabaseClient.from('grupos').insert(newGroupData);
+    // if (error) throw error;
+
+    // --- INÍCIO DA ALTERAÇÃO ---
+    const { data, error } = await supabaseClient
+        .from('grupos') //
+        .insert(newGroupData) //
+        .select() // Pede para retornar o objeto criado
+        .single(); // Esperamos apenas um
+    
+    if (error) throw error; //
+    return data; // Retorna o novo grupo
+    // --- FIM DA ALTERAÇÃO ---
 }
-export async function updateGroupInDB(groupId, updatedGroupData) {
+
+/* export async function updateGroupInDB(groupId, updatedGroupData) {
     const { error } = await supabaseClient.from('grupos').update(updatedGroupData).eq('id', groupId);
     if (error) throw error;
+}*/
+
+export async function updateGroupInDB(groupId, updatedGroupData) {
+    // const { error } = await supabaseClient.from('grupos').update(updatedGroupData).eq('id', groupId);
+    // if (error) throw error;
+
+    // --- INÍCIO DA ALTERAÇÃO ---
+    const { data, error } = await supabaseClient
+        .from('grupos') //
+        .update(updatedGroupData) //
+        .eq('id', groupId) //
+        .select() // Pede para retornar o objeto atualizado
+        .single(); // Esperamos apenas um
+
+    if (error) throw error; //
+    return data; // Retorna o grupo atualizado
+    // --- FIM DA ALTERAÇÃO ---
 }
+
 export async function deleteGroupInDB(groupId) {
     const { error } = await supabaseClient.from('grupos').delete().eq('id', groupId);
     if (error) throw error;
@@ -241,9 +648,11 @@ export async function requestPasswordReset(email) {
 export async function fetchTaskHistory(taskId) {
     const { data, error } = await supabaseClient
         .from('tarefa_historico')
-        .select('*, usuario:usuario_id(nome_completo)')
+        // CORREÇÃO: Removemos o join 'usuario:usuario_id(nome_completo)'
+        .select('*') 
         .eq('tarefa_id', taskId)
-        .order('created_at', { ascending: false }); // Mostra os mais recentes primeiro
+        .order('created_at', { ascending: false });
+
     if (error) throw error;
     return data || [];
 }
@@ -279,6 +688,36 @@ export async function updateUserGroupAssignments(userId, groupIds) {
         }));
         const { error: insertError } = await supabaseClient
             .from('usuario_grupo')
+            .insert(newAssignments);
+        if (insertError) throw insertError;
+    }
+}
+
+export async function fetchUserCondominioAssignments(userId) {
+    const { data, error } = await supabaseClient
+        .from('usuario_condominio')
+        .select('condominio_id')
+        .eq('usuario_id', userId);
+    if (error) throw error;
+    return data.map(item => item.condominio_id);
+}
+
+export async function updateUserCondominioAssignments(userId, condominioIds) {
+    // 1. Remove todas as associações antigas
+    const { error: deleteError } = await supabaseClient
+        .from('usuario_condominio')
+        .delete()
+        .eq('usuario_id', userId);
+    if (deleteError) throw deleteError;
+
+    // 2. Se houver novos condomínios para associar, insere-os
+    if (condominioIds && condominioIds.length > 0) {
+        const newAssignments = condominioIds.map(condoId => ({
+            usuario_id: userId,
+            condominio_id: condoId
+        }));
+        const { error: insertError } = await supabaseClient
+            .from('usuario_condominio')
             .insert(newAssignments);
         if (insertError) throw insertError;
     }
@@ -327,4 +766,62 @@ export async function fetchTaskById(taskId) {
         throw error;
     }
     return data;
+}
+
+export async function updateCompanyBySuperAdmin(empresaId, dadosAtualizados) {
+    const { error } = await supabaseClient.rpc('update_company_by_super_admin', {
+        target_empresa_id: empresaId,
+        novo_nome_empresa: dadosAtualizados.nome_empresa,
+        novo_cnpj: dadosAtualizados.cnpj,
+        novo_status_assinatura: dadosAtualizados.status_assinatura,
+        novo_plano_id: dadosAtualizados.plano_id,
+        novo_logo_url: dadosAtualizados.logo_url // <<<--- ADICIONADO
+    });
+
+    if (error) {
+        console.error("Erro ao atualizar empresa:", error);
+        throw error;
+    }
+}
+
+export async function fetchAllPlans() {
+    const { data, error } = await supabaseClient.rpc('get_all_plans');
+    if (error) {
+        console.error("Erro ao buscar planos:", error);
+        throw error;
+    }
+    return data || [];
+}
+
+// --- INÍCIO DA NOVA FUNÇÃO DE BUSCA ---
+
+export async function searchTasks(filters, profile) {
+    if (!profile || !profile.empresa_id) {
+        throw new Error("Perfil ou ID da empresa ausente para a busca.");
+    }
+
+    const hasAdmin = profile.cargo?.is_admin === true || profile.cargo?.tem_permissoes_admin === true;
+    const isClient = profile.cargo?.is_client_role === true;
+
+    const { data, error } = await supabaseClient.rpc('search_tasks', {
+        p_empresa_id: profile.empresa_id,
+        p_user_id: profile.id,
+        p_has_admin: hasAdmin,
+        p_is_client: isClient,
+        p_search_term: filters.searchTerm || null,
+        p_status: filters.status || null,
+        p_assignee_id: filters.assigneeId || null,
+        p_condominio_id: filters.condominioId ? parseInt(filters.condominioId, 10) : null,
+        p_task_type_id: filters.taskTypeId ? parseInt(filters.taskTypeId, 10) : null,
+        p_group_id: filters.groupId ? parseInt(filters.groupId, 10) : null,
+        p_date_start: filters.dateStart || null,
+        p_date_end: filters.dateEnd || null
+    });
+
+    if (error) {
+        console.error("Erro ao executar a busca de tarefas:", error);
+        throw error;
+    }
+    
+    return data || [];
 }
