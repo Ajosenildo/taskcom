@@ -204,13 +204,8 @@ function handleViewChange(event) {
         if (viewId === 'view-tasks-view') {
             state.tasksToDisplayForPdf = render.renderTasks(state);
         } else if (viewId === 'dashboard-view') {
-            // --- INÍCIO DA CORREÇÃO DO DASHBOARD ---
-            // Chama a API para buscar os números atualizados
-            api.fetchDashboardKPIs().then(kpiData => {
-                // Passa os dados para o renderizador
-                render.renderDashboard(state, kpiData);
-            }).catch(err => console.error("Erro ao carregar dashboard:", err));
-            // --- FIM DA CORREÇÃO ---
+            // Chama a função unificada que já lê os filtros
+            refreshDashboard();
         }
 
         // Lógica de renderização para as novas telas de Admin
@@ -1438,6 +1433,20 @@ async function executeTaskSearch() {
     }
 }
 
+// Função para recarregar o dashboard com os filtros atuais
+async function refreshDashboard() {
+    const userId = document.getElementById('dashboard-user-filter')?.value;
+    const dateStart = document.getElementById('dashboard-date-start')?.value;
+    const dateEnd = document.getElementById('dashboard-date-end')?.value;
+
+    try {
+        const kpiData = await api.fetchDashboardKPIs(userId, dateStart, dateEnd);
+        render.renderDashboard(state, kpiData); //
+    } catch (err) {
+        console.error("Erro ao atualizar dashboard:", err);
+    }
+}
+
 function setupPasswordToggle(toggleId, inputId) {
     const toggleBtn = document.getElementById(toggleId);
     const passwordInput = document.getElementById(inputId);
@@ -1646,11 +1655,10 @@ function setupEventListeners() {
         executeTaskSearch(); //
     });
 
-    document.getElementById('dashboard-user-filter')?.addEventListener('change', () => {
-        render.renderDashboard(state);
-    });
-    document.getElementById('dashboard-date-start')?.addEventListener('change', () => render.renderDashboard(state)); // <-- ADICIONE ESTA LINHA
-    document.getElementById('dashboard-date-end')?.addEventListener('change', () => render.renderDashboard(state));
+    // --- Listeners do Dashboard (Atualizados) ---
+    document.getElementById('dashboard-user-filter')?.addEventListener('change', refreshDashboard);
+    document.getElementById('dashboard-date-start')?.addEventListener('change', refreshDashboard);
+    document.getElementById('dashboard-date-end')?.addEventListener('change', refreshDashboard);
 
     document.getElementById('export-pdf-btn')?.addEventListener('click', handleExportToPDF);
     document.getElementById('template-select')?.addEventListener('change', handleTemplateSelect);

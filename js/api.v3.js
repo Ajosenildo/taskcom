@@ -563,11 +563,16 @@ export async function searchTasks(filters, profile) {
     return data || [];
 }
 
-export async function fetchDashboardKPIs() {
-    const { data, error } = await supabaseClient.rpc('get_dashboard_kpis');
+export async function fetchDashboardKPIs(filterUserId = null, dateStart = null, dateEnd = null) {
+    // Chama a RPC passando os parâmetros
+    const { data, error } = await supabaseClient.rpc('get_dashboard_kpis', {
+        p_filter_user_id: filterUserId || null,
+        p_date_start: dateStart || null,
+        p_date_end: dateEnd || null
+    });
+
     if (error) {
         console.error("Erro ao carregar KPIs:", error);
-        // Retorna dados zerados em caso de erro para não quebrar a tela
         return { in_progress: 0, overdue: 0, completed: 0, by_condo: {}, by_assignee_overdue: {} };
     }
     return data;
