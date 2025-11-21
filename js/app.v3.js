@@ -1399,7 +1399,6 @@ function handleCargoListClick(event) {
     if (action === 'delete-cargo') handleDeleteCargo(cargoId, cargoName);
 }
 
-// --- FUNÇÃO CENTRAL DE BUSCA (CORRIGIDA) ---
 // --- FUNÇÃO CENTRAL DE BUSCA (COM FILTRO 'TODAS') ---
 async function executeTaskSearch() {
     // 1. Pega todos os filtros ativos do 'state'
@@ -1410,14 +1409,17 @@ async function executeTaskSearch() {
     filters.searchTerm = searchTerm;
     state.activeFilters.searchTerm = searchTerm; //
 
-    // --- INÍCIO DA LÓGICA DE STATUS ---
-    // Lógica para o filtro "Todas" e "Ativas"
+    // --- INÍCIO DA CORREÇÃO (TRADUÇÃO DE FILTROS) ---
+    
+    // Regra 1: Se for "Todas" ('all'), enviamos NULL para o banco trazer tudo
     if (filters.status === 'all') {
-        filters.status = null; // NULO = Busca tudo (sem filtro no SQL)
+        filters.status = null;
     } 
-    // Se for 'active', enviamos 'active' mesmo (o SQL já sabe tratar)
-    // Se for 'in_progress', 'overdue', 'completed', etc., enviamos normalmente.
-    // --- FIM DA LÓGICA DE STATUS ---
+    
+    // Regra 2: Se for "Ativas" ('active'), mantemos 'active'.
+    // (O seu SQL já tem uma regra: OR (p_status = 'active' AND t.status = 'pending'))
+    
+    // --- FIM DA CORREÇÃO ---
 
     // 3. Mostra feedback de carregamento
     const list = document.getElementById('task-list');
@@ -1425,12 +1427,15 @@ async function executeTaskSearch() {
 
     try {
         // 4. Chama a API (backend) com os filtros
+        // Nota: Sem paginação por enquanto, traz tudo o que o banco permitir
         const tasks = await api.searchTasks(filters, state.currentUserProfile); //
         
         // 5. Atualiza o 'state.tasks'
         state.tasks = tasks; //
         
         // 6. Renderiza os resultados
+        // O 'renderTasks' vai usar o 'displayLimit' (20) do state para mostrar apenas as primeiras 20
+        // e o botão "Carregar Mais" vai mostrar o resto que já está na memória.
         state.tasksToDisplayForPdf = render.renderTasks(state); //
 
     } catch (error) {
