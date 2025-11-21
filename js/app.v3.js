@@ -9,16 +9,16 @@ import * as utils from './utils.js';
 import { state } from './state.js';
 
 supabaseClient.auth.getUser().then(({ data, error }) => {
-   // console.log("Sessão ao iniciar app:", data, error);
+    // console.log("Sessão ao iniciar app:", data, error);
 });
 
-let deferredPrompt; 
+let deferredPrompt;
 
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
     const installButton = document.getElementById('install-app-btn');
-    if(installButton) installButton.style.display = 'block';
+    if (installButton) installButton.style.display = 'block';
 
     installButton.addEventListener('click', async () => {
         installButton.style.display = 'none';
@@ -33,96 +33,6 @@ window.addEventListener('beforeinstallprompt', (e) => {
 let appInitialized = false;
 let listenersInitialized = false;
 let isPasswordUpdateInProgress = false;
-
-/* const state = {
-    displayLimit: 20,
-    tasks: [], taskTemplates: [], condominios: [], taskTypes: [],
-    allUsers: [], currentUserProfile: null, allCargos: [], allGroups: [], userGroupAssignments: [],
-    activeFilters: {
-        condominioId: '', status: 'in_progress', // <-- ALTERADO AQUI
-        dateStart: '', dateEnd: '', assigneeId: '',
-        taskTypeId: '', groupId: ''
-    },
-    chartInstances: { status: null, condo: null, assignee: null },
-    tasksToDisplayForPdf: [],
-    STATUSES: {
-        completed: { key: 'completed', text: 'Concluída', icon: '✔️', color: '#10b981' },
-        in_progress: { key: 'in_progress', text: 'Em Andamento', icon: '🔵', color: '#3b82f6' },
-        overdue: { key: 'overdue', text: 'Atrasada', icon: '🟠', color: '#f59e0b' },
-        deleted: { key: 'deleted', text: 'Excluída', icon: '❌', color: '#ef4444' }
-    },
-    unreadNotifications: 0, 
-    audioUnlocked: false,
-    lastNotifiedCount: 0
-};*/
-
-// --- FUNÇÕES DE ORQUESTRAÇÃO E MANIPULADORES (HANDLERS) ---
-
-/* async function handleCreateTask(event) {
-    event.preventDefault();
-    try {
-        const form = event.target;
-        const title = form.elements['task-title'].value.trim();
-        const assigneeId = form.elements['task-assignee'].value;
-        const typeId = form.elements['task-type'].value;
-        const condominioId = document.getElementById('task-condominio').value;
-        const dueDate = form.elements['task-due-date'].value;
-
-        if (!title || !typeId || !condominioId || !dueDate || !assigneeId) {
-            return alert('Todos os campos obrigatórios precisam ser preenchidos.');
-        }
-
-        const taskData = {
-            titulo: title,
-            descricao: form.elements['task-desc'].value,
-            data_conclusao_prevista: dueDate,
-            condominio_id: parseInt(condominioId),
-            tipo_tarefa_id: parseInt(typeId),
-            status: form.elements['create-as-completed'].checked ? 'completed' : 'pending',
-            criador_id: state.currentUserProfile.id,
-            responsavel_id: assigneeId,
-            empresa_id: state.currentUserProfile.empresa_id
-        };
-
-        await api.createTaskInDB(taskData);
-
-        if (form.elements['save-as-template'].checked) {
-            await api.createTemplateInDB({
-                titulo: title,
-                tipo_tarefa_id: parseInt(typeId),
-                empresa_id: state.currentUserProfile.empresa_id,
-                criador_id: state.currentUserProfile.id
-            });
-        }
-        form.reset();
-        document.getElementById('task-condo-search').value = '';
-        alert('Tarefa criada com sucesso!');
-
-        const freshData = await api.fetchInitialData(
-            state.currentUserProfile.empresa_id,
-            state.currentUserProfile.id,
-            state.currentUserProfile.cargo?.is_admin === true
-        );
-        // Atualiza o estado local com a nova tarefa e/ou modelo
-        Object.assign(state, freshData);
-
-        // Atualiza os menus de seleção que podem ter mudado (ex: modelos)
-        ui.populateTemplatesDropdown(state.taskTemplates);
-        
-    } catch(error) {
-        // ========================================================================
-        // LÓGICA DE MENSAGEM DE ERRO APRIMORADA
-        // ========================================================================
-        if (error.message && error.message.includes('modelos_tarefa_empresa_id_titulo_key')) {
-            // Se o erro for de duplicidade de modelo, mostra a mensagem personalizada.
-            alert('Erro ao criar tarefa: O título desta tarefa já está salvo como um modelo. Desmarque a opção "Salvar como modelo" ou use um título diferente.');
-        } else {
-            // Para qualquer outro erro, mostra a mensagem padrão.
-            alert("Ocorreu um erro ao criar a tarefa: " + error.message);
-        }
-        // ========================================================================
-    }
-}*/
 
 async function handleCreateTask(event) {
     event.preventDefault(); //
@@ -154,12 +64,12 @@ async function handleCreateTask(event) {
 
         // 1. Chama a API (que agora retorna a nova tarefa)
         const novaTarefaBase = await api.createTaskInDB(taskData); //
-        
+
         // 2. "Enriquece" a tarefa com os nomes (para o renderizador)
         //    Usamos os dados que já temos no 'state'
         const criador = state.allUsers.find(u => u.id === novaTarefaBase.criador_id); //
         const responsavel = state.allUsers.find(u => u.id === novaTarefaBase.responsavel_id); //
-        
+
         const novaTarefaDetalhada = {
             ...novaTarefaBase,
             // Adiciona os nomes que o render.renderTasks precisa
@@ -178,7 +88,7 @@ async function handleCreateTask(event) {
         if (form.elements['save-as-template'].checked) { //
             // (Para esta otimização, ainda vamos recarregar os dados *apenas* se
             // um novo template for salvo, pois precisamos atualizar o dropdown de templates)
-            
+
             // NOTA: Esta parte ainda usa a lógica antiga.
             // Para otimizá-la, teríamos que modificar 'api.createTemplateInDB' também.
             await api.createTemplateInDB({ //
@@ -187,13 +97,13 @@ async function handleCreateTask(event) {
                 empresa_id: state.currentUserProfile.empresa_id,
                 criador_id: state.currentUserProfile.id
             });
-            
+
             // Recarrega Apenas os templates
             const { data: templates } = await supabaseClient.from('modelos_tarefa').select('*').eq('empresa_id', state.currentUserProfile.empresa_id);
             state.taskTemplates = templates || []; //
             ui.populateTemplatesDropdown(state.taskTemplates); //
         }
-        
+
         // 6. Limpa o formulário e avisa o usuário
         form.reset(); //
         document.getElementById('task-condo-search').value = ''; //
@@ -202,8 +112,8 @@ async function handleCreateTask(event) {
         // (A chamada demorada para 'fetchInitialData' foi removida)
 
         // --- FIM DO REFINAMENTO ---
-        
-    } catch(error) {
+
+    } catch (error) {
         // Lógica de erro mantida
         if (error.message && error.message.includes('modelos_tarefa_empresa_id_titulo_key')) { //
             alert('Erro ao criar tarefa: O título desta tarefa já está salvo como um modelo. Desmarque a opção "Salvar como modelo" ou use um título diferente.'); //
@@ -241,7 +151,7 @@ async function handleAudioTranscription(event) {
     try {
         await navigator.mediaDevices.getUserMedia({ audio: true });
         recognition.start();
-        
+
         // --- ALTERAÇÃO DE TEXTO ---
         recordBtn.textContent = '🔴'; // Mostra ícone de gravação
         recordBtn.classList.add('recording'); //
@@ -263,7 +173,7 @@ async function handleAudioTranscription(event) {
                 interim_transcript += event.results[i][0].transcript;
             }
         }
-        
+
         descTextarea.value = baseText + (baseText ? ' ' : '') + final_transcript + interim_transcript;
     };
 
@@ -277,7 +187,7 @@ async function handleAudioTranscription(event) {
     // Evento: Em caso de erro
     recognition.onerror = (event) => {
 
-       if (event.error === 'no-speech') {
+        if (event.error === 'no-speech') {
             alert("Voz não identificada, tente novamente."); //
         } else {
             alert(`Erro no reconhecimento de voz: ${event.error}`); //
@@ -294,7 +204,13 @@ function handleViewChange(event) {
         if (viewId === 'view-tasks-view') {
             state.tasksToDisplayForPdf = render.renderTasks(state);
         } else if (viewId === 'dashboard-view') {
-            render.renderDashboard(state);
+            // --- INÍCIO DA CORREÇÃO DO DASHBOARD ---
+            // Chama a API para buscar os números atualizados
+            api.fetchDashboardKPIs().then(kpiData => {
+                // Passa os dados para o renderizador
+                render.renderDashboard(state, kpiData);
+            }).catch(err => console.error("Erro ao carregar dashboard:", err));
+            // --- FIM DA CORREÇÃO ---
         }
 
         // Lógica de renderização para as novas telas de Admin
@@ -302,32 +218,32 @@ function handleViewChange(event) {
         if (viewId === 'admin-users-view') {
             render.renderUserList(state.allUsers, state.currentUserProfile, state.allCargos, state.allGroups, state.userGroupAssignments, state.condominios, state.allCondoAssignments);
             const addUserBtn = document.getElementById('add-user-btn');
-    const userLimit = state.plano?.limite_usuarios;
-    const activeUserCount = state.allUsers.filter(u => u.ativo).length;
+            const userLimit = state.plano?.limite_usuarios;
+            const activeUserCount = state.allUsers.filter(u => u.ativo).length;
 
-    // Limpa qualquer mensagem de limite anterior
-    const oldLimitMessage = document.getElementById('user-limit-message');
-    if (oldLimitMessage) oldLimitMessage.remove();
+            // Limpa qualquer mensagem de limite anterior
+            const oldLimitMessage = document.getElementById('user-limit-message');
+            if (oldLimitMessage) oldLimitMessage.remove();
 
-    if (userLimit && activeUserCount >= userLimit) {
-        // Se o limite existe E foi atingido
-        addUserBtn.disabled = true;
-        addUserBtn.style.backgroundColor = '#9ca3af'; // Cor cinza de desabilitado
-        addUserBtn.style.cursor = 'not-allowed';
+            if (userLimit && activeUserCount >= userLimit) {
+                // Se o limite existe E foi atingido
+                addUserBtn.disabled = true;
+                addUserBtn.style.backgroundColor = '#9ca3af'; // Cor cinza de desabilitado
+                addUserBtn.style.cursor = 'not-allowed';
 
-        // Cria e insere a mensagem de aviso
-        const limitMessage = document.createElement('p');
-        limitMessage.id = 'user-limit-message';
-        limitMessage.style.color = 'red';
-        limitMessage.style.textAlign = 'center';
-        limitMessage.textContent = `Limite de ${userLimit} usuários ativos atingido para o ${state.plano.nome}.`;
-        addUserBtn.after(limitMessage); // Insere a mensagem após o botão
-    } else {
-        // Garante que o botão esteja habilitado se o limite não foi atingido
-        addUserBtn.disabled = false;
-        addUserBtn.style.backgroundColor = ''; // Volta à cor padrão
-        addUserBtn.style.cursor = 'pointer';
-    }
+                // Cria e insere a mensagem de aviso
+                const limitMessage = document.createElement('p');
+                limitMessage.id = 'user-limit-message';
+                limitMessage.style.color = 'red';
+                limitMessage.style.textAlign = 'center';
+                limitMessage.textContent = `Limite de ${userLimit} usuários ativos atingido para o ${state.plano.nome}.`;
+                addUserBtn.after(limitMessage); // Insere a mensagem após o botão
+            } else {
+                // Garante que o botão esteja habilitado se o limite não foi atingido
+                addUserBtn.disabled = false;
+                addUserBtn.style.backgroundColor = ''; // Volta à cor padrão
+                addUserBtn.style.cursor = 'pointer';
+            }
         } else if (viewId === 'admin-cargos-view') {
             render.renderCargoList(state.allCargos);
         } else if (viewId === 'admin-groups-view') {
@@ -413,7 +329,7 @@ async function handleCreateUser(event) {
 
     // --- INÍCIO DA ALTERAÇÃO (Lendo Checkboxes) ---
     const selectedCondoIds = Array.from(form.querySelectorAll('input[name="condominios_create"]:checked'))
-                                .map(cb => parseInt(cb.value, 10));
+        .map(cb => parseInt(cb.value, 10));
     // --- FIM DA ALTERAÇÃO ---
 
     if (!nome || !email || !password || isNaN(cargoId)) { //
@@ -422,7 +338,7 @@ async function handleCreateUser(event) {
     if (password.length < 6) { //
         return alert("A senha provisória deve ter no mínimo 6 caracteres.");
     }
-    
+
     const cargo = state.allCargos.find(c => c.id === cargoId);
     if (cargo && cargo.is_client_role && selectedCondoIds.length === 0) { // Verifica se o array está vazio
         return alert("Para cargos do tipo 'Cliente', é obrigatório selecionar pelo menos um condomínio associado.");
@@ -430,10 +346,10 @@ async function handleCreateUser(event) {
 
     try {
         await api.createUser({ //
-            email, 
-            password, 
-            nome_completo: nome, 
-            cargo_id: cargoId, 
+            email,
+            password,
+            nome_completo: nome,
+            cargo_id: cargoId,
             condominio_ids: selectedCondoIds // <<<--- ENVIANDO O ARRAY DE IDS
         });
         ui.closeCreateUserModal(); //
@@ -447,7 +363,7 @@ async function handleCreateUser(event) {
         Object.assign(state, freshData); //
         render.renderUserList(state.allUsers, state.currentUserProfile, state.allCargos, state.allGroups, state.userGroupAssignments, state.condominios, state.allCondoAssignments); //
 
-    } catch(error) {
+    } catch (error) {
         console.error("Erro detalhado ao criar usuário:", error); //
         alert('Erro ao criar usuário: ' + (error.message || 'Ocorreu um erro inesperado.')); //
     }
@@ -456,7 +372,7 @@ async function handleCreateUser(event) {
 async function handleOpenEditModal(taskId) {
     const task = state.tasks.find(t => t.id == taskId);
     if (!task) return;
-    
+
     // Abre o modal imediatamente com os dados que já temos
     ui.openEditModal(task, [], state.currentUserProfile);
 
@@ -485,10 +401,10 @@ async function handleOpenEditModal(taskId) {
         // ========================================================================
         // INÍCIO DA MUDANÇA PARA DEPURAÇÃO
         // ========================================================================
-        
+
         // Em vez de um alerta genérico, agora vamos registrar o erro detalhado no console.
         console.error("ERRO DETALHADO AO CARREGAR DADOS DO MODAL:", error);
-        
+
         // O alerta agora nos instrui a olhar o console.
         alert("Falha ao carregar dados secundários da tarefa. Verifique o console (F12) para mais detalhes.");
 
@@ -554,7 +470,7 @@ async function handleExportToPDF() {
         }
         const emitterName = state.currentUserProfile?.nome_completo || 'Usuário Desconhecido';
         const logoUrl = state.currentUserProfile?.empresa?.logo_url || null; // <<<--- ADICIONE ESTA LINHA
-        
+
         // A chamada para a função de exportação continua a mesma
         await utils.exportTasksToPDF(
             state.tasksToDisplayForPdf, state.condominios, state.taskTypes,
@@ -575,29 +491,6 @@ async function handleExportToPDF() {
     }
 }
 
-/* async function handleExportToPDF() {
-    try {
-        if (state.tasksToDisplayForPdf.length === 0) {
-            return alert("Não há tarefas na lista atual para exportar.");
-        }
-        const includeDesc = document.getElementById('pdf-include-desc').checked;
-        const includeHistory = document.getElementById('pdf-include-history').checked;
-        const empresaNome = state.currentUserProfile?.empresa?.nome_empresa || 'Relatório Geral';
-        let reportOwnerName = null;
-        if (state.currentUserProfile && !state.currentUserProfile.cargo?.is_admin) {
-            reportOwnerName = state.currentUserProfile.nome_completo;
-        }
-        const emitterName = state.currentUserProfile?.nome_completo || 'Usuário Desconhecido';
-        await utils.exportTasksToPDF(
-            state.tasksToDisplayForPdf, state.condominios, state.taskTypes,
-            state.STATUSES, includeDesc, includeHistory,
-            reportOwnerName, empresaNome, emitterName
-        );
-    } catch (error) {
-        alert("Ocorreu um erro crítico ao gerar o PDF: " + error.message);
-    }
-}*/ 
-
 async function handleUpdateUser(event) {
     event.preventDefault(); //
     const form = event.target; //
@@ -613,13 +506,13 @@ async function handleUpdateUser(event) {
     // 2. Lê os IDs dos grupos E dos condomínios
     const selectedGroupIds = Array.from(form.querySelectorAll('input[name="grupos"]:checked')).map(cb => parseInt(cb.value, 10)); //
     const selectedCondoIds = Array.from(form.querySelectorAll('input[name="condominios_edit"]:checked'))
-                                .map(cb => parseInt(cb.value, 10));
+        .map(cb => parseInt(cb.value, 10));
     // --- FIM DAS ALTERAÇÕES ---
 
     if (!updatedUserData.nome_completo || isNaN(updatedUserData.cargo_id)) { //
         return alert('Nome e Cargo são obrigatórios.');
     }
-    
+
     const cargo = state.allCargos.find(c => c.id === updatedUserData.cargo_id);
     if (cargo && cargo.is_client_role && selectedCondoIds.length === 0) { // Verifica o array
         return alert("Para cargos do tipo 'Cliente', é obrigatório selecionar pelo menos um condomínio associado.");
@@ -630,45 +523,45 @@ async function handleUpdateUser(event) {
         await api.updateUserInDB(userId, updatedUserData); //
         // 2. Salva os grupos
         await api.updateUserGroupAssignments(userId, selectedGroupIds); //
-        
+
         // --- INÍCIO DA ADIÇÃO ---
         // 3. Salva os condomínios associados
         await api.updateUserCondominioAssignments(userId, selectedCondoIds);
         // --- FIM DA ADIÇÃO ---
-        
+
         ui.closeEditUserModal(); //
         alert("Usuário atualizado com sucesso!"); //
 
         // --- Atualização do State (Quase igual, mas removemos a coluna 'condominio_associado_id') ---
         const userIndex = state.allUsers.findIndex(u => u.id === userId); //
-        
+
         if (userIndex !== -1) {
             state.allUsers[userIndex].nome_completo = updatedUserData.nome_completo; //
             state.allUsers[userIndex].cargo_id = updatedUserData.cargo_id; //
-            
+
             // REMOVIDA A LINHA: state.allUsers[userIndex].condominio_associado_id = ...
-            
+
             const newCargo = state.allCargos.find(c => c.id === updatedUserData.cargo_id);
             if (newCargo) {
-                 if (!state.allUsers[userIndex].cargo) state.allUsers[userIndex].cargo = {};
-                 state.allUsers[userIndex].cargo.nome_cargo = newCargo.nome_cargo;
-                 state.allUsers[userIndex].cargo.is_admin = newCargo.is_admin;
-                 state.allUsers[userIndex].cargo.tem_permissoes_admin = newCargo.tem_permissoes_admin;
-                 state.allUsers[userIndex].cargo.is_client_role = newCargo.is_client_role; //
+                if (!state.allUsers[userIndex].cargo) state.allUsers[userIndex].cargo = {};
+                state.allUsers[userIndex].cargo.nome_cargo = newCargo.nome_cargo;
+                state.allUsers[userIndex].cargo.is_admin = newCargo.is_admin;
+                state.allUsers[userIndex].cargo.tem_permissoes_admin = newCargo.tem_permissoes_admin;
+                state.allUsers[userIndex].cargo.is_client_role = newCargo.is_client_role; //
             } else {
-                 state.allUsers[userIndex].cargo = null;
+                state.allUsers[userIndex].cargo = null;
             }
-        } 
-        
+        }
+
         state.userGroupAssignments = state.userGroupAssignments.filter(a => a.usuario_id !== userId); //
         selectedGroupIds.forEach(groupId => {
             state.userGroupAssignments.push({ usuario_id: userId, grupo_id: groupId }); //
         });
-        
+
         // (Nota: O 'state' não armazena as associações de condomínio, então não precisamos atualizar)
 
         render.renderUserList(state.allUsers, state.currentUserProfile, state.allCargos, state.allGroups, state.userGroupAssignments, state.condominios, state.allCondoAssignments); //
-        
+
     } catch (error) {
         console.error("[handleUpdateUser] Erro detalhado:", error); //
         alert("Erro ao atualizar usuário: " + error.message); //
@@ -678,13 +571,13 @@ async function handleUpdateUser(event) {
 async function handleToggleUserStatus(userId) {
     const userToToggle = state.allUsers.find(u => u.id === userId);
     if (!userToToggle) return;
-    
+
     const action = userToToggle.ativo ? "desativar" : "reativar";
     if (confirm(`Tem certeza que deseja ${action} o usuário ${userToToggle.nome_completo}?`)) {
         try {
             // 1. Atualiza o status no banco de dados
             await api.toggleUserStatusInDB(userId, userToToggle.ativo);
-            
+
             // 2. Encontra o índice do usuário no nosso estado local
             const userIndex = state.allUsers.findIndex(u => u.id === userId);
             if (userIndex !== -1) {
@@ -714,11 +607,11 @@ async function handleOpenEditUserModal(userId) {
 
         // Passa a nova lista de IDs de condomínio para o modal
         ui.openEditUserModal(
-            userToEdit, 
-            state.allCargos, 
-            state.allGroups, 
+            userToEdit,
+            state.allCargos,
+            state.allGroups,
             groupAssignments, // array [1, 2]
-            state.condominios, 
+            state.condominios,
             state.allCargos,
             condominioAssignments // array [5, 10]
         );
@@ -767,38 +660,6 @@ function handleEditCondo(condoId) {
     document.getElementById('condo-nome').focus();
 }
 
-/* async function handleDeleteCondo(condoId) {
-    const condo = state.condominios.find(c => c.id === condoId);
-    if (!condo) return;
-
-    if (confirm(`Tem certeza que deseja excluir o condomínio "${condo.nome_fantasia || condo.nome}"?`)) {
-        try {
-            await api.deleteCondoInDB(condoId);
-            alert('Condomínio excluído com sucesso!');
-
-            // Busca os dados atualizados
-            const freshData = await api.fetchInitialData(
-                state.currentUserProfile.empresa_id,
-                state.currentUserProfile.id,
-                state.currentUserProfile.cargo?.is_admin === true
-            );
-            // Atualiza o estado local
-            Object.assign(state, freshData);
-
-            // Redesenha a lista e os menus de seleção pelo app
-            render.renderCondoList(state.condominios, state.allGroups);
-            ui.populateDropdowns(state.condominios, state.taskTypes, state.allUsers, state.allGroups, state.currentUserProfile);
-
-        } catch (error) {
-            if (error.code === '23503') {
-                alert("Este condomínio não pode ser excluído por haver tarefas vinculadas.");
-            } else {
-                alert('Erro ao excluir condomínio: ' + error.message);
-            }
-        }
-    }
-}*/
-
 async function handleDeleteCondo(condoId) {
     const condo = state.condominios.find(c => c.id === condoId); //
     if (!condo) return; //
@@ -822,7 +683,7 @@ async function handleDeleteCondo(condoId) {
 
             // 4. ATUALIZA OS DROPDOWNS por todo o app (filtros, criação, etc.)
             ui.populateDropdowns(state.condominios, state.taskTypes, state.allUsers, state.allGroups, state.currentUserProfile); //
-            
+
             // (A chamada demorada para 'fetchInitialData' foi removida)
 
             // --- FIM DO REFINAMENTO ---
@@ -837,59 +698,6 @@ async function handleDeleteCondo(condoId) {
         }
     }
 }
-
-/* async function handleCreateOrUpdateTaskType(event) {
-    event.preventDefault();
-    const form = event.target;
-    const typeId = form.elements['task-type-id'].value;
-    const typeData = {
-        nome_tipo: form.elements['task-type-nome'].value.trim(),
-        cor: form.elements['task-type-cor'].value,
-        empresa_id: state.currentUserProfile.empresa_id
-    };
-    if (!typeData.nome_tipo) return alert("O nome do tipo de tarefa é obrigatório.");
-
-    try {
-        if (typeId) {
-            await api.updateTaskTypeInDB(typeId, typeData);
-            alert('Tipo de tarefa atualizado com sucesso!');
-        } else {
-            await api.createTaskTypeInDB(typeData);
-            alert('Tipo de tarefa criado com sucesso!');
-        }
-
-        // Limpa o formulário
-        form.reset();
-        document.getElementById('task-type-id').value = '';
-        document.getElementById('task-type-submit-btn').textContent = 'Adicionar Tipo';
-        
-        // Busca os dados atualizados
-        const freshData = await api.fetchInitialData(
-            state.currentUserProfile.empresa_id,
-            state.currentUserProfile.id,
-            state.currentUserProfile.cargo?.is_admin === true
-        );
-        // Atualiza o estado local
-        Object.assign(state, freshData);
-
-        // Redesenha a lista e também os menus de seleção por todo o app
-        render.renderTaskTypeList(state.taskTypes);
-        ui.populateDropdowns(state.condominios, state.taskTypes, state.allUsers, state.allGroups, state.currentUserProfile);
-
-    } catch (error) {
-        // ========================================================================
-        // LÓGICA DE MENSAGEM DE ERRO APRIMORADA
-        // ========================================================================
-        if (error.message && error.message.includes('tipos_tarefa_empresa_id_nome_tipo_key')) {
-            // Se o erro for de duplicidade, mostra a sua mensagem personalizada.
-            alert("Este tipo de tarefa já foi criado, use outro nome.");
-        } else {
-            // Para qualquer outro erro, mostra a mensagem padrão.
-            alert('Erro ao salvar tipo de tarefa: ' + error.message);
-        }
-        // ========================================================================
-    }
-}*/
 
 async function handleCreateOrUpdateTaskType(event) {
     event.preventDefault(); //
@@ -919,7 +727,7 @@ async function handleCreateOrUpdateTaskType(event) {
         form.reset(); //
         document.getElementById('task-type-id').value = ''; //
         document.getElementById('task-type-submit-btn').textContent = 'Adicionar Tipo'; //
-        
+
         // --- INÍCIO DO REFINAMENTO ---
 
         if (typeId) {
@@ -932,7 +740,7 @@ async function handleCreateOrUpdateTaskType(event) {
             // Se foi uma CRIAÇÃO, apenas adiciona o novo tipo ao 'state'
             state.taskTypes.push(savedTaskType); //
         }
-        
+
         // Renderiza (redesenha) a lista de tipos de tarefa
         render.renderTaskTypeList(state.taskTypes); //
 
@@ -983,51 +791,11 @@ function handleCondoImport(event) {
     event.target.value = '';
 }
 
-/* async function handleCreateOrUpdateGroup(event) {
-    event.preventDefault();
-    const form = event.target;
-    const groupId = form.elements['group-id'].value;
-    const groupData = { 
-        nome_grupo: form.elements['group-name'].value,
-        empresa_id: state.currentUserProfile.empresa_id 
-    };
-
-    try {
-        if (groupId) {
-            await api.updateGroupInDB(groupId, groupData);
-            alert('Grupo atualizado com sucesso!');
-        } else {
-            await api.createGroupInDB(groupData);
-            alert('Grupo criado com sucesso!');
-        }
-
-        // Limpa e reseta o formulário
-        form.reset();
-        document.getElementById('group-id').value = '';
-        document.getElementById('group-submit-btn').textContent = 'Adicionar Grupo';
-        
-        // Busca os dados atualizados
-        const freshData = await api.fetchInitialData(
-            state.currentUserProfile.empresa_id,
-            state.currentUserProfile.id,
-            state.currentUserProfile.cargo?.is_admin === true
-        );
-        // Atualiza o estado local
-        Object.assign(state, freshData);
-
-        // Redesenha apenas a lista de grupos
-        render.renderGroupList(state.allGroups);
-
-    } catch (error) {
-        alert('Erro ao salvar grupo: ' + error.message);
-    }
-}*/
-
 async function handleCreateOrUpdateGroup(event) {
     event.preventDefault(); //
     const form = event.target; //
     const groupId = form.elements['group-id'].value; //
-    const groupData = { 
+    const groupData = {
         nome_grupo: form.elements['group-name'].value, //
         empresa_id: state.currentUserProfile.empresa_id //
     };
@@ -1049,7 +817,7 @@ async function handleCreateOrUpdateGroup(event) {
         form.reset(); //
         document.getElementById('group-id').value = ''; //
         document.getElementById('group-submit-btn').textContent = 'Adicionar Grupo'; //
-        
+
         // --- INÍCIO DO REFINAMENTO ---
 
         if (groupId) {
@@ -1068,7 +836,7 @@ async function handleCreateOrUpdateGroup(event) {
 
         // Atualiza os dropdowns que usam grupos (filtros, modais de condomínio/usuário)
         ui.populateDropdowns(state.condominios, state.taskTypes, state.allUsers, state.allGroups, state.currentUserProfile); //
-        
+
         // (A chamada demorada para 'fetchInitialData' foi removida)
 
         // --- FIM DO REFINAMENTO ---
@@ -1085,31 +853,6 @@ function handleEditGroup(groupId, groupName) {
     document.getElementById('group-name').focus();
 }
 
-/* async function handleDeleteGroup(groupId, groupName) {
-    if (confirm(`Tem certeza que deseja excluir o grupo "${groupName}"?`)) {
-        try {
-            // 1. Deleta o grupo no banco de dados
-            await api.deleteGroupInDB(groupId);
-            alert('Grupo excluído com sucesso!');
-
-            // 2. Busca os dados atualizados
-            const freshData = await api.fetchInitialData(
-                state.currentUserProfile.empresa_id,
-                state.currentUserProfile.id,
-                state.currentUserProfile.cargo?.is_admin === true
-            );
-            // 3. Atualiza o estado local
-            Object.assign(state, freshData);
-
-            // 4. Redesenha apenas a lista de grupos
-            render.renderGroupList(state.allGroups);
-
-        } catch (error) {
-            alert('Erro ao excluir grupo: ' + error.message);
-        }
-    }
-}*/
-
 async function handleDeleteGroup(groupId, groupName) {
     // 1. Confirma a ação
     if (confirm(`Tem certeza que deseja excluir o grupo "${groupName}"?`)) { //
@@ -1125,7 +868,7 @@ async function handleDeleteGroup(groupId, groupName) {
 
             // 4. Renderiza a lista de grupos atualizada
             render.renderGroupList(state.allGroups); //
-            
+
             // (A chamada demorada para 'fetchInitialData' foi removida)
 
             // --- FIM DO REFINAMENTO ---
@@ -1150,20 +893,6 @@ function handleDownloadTemplate() {
     document.body.removeChild(link);
 }
 
-/* async function handleForgotPassword(event) {
-    event.preventDefault();
-    const email = prompt("Por favor, digite o e-mail da sua conta para enviarmos o link de redefinição de senha:");
-    if (!email) return;
-    try {
-        await api.requestPasswordReset(email);
-        alert("Se uma conta com este e-mail existir, um link para redefinir a senha foi enviado.");
-    } catch (error) {
-        alert("Ocorreu um erro ao tentar enviar o e-mail de redefinição: " + error.message);
-    }
-}*/
-
-// Em js/app.v3.js
-
 async function handleForgotPassword(event) {
     event.preventDefault();
     const email = prompt("Por favor, digite o e-mail da sua conta para enviarmos o link de redefinição de senha:");
@@ -1177,7 +906,7 @@ async function handleForgotPassword(event) {
         });
 
         if (error) throw error;
-        
+
         // Mensagem de sucesso para o usuário.
         alert("Se uma conta com este e-mail existir, um link para redefinir a senha foi enviado.");
 
@@ -1196,39 +925,6 @@ function handleEditTaskType(typeId) {
     document.getElementById('task-type-submit-btn').textContent = 'Salvar Alterações';
     document.getElementById('task-type-nome').focus();
 }
-
-/* async function handleDeleteTaskType(typeId) {
-    const type = state.taskTypes.find(t => t.id === typeId);
-    if (!type) return;
-
-    if (confirm(`Tem certeza que deseja excluir o tipo de tarefa "${type.nome_tipo}"?`)) {
-        try {
-            // 1. Deleta no banco
-            await api.deleteTaskTypeInDB(typeId);
-            alert('Tipo de tarefa excluído com sucesso!');
-
-            // 2. Busca os dados atualizados
-            const freshData = await api.fetchInitialData(
-                state.currentUserProfile.empresa_id,
-                state.currentUserProfile.id,
-                state.currentUserProfile.cargo?.is_admin === true
-            );
-            // 3. Atualiza o estado local
-            Object.assign(state, freshData);
-
-            // 4. Redesenha a lista e os menus de seleção
-            render.renderTaskTypeList(state.taskTypes);
-            ui.populateDropdowns(state.condominios, state.taskTypes, state.allUsers, state.allGroups, state.currentUserProfile);
-
-        } catch (error) {
-            if (error.code === '23503') {
-                alert('Impossível excluir! Este tipo de tarefa ainda está vinculado a uma ou mais tarefas.');
-            } else {
-                alert('Erro ao excluir tipo de tarefa: ' + error.message);
-            }
-        }
-    }
-}*/
 
 async function handleDeleteTaskType(typeId) {
     const type = state.taskTypes.find(t => t.id === typeId); //
@@ -1251,7 +947,7 @@ async function handleDeleteTaskType(typeId) {
             // 4. ATUALIZA OS DROPDOWNS por todo o app (filtros, criação, etc.)
             //    Usando o 'state' que acabamos de atualizar.
             ui.populateDropdowns(state.condominios, state.taskTypes, state.allUsers, state.allGroups, state.currentUserProfile); //
-            
+
             // (A chamada demorada para 'fetchInitialData' foi removida)
 
             // --- FIM DO REFINAMENTO ---
@@ -1266,64 +962,6 @@ async function handleDeleteTaskType(typeId) {
         }
     }
 }
-
-/* async function handleCreateOrUpdateCargo(event) {
-    event.preventDefault();
-    const form = event.target;
-    const cargoId = form.elements['cargo-id'].value;
-
-    // ========================================================================
-    // INÍCIO DA LÓGICA CORRIGIDA
-    // ========================================================================
-    const cargoData = {
-        nome_cargo: form.elements['cargo-nome'].value.trim(),
-        // Lê o valor da nova caixa de seleção (true ou false)
-        tem_permissoes_admin: form.elements['cargo-tem-permissoes-admin'].checked, 
-        empresa_id: state.currentUserProfile.empresa_id 
-        // Não precisamos mais enviar 'is_admin' daqui, o backend cuida disso
-    };
-    // ========================================================================
-    // FIM DA LÓGICA CORRIGIDA
-    // ========================================================================
-
-    if (!cargoData.nome_cargo) return alert("O nome do cargo é obrigatório.");
-
-    try {
-        if (cargoId) {
-            // Chama a função da API para ATUALIZAR
-            await api.updateCargoInDB(cargoId, cargoData);
-            alert('Cargo atualizado com sucesso!');
-        } else {
-            // Chama a função da API para CRIAR
-            await api.createCargoInDB(cargoData);
-            alert('Cargo criado com sucesso!');
-        }
-
-        // Limpa e reseta o formulário
-        form.reset();
-        document.getElementById('cargo-id').value = '';
-        document.getElementById('cargo-submit-btn').textContent = 'Adicionar Cargo';
-
-        // Busca os dados atualizados em segundo plano
-        const freshData = await api.fetchInitialData(
-            state.currentUserProfile.empresa_id,
-            state.currentUserProfile.id,
-            state.currentUserProfile.cargo?.is_admin === true
-        );
-        // Atualiza o estado local
-        Object.assign(state, freshData);
-
-        // Redesenha apenas a lista de cargos
-        render.renderCargoList(state.allCargos);
-
-    } catch (error) {
-        if (error.message.includes('cargos_empresa_id_nome_cargo_key')) {
-            alert('Erro: Cargo já existente!');
-        } else {
-            alert('Erro ao salvar cargo: ' + error.message);
-        }
-    }
-}*/
 
 async function handleCreateOrUpdateCargo(event) {
     event.preventDefault(); //
@@ -1340,7 +978,7 @@ async function handleCreateOrUpdateCargo(event) {
     if (!cargoData.nome_cargo) return alert("O nome do cargo é obrigatório."); //
 
     try {
-        let savedCargo; 
+        let savedCargo;
         if (cargoId) {
             savedCargo = await api.updateCargoInDB(cargoId, cargoData); //
             alert('Cargo atualizado com sucesso!'); //
@@ -1357,7 +995,7 @@ async function handleCreateOrUpdateCargo(event) {
         if (cargoId) {
             const index = state.allCargos.findIndex(c => c.id === savedCargo.id); //
             if (index !== -1) {
-                state.allCargos[index] = savedCargo; 
+                state.allCargos[index] = savedCargo;
             }
         } else {
             state.allCargos.push(savedCargo); //
@@ -1379,49 +1017,20 @@ function handleEditCargo(cargoId) {
     const cargo = state.allCargos.find(c => c.id === cargoId); //
     if (!cargo) {
         console.error(`Cargo com ID ${cargoId} não encontrado no estado.`);
-        return; 
+        return;
     }
 
     document.getElementById('cargo-id').value = cargo.id; //
     document.getElementById('cargo-nome').value = cargo.nome_cargo; //
     document.getElementById('cargo-tem-permissoes-admin').checked = cargo.tem_permissoes_admin; //
-    
+
     // --- INÍCIO DA ADIÇÃO ---
     document.getElementById('cargo-is-client-role').checked = cargo.is_client_role || false; // Preenche a nova caixa
     // --- FIM DA ADIÇÃO ---
-    
+
     document.getElementById('cargo-submit-btn').textContent = 'Salvar Alterações'; //
     document.getElementById('cargo-nome').focus(); //
 }
-
-/* async function handleDeleteCargo(cargoId, cargoName) {
-    if (confirm(`Tem certeza que deseja excluir o cargo "${cargoName}"?`)) {
-        try {
-            // 1. Deleta o cargo no banco de dados
-            await api.deleteCargoInDB(cargoId);
-            alert('Cargo excluído com sucesso!');
-
-            // 2. Busca os dados atualizados
-            const freshData = await api.fetchInitialData(
-                state.currentUserProfile.empresa_id,
-                state.currentUserProfile.id,
-                state.currentUserProfile.cargo?.is_admin === true
-            );
-            // 3. Atualiza o estado local
-            Object.assign(state, freshData);
-
-            // 4. Redesenha apenas a lista de cargos
-            render.renderCargoList(state.allCargos);
-
-        } catch (error) {
-            if(error.code === '23503'){
-                alert('Impossível excluir! Este cargo está vinculado a um ou mais usuários.');
-            } else {
-                alert('Erro ao excluir cargo: ' + error.message);
-            }
-        }
-    }
-}*/
 
 async function handleDeleteCargo(cargoId, cargoName) {
     // 1. Confirma a ação com o usuário
@@ -1447,7 +1056,7 @@ async function handleDeleteCargo(cargoId, cargoName) {
 
         } catch (error) {
             // 5. A lógica de tratamento de erro (caso o cargo esteja em uso) é mantida
-            if(error.code === '23503'){ //
+            if (error.code === '23503') { //
                 alert('Impossível excluir! Este cargo está vinculado a um ou mais usuários.'); //
             } else {
                 alert('Erro ao excluir cargo: ' + error.message); //
@@ -1484,7 +1093,7 @@ async function handleUpdateCondo(event) {
 
         // 1. Chama a API (que agora retorna a entidade atualizada)
         const updatedCondo = await api.updateCondoInDB(condoId, condoData); //
-        
+
         // 2. Fecha o modal e avisa o usuário
         ui.closeEditCondoModal(); //
         alert(`${termoSingular} atualizado com sucesso!`); //
@@ -1497,13 +1106,13 @@ async function handleUpdateCondo(event) {
             // Fallback caso não encontre (adiciona ao final)
             state.condominios.push(updatedCondo); //
         }
-        
+
         // 4. Renderiza (redesenha) a lista
         render.renderCondoList(state.condominios, state.allGroups); //
 
         // 5. Atualiza os dropdowns em todo o app
         ui.populateDropdowns(state.condominios, state.taskTypes, state.allUsers, state.allGroups, state.currentUserProfile); //
-        
+
         // (A chamada demorada 'location.reload()' foi removida)
 
         // --- FIM DO REFINAMENTO ---
@@ -1524,7 +1133,7 @@ function handleOpenEditCondoModal(condoId) {
     document.querySelector('#edit-condo-modal h3').textContent = `Editar ${termo}`;
 
     // Chama a função da UI, passando o segmentoId para ela lidar com a visibilidade
-    ui.openEditCondoModal(condo, state.allGroups, segmentoId); 
+    ui.openEditCondoModal(condo, state.allGroups, segmentoId);
 }
 
 async function handleSetPassword(event) {
@@ -1538,7 +1147,7 @@ async function handleSetPassword(event) {
     try {
         await api.activateUser(data.user.id);
         alert("Senha definida e usuário ativado com sucesso! Você será redirecionado.");
-        location.reload(); 
+        location.reload();
     } catch (activateError) {
         alert("Sua senha foi definida, mas houve um erro ao ativar seu perfil. Contate o administrador.");
     }
@@ -1563,47 +1172,6 @@ async function handleUpdatePassword(event) {
     }
 }
 
-/*
-function handleOpenCreateCondoModal() {
-    const termo = utils.getTermSingular(); // Busca o termo correto (ex: "Projeto")
-
-    // Atualiza os textos do modal
-    document.querySelector('#create-condo-modal h3').textContent = `Novo ${termo}`;
-    document.querySelector('#create-condo-form button[type="submit"]').textContent = `Criar ${termo}`;
-
-    // ========================================================================
-    // INÍCIO DA LÓGICA CORRIGIDA PARA ESCONDER CAMPOS
-    // ========================================================================
-
-    // Seleciona os inputs e seus labels correspondentes
-    const nomeFantasiaInput = document.getElementById('create-condo-nome-fantasia');
-    const cnpjInput = document.getElementById('create-condo-cnpj');
-    const nomeFantasiaLabel = document.querySelector('label[for="create-condo-nome-fantasia"]');
-    const cnpjLabel = document.querySelector('label[for="create-condo-cnpj"]');
-
-    // Verifica se temos os dados necessários e se o segmento NÃO é Condomínio (ID 1)
-    if (state.currentUserProfile?.empresa?.segmento_id && state.currentUserProfile.empresa.segmento_id !== 1) {
-        // Esconde o input E o label
-        if (nomeFantasiaInput) nomeFantasiaInput.style.display = 'none';
-        if (nomeFantasiaLabel) nomeFantasiaLabel.style.display = 'none';
-        if (cnpjInput) cnpjInput.style.display = 'none';
-        if (cnpjLabel) cnpjLabel.style.display = 'none';
-    } else {
-        // Garante que os campos fiquem visíveis para o segmento de condomínios ou se houver erro
-        if (nomeFantasiaInput) nomeFantasiaInput.style.display = 'block'; // Ou 'flex' se for o caso
-        if (nomeFantasiaLabel) nomeFantasiaLabel.style.display = 'block'; // Ou 'flex'
-        if (cnpjInput) cnpjInput.style.display = 'block'; // Ou 'flex'
-        if (cnpjLabel) cnpjLabel.style.display = 'block'; // Ou 'flex'
-    }
-    // ========================================================================
-    // FIM DA LÓGICA CORRIGIDA
-    // ========================================================================
-
-    // Código para popular grupos e abrir modal continua
-    ui.openCreateCondoModal(state.allGroups);
-}
-    */
-
 function handleOpenCreateCondoModal() {
     const termo = utils.getTermSingular(); // Busca o termo correto (ex: "Unidade")
     const segmentoId = state.currentUserProfile?.empresa?.segmento_id; // Pega o segmento do usuário logado
@@ -1613,69 +1181,8 @@ function handleOpenCreateCondoModal() {
     document.querySelector('#create-condo-form button[type="submit"]').textContent = `Criar ${termo}`;
 
     // 2. Chama a função da UI, passando o segmentoId para ela lidar com os campos
-    ui.openCreateCondoModal(state.allGroups, segmentoId); 
+    ui.openCreateCondoModal(state.allGroups, segmentoId);
 }
-
-/* async function handleCreateCondo(event) {
-    event.preventDefault();
-    const form = event.target;
-    const termoSingular = utils.getTermSingular();
-
-    // Monta o objeto de dados a ser enviado (lógica condicional)
-    const condoData = {
-        nome: form.elements['create-condo-nome'].value.trim(),
-        nome_fantasia: undefined,
-        cnpj: undefined,
-        grupo_id: form.elements['create-condo-group'].value ? parseInt(form.elements['create-condo-group'].value, 10) : null,
-        empresa_id: state.currentUserProfile.empresa_id
-    };
-    if (state.currentUserProfile?.empresa?.segmento_id === 1) { // Se for Condomínio
-        condoData.nome_fantasia = form.elements['create-condo-nome-fantasia'].value.trim() || null;
-        condoData.cnpj = form.elements['create-condo-cnpj'].value.trim() || null;
-    } else {
-        condoData.nome_fantasia = condoData.nome;
-    }
-    Object.keys(condoData).forEach(key => condoData[key] === undefined && delete condoData[key]);
-
-    if (!condoData.nome) return alert("O campo 'Nome' é obrigatório.");
-
-    try {
-        // 1. Salva no banco de dados
-        // Precisamos pegar o ID retornado para a atualização otimista
-        const { data: newCondo, error: createError } = await api.createCondoInDBAndReturn(condoData);
-        if (createError) throw createError; // Lança o erro se a criação falhar
-
-        // 2. Fecha o modal e mostra a mensagem de sucesso
-        ui.closeCreateCondoModal();
-        alert(`${termoSingular} criado com sucesso!`);
-
-        // 3. ATUALIZAÇÃO OTIMISTA DO ESTADO (COMO ESTAVA ANTES DO RELOAD)
-        // Adiciona o novo item à lista local state.condominios
-        if (newCondo) {
-           state.condominios.push(newCondo); // Adiciona o novo item retornado
-           console.log("[handleCreateCondo] Estado local (state.condominios) atualizado otimistamente:", state.condominios);
-        } else {
-            // Fallback: Se a criação não retornar o objeto, busca tudo de novo
-            console.warn("[handleCreateCondo] Criação não retornou dados, forçando re-busca completa...");
-            const freshData = await api.fetchInitialData(
-                state.currentUserProfile.empresa_id,
-                state.currentUserProfile.id
-            );
-            Object.assign(state, freshData);
-        }
-
-
-        // 4. Redesenha a lista
-        render.renderCondoList(state.condominios, state.allGroups);
-        console.log("[handleCreateCondo] renderCondoList chamado.");
-
-        // 5. Atualiza os dropdowns
-        ui.populateDropdowns(state.condominios, state.taskTypes, state.allUsers, state.allGroups, state.currentUserProfile);
-
-    } catch (error) {
-        alert(`Erro ao criar ${termoSingular}: ` + error.message);
-    }
-}*/
 
 async function handleCreateCondo(event) {
     event.preventDefault(); //
@@ -1701,29 +1208,26 @@ async function handleCreateCondo(event) {
     if (!condoData.nome) return alert("O campo 'Nome' é obrigatório."); //
 
     try {
-        // --- INÍCIO DA CORREÇÃO ---
-        // Antes: const newCondo = await api.createCondoInDBAndReturn(condoData);
-        // DEPOIS: Desestruturamos a resposta para pegar 'data' e 'error'
-        
+
         const { data: newCondo, error: createError } = await api.createCondoInDBAndReturn(condoData); //
 
         // Se a API retornar um erro, paramos aqui
         if (createError) throw createError;
         // --- FIM DA CORREÇÃO ---
-        
+
         // 2. Fecha o modal e avisa o usuário
         ui.closeCreateCondoModal(); //
         alert(`${termoSingular} criado com sucesso!`); //
 
         // 3. Adiciona a nova entidade (o objeto 'newCondo' correto) ao 'state' local
         state.condominios.push(newCondo); //
-        
+
         // 4. Renderiza (redesenha) a lista
         render.renderCondoList(state.condominios, state.allGroups); //
 
         // 5. Atualiza os dropdowns em todo o app
         ui.populateDropdowns(state.condominios, state.taskTypes, state.allUsers, state.allGroups, state.currentUserProfile); //
-        
+
     } catch (error) {
         alert(`Erro ao criar ${termoSingular}: ` + error.message); //
     }
@@ -1768,17 +1272,17 @@ async function verificarNotificacoes() {
 }
 
 function unlockAudio() {
-  const sound = document.getElementById('notification-sound');
-  if (sound) {
-    sound.play().then(() => {
-      sound.pause(); // 🔇 Imediatamente pausa
-      sound.currentTime = 0;
-      console.log("Áudio desbloqueado com sucesso.");
-      state.audioUnlocked = true;
-    }).catch(e => {
-      console.warn("Falha ao desbloquear áudio:", e);
-    });
-  }
+    const sound = document.getElementById('notification-sound');
+    if (sound) {
+        sound.play().then(() => {
+            sound.pause(); // 🔇 Imediatamente pausa
+            sound.currentTime = 0;
+            console.log("Áudio desbloqueado com sucesso.");
+            state.audioUnlocked = true;
+        }).catch(e => {
+            console.warn("Falha ao desbloquear áudio:", e);
+        });
+    }
 }
 
 function updateFavicon(count) {
@@ -1808,7 +1312,7 @@ function updateFavicon(count) {
 
         // 2. Prepara o texto da notificação (ex: "1", "2", ..., "9+")
         const text = count > 9 ? '9+' : count.toString();
-        
+
         // 3. Configurações do círculo vermelho (badge)
         ctx.beginPath();
         ctx.arc(22, 10, 8, 0, 2 * Math.PI); // Posição (x,y), raio, etc.
@@ -1820,7 +1324,7 @@ function updateFavicon(count) {
         ctx.fillStyle = 'white';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        
+
         // 5. Desenha o número sobre o círculo vermelho
         ctx.fillText(text, 22, 10);
 
@@ -1904,17 +1408,12 @@ function handleCargoListClick(event) {
 async function executeTaskSearch() {
     // 1. Pega todos os filtros ativos do 'state'
     const filters = { ...state.activeFilters }; //
-    
+
     // 2. Pega o termo de busca do input
     const searchTerm = document.getElementById('search-term-input').value.trim();
     filters.searchTerm = searchTerm;
     state.activeFilters.searchTerm = searchTerm; //
 
-    // --- INÍCIO DA CORREÇÃO ---
-    // Traduz o filtro "Ativas" (value="active") para a lógica do SQL
-    // A nossa função SQL agora não entende 'active', ela entende 'in_progress' e 'overdue'.
-    // Se o usuário selecionar "Ativas" (value="active"), nós *não* passamos filtro de status,
-    // o que fará o SQL buscar 'in_progress' E 'overdue' (todos os pendentes).
     if (filters.status === 'active') {
         filters.status = null; // Envia NULO para o SQL
     }
@@ -1927,10 +1426,10 @@ async function executeTaskSearch() {
     try {
         // 4. Chama a API (backend) com os filtros
         const tasks = await api.searchTasks(filters, state.currentUserProfile); //
-        
+
         // 5. Atualiza o 'state.tasks'
         state.tasks = tasks; //
-        
+
         // 6. Renderiza os resultados
         state.tasksToDisplayForPdf = render.renderTasks(state); //
 
@@ -1957,19 +1456,19 @@ function setupPasswordToggle(toggleId, inputId) {
 function setupEventListeners() {
     if (listenersInitialized) return;
     listenersInitialized = true;
-    
+
     document.addEventListener('click', unlockAudio, { once: true });
 
     document.getElementById('nav-super-admin')?.addEventListener('click', async () => {
-    try {
-        ui.showView('super-admin-view');
-        const todasAsEmpresas = await api.fetchAllCompaniesForSuperAdmin();
-        state.todasAsEmpresas = todasAsEmpresas; // <-- ARMAZENA OS DADOS
-        render.renderSuperAdminDashboard(todasAsEmpresas);
-    } catch (error) {
-        alert("Acesso negado ou erro ao carregar dados: " + error.message);
-        ui.showView('view-tasks-view');
-    }
+        try {
+            ui.showView('super-admin-view');
+            const todasAsEmpresas = await api.fetchAllCompaniesForSuperAdmin();
+            state.todasAsEmpresas = todasAsEmpresas; // <-- ARMAZENA OS DADOS
+            render.renderSuperAdminDashboard(todasAsEmpresas);
+        } catch (error) {
+            alert("Acesso negado ou erro ao carregar dados: " + error.message);
+            ui.showView('view-tasks-view');
+        }
     });
 
     // --- (Novo listener para o botão de busca) ---
@@ -1981,103 +1480,97 @@ function setupEventListeners() {
             executeTaskSearch();
         }
     });
-    
+
     document.getElementById('super-admin-table-body')?.addEventListener('click', async (event) => { //
-    const editButton = event.target.closest('.btn-edit'); //
-    if (editButton) {
-        const empresaId = parseInt(editButton.dataset.empresaId, 10); //
-        // Graças ao novo SQL, o objeto 'empresa' agora contém 'plano_id'
-        const empresa = state.todasAsEmpresas.find(e => e.id === empresaId); //
-        
-        if (empresa) {
-            try {
-                // 1. Busca a lista de todos os planos
-                const planos = await api.fetchAllPlans(); //
+        const editButton = event.target.closest('.btn-edit'); //
+        if (editButton) {
+            const empresaId = parseInt(editButton.dataset.empresaId, 10); //
+            // Graças ao novo SQL, o objeto 'empresa' agora contém 'plano_id'
+            const empresa = state.todasAsEmpresas.find(e => e.id === empresaId); //
 
-                // 2. Popula o dropdown de planos
-                const planoSelect = document.getElementById('edit-empresa-plano');
-                planoSelect.innerHTML = ''; // Limpa "Carregando..."
-                planos.forEach(plano => {
-                    const option = document.createElement('option');
-                    option.value = plano.id;
-                    option.textContent = plano.nome;
-                    planoSelect.appendChild(option);
-                });
+            if (empresa) {
+                try {
+                    // 1. Busca a lista de todos os planos
+                    const planos = await api.fetchAllPlans(); //
 
-                // 3. Preenche o modal com os dados da empresa
-                document.getElementById('edit-empresa-id').value = empresa.id; //
-                document.getElementById('edit-empresa-nome').value = empresa.nome_empresa; //
-                document.getElementById('edit-empresa-cnpj').value = empresa.cnpj_cpf; //
-                document.getElementById('edit-empresa-status').value = empresa.status_assinatura; //
-                
-                // --- INÍCIO DA CORREÇÃO ---
-                // Define o valor do select usando o 'plano_id' que já veio no objeto 'empresa'
-                planoSelect.value = empresa.plano_id || ''; // Garante que seleciona o plano correto
-                // (A chamada extra ao supabaseClient.from('empresas')... foi removida)
-                // --- FIM DA CORREÇÃO ---
-                document.getElementById('edit-empresa-logo-url').value = empresa.logo_url || ''; // <<<--- ADICIONE ESTA LINHA
-                // 4. Mostra o modal
-                document.getElementById('edit-empresa-modal').style.display = 'flex'; //
+                    // 2. Popula o dropdown de planos
+                    const planoSelect = document.getElementById('edit-empresa-plano');
+                    planoSelect.innerHTML = ''; // Limpa "Carregando..."
+                    planos.forEach(plano => {
+                        const option = document.createElement('option');
+                        option.value = plano.id;
+                        option.textContent = plano.nome;
+                        planoSelect.appendChild(option);
+                    });
 
-            } catch (error) {
-                alert("Erro ao carregar dados para edição: " + error.message);
+                    // 3. Preenche o modal com os dados da empresa
+                    document.getElementById('edit-empresa-id').value = empresa.id; //
+                    document.getElementById('edit-empresa-nome').value = empresa.nome_empresa; //
+                    document.getElementById('edit-empresa-cnpj').value = empresa.cnpj_cpf; //
+                    document.getElementById('edit-empresa-status').value = empresa.status_assinatura; //
+
+                    // --- INÍCIO DA CORREÇÃO ---
+                    // Define o valor do select usando o 'plano_id' que já veio no objeto 'empresa'
+                    planoSelect.value = empresa.plano_id || ''; // Garante que seleciona o plano correto
+                    // (A chamada extra ao supabaseClient.from('empresas')... foi removida)
+                    // --- FIM DA CORREÇÃO ---
+                    document.getElementById('edit-empresa-logo-url').value = empresa.logo_url || ''; // <<<--- ADICIONE ESTA LINHA
+                    // 4. Mostra o modal
+                    document.getElementById('edit-empresa-modal').style.display = 'flex'; //
+
+                } catch (error) {
+                    alert("Erro ao carregar dados para edição: " + error.message);
+                }
             }
         }
-    }
     });
 
     document.getElementById('access-denied-logout-btn')?.addEventListener('click', logout);
 
     document.getElementById('edit-empresa-form')?.addEventListener('submit', async (event) => { //
-    event.preventDefault(); //
-    const form = event.target; //
-    const empresaId = parseInt(form.elements['edit-empresa-id'].value, 10); //
-    
-    // --- INÍCIO DA ALTERAÇÃO ---
-    const dadosAtualizados = {
-        nome_empresa: form.elements['edit-empresa-nome'].value, //
-        cnpj: form.elements['edit-empresa-cnpj'].value, //
-        status_assinatura: form.elements['edit-empresa-status'].value, //
-        plano_id: parseInt(form.elements['edit-empresa-plano'].value, 10), // <-- DADO ADICIONADO
-        logo_url: form.elements['edit-empresa-logo-url'].value.trim() || null // <<<--- ADICIONE ESTA LINHA
-    };
-    // --- FIM DA ALTERAÇÃO ---
+        event.preventDefault(); //
+        const form = event.target; //
+        const empresaId = parseInt(form.elements['edit-empresa-id'].value, 10); //
 
-    try {
-        await api.updateCompanyBySuperAdmin(empresaId, dadosAtualizados); //
-        alert('Empresa atualizada com sucesso!'); //
-        document.getElementById('edit-empresa-modal').style.display = 'none'; //
-        // Recarrega a lista para mostrar os dados atualizados
-        document.getElementById('nav-super-admin').click(); //
-    } catch (error) {
-        alert('Falha ao atualizar a empresa: ' + error.message); //
-    }
+        // --- INÍCIO DA ALTERAÇÃO ---
+        const dadosAtualizados = {
+            nome_empresa: form.elements['edit-empresa-nome'].value, //
+            cnpj: form.elements['edit-empresa-cnpj'].value, //
+            status_assinatura: form.elements['edit-empresa-status'].value, //
+            plano_id: parseInt(form.elements['edit-empresa-plano'].value, 10), // <-- DADO ADICIONADO
+            logo_url: form.elements['edit-empresa-logo-url'].value.trim() || null // <<<--- ADICIONE ESTA LINHA
+        };
+        // --- FIM DA ALTERAÇÃO ---
+
+        try {
+            await api.updateCompanyBySuperAdmin(empresaId, dadosAtualizados); //
+            alert('Empresa atualizada com sucesso!'); //
+            document.getElementById('edit-empresa-modal').style.display = 'none'; //
+            // Recarrega a lista para mostrar os dados atualizados
+            document.getElementById('nav-super-admin').click(); //
+        } catch (error) {
+            alert('Falha ao atualizar a empresa: ' + error.message); //
+        }
     });
 
     document.getElementById('edit-empresa-modal-close-btn')?.addEventListener('click', () => {
-    document.getElementById('edit-empresa-modal').style.display = 'none';
+        document.getElementById('edit-empresa-modal').style.display = 'none';
     });
     document.getElementById('edit-empresa-modal-cancel-btn')?.addEventListener('click', () => {
         document.getElementById('edit-empresa-modal').style.display = 'none';
     });
 
-    
-    
+
+
     // --- Autenticação ---
     document.getElementById('login-btn')?.addEventListener('click', login);
     document.getElementById('logout-btn')?.addEventListener('click', logout);
-    /* document.getElementById('toggle-password')?.addEventListener('click', () => {
-        const passwordInput = document.getElementById('password');
-        const isHidden = passwordInput.type === 'password';
-        passwordInput.type = isHidden ? 'text' : 'password';
-        document.getElementById('toggle-password').textContent = isHidden ? '👁️' : '🙈';
-    });*/
     setupPasswordToggle('toggle-password', 'password'); // Tela de Login
     setupPasswordToggle('toggle-new-password', 'change-new-password'); // Modal Alterar Senha
     setupPasswordToggle('toggle-confirm-password', 'change-confirm-password');
     document.getElementById('forgot-password-link')?.addEventListener('click', handleForgotPassword);
     document.getElementById('record-desc-btn')?.addEventListener('click', handleAudioTranscription);
-    
+
     // --- Navegação Principal e de Utilidades ---
     document.getElementById('nav-create')?.addEventListener('click', () => ui.showView('create-task-view'));
     document.getElementById('nav-view')?.addEventListener('click', () => ui.showView('view-tasks-view'));
@@ -2118,9 +1611,9 @@ function setupEventListeners() {
         document.getElementById(id)?.addEventListener('change', (e) => {
             state.displayLimit = 20;
             const filterMap = {
-                'filter-status': 'status', 
-                'filter-assignee': 'assigneeId', 
-                'filter-date-start': 'dateStart', 
+                'filter-status': 'status',
+                'filter-assignee': 'assigneeId',
+                'filter-date-start': 'dateStart',
                 'filter-date-end': 'dateEnd',
                 'filter-task-type': 'taskTypeId',
                 'filter-group': 'groupId'
@@ -2131,19 +1624,6 @@ function setupEventListeners() {
         });
     });
 
-    /*document.getElementById('clear-filters')?.addEventListener('click', () => {
-        state.displayLimit = 20;
-        const filterBarForm = document.getElementById('filter-bar')?.closest('div'); // Encontra o formulário ou div pai
-        if (filterBarForm) {
-            Array.from(filterBarForm.querySelectorAll('select, input[type="date"]')).forEach(input => input.value = '');
-        }
-        document.getElementById('filter-condo-search').value = '';
-        state.activeFilters = { condominioId: '', status: 'in_progress', dateStart: '', dateEnd: '', assigneeId: '', taskTypeId: '', groupId: '' };
-        document.getElementById('filter-status').value = 'in_progress'; // Força o status a voltar para "Ativas"
-        // state.tasksToDisplayForPdf = render.renderTasks(state);
-        executeTaskSearch();
-    });*/
-
     document.getElementById('clear-filters')?.addEventListener('click', () => {
         state.displayLimit = 20; //
         const filterBarForm = document.getElementById('filter-bar')?.closest('div'); //
@@ -2151,17 +1631,17 @@ function setupEventListeners() {
             Array.from(filterBarForm.querySelectorAll('select, input[type="date"]')).forEach(input => input.value = '');
         }
         document.getElementById('filter-condo-search').value = ''; //
-        
+
         // --- INÍCIO DA CORREÇÃO ---
         // 1. Limpa o novo campo de busca por palavra-chave
         document.getElementById('search-term-input').value = ''; //
-        
+
         // 2. Reseta o 'state' (incluindo o searchTerm)
         state.activeFilters = { searchTerm: '', condominioId: '', status: 'in_progress', dateStart: '', dateEnd: '', assigneeId: '', taskTypeId: '', groupId: '' }; //
         // --- FIM DA CORREÇÃO ---
 
         document.getElementById('filter-status').value = 'in_progress'; //
-        
+
         // Executa a busca com os filtros limpos (que trará as tarefas "Em Andamento")
         executeTaskSearch(); //
     });
@@ -2181,7 +1661,7 @@ function setupEventListeners() {
     // --- Outros Listeners ---
     document.getElementById('add-condo-btn')?.addEventListener('click', handleOpenCreateCondoModal);
     document.getElementById('add-user-btn')?.addEventListener('click', handleOpenCreateUserModal);
-    
+
     // (Listeners de fechar modais)
     document.getElementById('create-user-modal-close-btn')?.addEventListener('click', ui.closeCreateUserModal);
     document.getElementById('create-user-modal-cancel-btn')?.addEventListener('click', ui.closeCreateUserModal);
@@ -2218,7 +1698,7 @@ function setupEventListeners() {
     document.getElementById('group-list')?.addEventListener('click', handleGroupListClick);
     document.getElementById('cargo-list')?.removeEventListener('click', handleCargoListClick);
     document.getElementById('cargo-list')?.addEventListener('click', handleCargoListClick);
-    
+
     // --- Listeners para o Modal de Notificações ---
     document.getElementById('notification-bell-container')?.addEventListener('click', async () => {
         const { data: notifications, error } = await supabaseClient
@@ -2315,21 +1795,16 @@ function setupEventListeners() {
     });
 
     // Listener para cliques DENTRO da lista de notificações
-        document.getElementById('notifications-list')?.addEventListener('click', async (event) => {
+    document.getElementById('notifications-list')?.addEventListener('click', async (event) => {
         const item = event.target.closest('.notification-item');
         if (item && item.dataset.taskId) {
             const taskId = item.dataset.taskId;
-            
+
             // Fecha o modal e muda para a tela de visualização de tarefas
             ui.closeNotificationsModal();
             ui.showView('view-tasks-view');
-            
-            // ========================================================================
-            // INÍCIO DA CORREÇÃO DE SINCRONIA
-            // ========================================================================
 
-            // Forçamos uma nova busca de dados para garantir que a tarefa exista no estado local.
-            // Isso é importante caso a notificação chegue antes da atualização do estado.
+
             try {
                 const freshData = await api.fetchInitialData(
                     state.currentUserProfile.empresa_id,
@@ -2342,9 +1817,7 @@ function setupEventListeners() {
             } catch (error) {
                 console.error("Falha ao recarregar dados após clique na notificação:", error);
             }
-            
-            // AGORA que a tela foi redesenhada, podemos procurar e destacar o card.
-            // Usamos um pequeno timeout para garantir que o DOM foi atualizado.
+
             setTimeout(() => {
                 const cardToFocus = document.querySelector(`.task-card .btn-edit[data-taskid="${taskId}"]`)?.closest('.task-card');
 
@@ -2358,240 +1831,26 @@ function setupEventListeners() {
                     console.warn(`Card da tarefa com ID ${taskId} não encontrado na tela após a atualização.`);
                 }
             }, 100); // 100ms de espera para o DOM renderizar.
-            
+
             // ========================================================================
             // FIM DA CORREÇÃO DE SINCRONIA
             // ========================================================================
         }
     });
-    
+
     // Evento global para troca de view
     window.addEventListener('viewChanged', handleViewChange);
 }
 
-/*
-async function startApp() {
-    setupEventListeners();
-    ui.setupPWAInstallHandlers();
-    
-    const { data: { session } } = await supabaseClient.auth.getSession();
-
-    if (session) {
-        if (appInitialized) return;
-        appInitialized = true;
-
-        try {
-            const { data: userProfile, error: profileError } = await supabaseClient
-                .from("usuarios")
-                .select("*, cargo: cargo_id(nome_cargo, is_admin), empresa:empresa_id(nome_empresa)")
-                .eq("id", session.user.id)
-                .single();
-
-                console.log("DADOS DO PERFIL RECEBIDOS:", userProfile);
-
-            if (profileError) throw profileError;
-            state.currentUserProfile = userProfile;
-            
-            /* const initialData = await api.fetchInitialData(
-                userProfile.empresa_id,
-                userProfile.id,
-                userProfile.cargo?.is_admin === true
-            );*/
-
-            /* const initialData = await api.fetchInitialData(
-                userProfile.empresa_id,
-                userProfile.id,
-                userProfile.cargo?.is_admin === true
-            );
-
-            // const initialData = await fetchInitialData(empresaId, userId, isAdmin);
-
-                if (initialData.error === 'NO_PROFILE') {
-                    alert('Seu perfil não foi encontrado. Entre em contato com o suporte ou tente novamente.');
-                    // Opcional: redirecionar para uma tela de cadastro ou suporte
-                    return;
-                }
-
-            ui.setupRoleBasedUI(initialData.currentUserProfile);
-            ui.populateDropdowns(
-                initialData.condominios,
-                initialData.taskTypes,
-                initialData.allUsers,
-                initialData.allGroups,
-                initialData.currentUserProfile
-            );
-            Object.assign(state, initialData);
-
-            
-
-            document.getElementById('filter-status').value = state.activeFilters.status;
-
-            ui.setupRoleBasedUI(state.currentUserProfile);
-            const userDisplayName = document.getElementById('user-display-name');
-            if (userDisplayName) {
-                userDisplayName.textContent = `Usuário: ${userProfile.nome_completo}`;
-            }
-            
-            ui.populateDropdowns(state.condominios, state.taskTypes, state.allUsers, state.allGroups, state.currentUserProfile);
-            ui.populateTemplatesDropdown(state.taskTemplates);
-
-            const filterCondoDropdown = ui.createSearchableDropdown(
-                'filter-condo-search', 'filter-condo-options', 'filter-condominio-id',
-                state.condominios,
-                (selectedValue) => {
-                    state.displayLimit = 20;
-                    state.activeFilters.condominioId = selectedValue;
-                    state.tasksToDisplayForPdf = render.renderTasks(state);
-                }
-            );
-
-            ui.createSearchableDropdown(
-                'task-condo-search', 'task-condo-options', 'task-condominio',
-                state.condominios,
-                (selectedValue) => {
-                    document.getElementById('task-condominio').value = selectedValue;
-                }
-            );
-            
-            const clearFiltersBtn = document.getElementById('clear-filters');
-            if(clearFiltersBtn && filterCondoDropdown) {
-                clearFiltersBtn.addEventListener('click', () => {
-                    filterCondoDropdown.clear();
-                });
-            }
-            
-            state.tasksToDisplayForPdf = render.renderTasks(state);
-            ui.show('main-container');
-            const lastView = sessionStorage.getItem('lastActiveView');
-            ui.showView(lastView || 'create-task-view');
-            if (lastView) sessionStorage.removeItem('lastActiveView');
-
-            // ========================================================================
-            // LÓGICA DE NOTIFICAÇÃO FINAL E OTIMIZADA
-            // ========================================================================
-
-            // 1. Verifica as notificações ao carregar a página
-            await verificarNotificacoes();
-
-            // 2. Ativa o "ouvinte" de notificações em tempo real com lógica corrigida
-            const notificationChannel = supabaseClient
-            .channel('public:notificacoes:user_id=eq.' + state.currentUserProfile.id)
-            .on(
-              'postgres_changes',
-              { event: 'INSERT', schema: 'public', table: 'notificacoes' },
-              async (payload) => {
-                console.log('Notificação em tempo real recebida!', payload);
-
-                // PRIMEIRO, busca todos os dados mais recentes.
-                // Isso garante que o state.unreadCount seja o mais atual possível.
-                try {
-                    const freshData = await api.fetchInitialData(
-                        state.currentUserProfile.empresa_id,
-                        state.currentUserProfile.id,
-                        state.currentUserProfile.cargo?.is_admin === true
-                    );
-                    Object.assign(state, freshData);
-                    
-                    // AGORA, com os dados frescos, chama a função que atualiza a UI
-                    await verificarNotificacoes();
-                    
-                    // E por fim, redesenha a lista de tarefas se o usuário estiver na tela
-                    if (document.getElementById('view-tasks-view')?.style.display === 'flex') {
-                        state.tasksToDisplayForPdf = render.renderTasks(state);
-                    }
-                } catch (error) {
-                    console.error("Falha ao recarregar dados em tempo real:", error);
-                }
-              }
-            )
-            .subscribe();
-
-            // 3. Mantém a verificação periódica como um "plano B" confiável
-            setInterval(verificarNotificacoes, 60000); 
-
-        } catch (error) {
-            console.error("Erro crítico durante a inicialização:", error);
-            await logout();
-        }
-    } else {
-        appInitialized = false;
-        sessionStorage.clear();
-        ui.show('login-screen');
-    }
-}*/
-
-// Substitua a sua função startApp inteira por esta em app.v3.js
-
-/* async function startApp() {
-    setupEventListeners();
-    ui.setupPWAInstallHandlers();
-    
-    const { data: { session } } = await supabaseClient.auth.getSession();
-
-    debugger; // <--- ADICIONE ESTA LINHA AQUI
-
-    if (session) {
-
-        // ===== INÍCIO DA NOVA LÓGICA DE VERIFICAÇÃO =====
-        const acessoLiberado = await api.verificarStatusAcesso();
-        
-        if (!acessoLiberado) {
-            // Se o acesso NÃO estiver liberado, mostra a tela de bloqueio e para tudo.
-            document.getElementById('main-container').style.display = 'none';
-            document.getElementById('access-denied-overlay').style.display = 'flex';
-            return; // Interrompe a inicialização do app
-        }
-        // ===== FIM DA NOVA LÓGICA =====
-        if (appInitialized) return;
-        appInitialized = true;
-
-        try {
-            // 1. Busca o perfil do usuário COM os dados do cargo (is_admin). Esta é a nossa "fonte da verdade".
-            const { data: userProfile, error: profileError } = await supabaseClient
-                .from("usuarios")
-                .select("*, cargo: cargo_id(nome_cargo, is_admin), empresa:empresa_id(nome_empresa)")
-                .eq("id", session.user.id)
-                .single();
-
-            // console.log("DADOS DO PERFIL RECEBIDOS:", userProfile);
-
-            if (profileError) throw profileError;
-
-            // 2. Busca todos os outros dados iniciais da aplicação.
-            const initialData = await api.fetchInitialData(
-                userProfile.empresa_id,
-                userProfile.id,
-                userProfile.cargo?.is_admin === true
-            );
-
-            // 3. CORREÇÃO CRÍTICA: Sobrescrevemos o perfil incompleto que veio de 'initialData'
-            //    pelo nosso perfil completo e correto que buscamos na etapa 1.
-            initialData.currentUserProfile = userProfile;
-            state.currentUserProfile = userProfile;
-
-            if (initialData.error === 'NO_PROFILE') {
-                alert('Seu perfil não foi encontrado. Entre em contato com o suporte ou tente novamente.');
-                return;
-            }
-
-            // 4. Agora, atribuímos todos os dados ao estado global da aplicação.
-            Object.assign(state, initialData);
-
-            ui.aplicarTerminologia(state.terminologia); // <-- ADICIONE ESTA LINHA
-
-            // 5. CHAMADA ÚNICA E CORRETA: Chamamos a função da UI apenas UMA VEZ,
-            //    agora com a certeza de que os dados do perfil estão corretos.
-            ui.setupRoleBasedUI(state.currentUserProfile);
-
-            // O restante da inicialização... */
+// O restante da inicialização... */
 async function startApp() {
     setupEventListeners(); //
     ui.setupPWAInstallHandlers(); //
-    
+
     const { data: { session } } = await supabaseClient.auth.getSession(); //
 
     if (session) {
-        
+
         // Etapa 1: Verificar o status do acesso (mantido)
         const acessoLiberado = await api.verificarStatusAcesso(); //
         if (!acessoLiberado) {
@@ -2599,13 +1858,13 @@ async function startApp() {
             document.getElementById('access-denied-overlay').style.display = 'flex'; //
             return;
         }
-        
+
         if (appInitialized) return; //
         appInitialized = true; //
 
         try {
             // --- INÍCIO DA CORREÇÃO DO LOOP DE LOGIN ---
-            
+
             // 1. Busca PRIMEIRO o perfil do usuário (sem o join da empresa)
             const { data: userProfile, error: profileError } = await supabaseClient
                 .from("usuarios")
@@ -2621,7 +1880,7 @@ async function startApp() {
                 .select("nome_empresa, segmento_id, logo_url") //
                 .eq("id", userProfile.empresa_id) // Usa o ID que acabamos de buscar
                 .single();
-            
+
             if (empresaError) throw empresaError;
 
             // 3. Junta os dados manualmente
@@ -2639,7 +1898,7 @@ async function startApp() {
             // Lógica de permissões (mantida)
             const hasAdminPermissions = userProfile.cargo?.is_admin === true || userProfile.cargo?.tem_permissoes_admin === true;
             const isClientRole = userProfile.cargo?.is_client_role === true;
-            
+
             const initialData = await api.fetchInitialData( //
                 userProfile.empresa_id,
                 userProfile.id,
@@ -2669,17 +1928,17 @@ async function startApp() {
             // --- INÍCIO DA VERIFICAÇÃO DE PLANO (LÓGICA DO BOTÃO DE ÁUDIO) ---
             const recordBtn = document.getElementById('record-desc-btn');
             const descTextarea = document.getElementById('task-desc'); //
-            
+
             // Garante que state.plano e state.plano.nome existam
             if (recordBtn && descTextarea && state.plano && state.plano.nome) { //
-                
+
                 const userPlan = state.plano.nome.toLowerCase();
-                
+
                 if (userPlan === 'plano profissional' || userPlan === 'plano master') {
-                    
+
                     // Mostra o botão
                     recordBtn.style.setProperty('display', 'block', 'important');
-                    
+
                     // Atualiza o placeholder
                     descTextarea.placeholder = 'Digite a descrição ou clique no 🎙️...';
                 } else {
@@ -2704,7 +1963,7 @@ async function startApp() {
 
                 if (hiddenInput && searchInput) {
                     hiddenInput.value = singleCondo.id;
-                    searchInput.value = singleCondo.nome_fantasia || singleCondo.nome; 
+                    searchInput.value = singleCondo.nome_fantasia || singleCondo.nome;
                 }
             } else {
                 const hiddenInput = document.getElementById('task-condominio');
@@ -2714,16 +1973,16 @@ async function startApp() {
                     searchInput.value = '';
                 }
             }
-            
+
             // Define o filtro de status padrão na UI
             document.getElementById('filter-status').value = state.activeFilters.status; //
-            
+
             // Define o nome do usuário na UI
             const userDisplayName = document.getElementById('user-display-name'); //
             if (userDisplayName) {
                 userDisplayName.textContent = `Usuário: ${userProfile.nome_completo}`;
             }
-            
+
             // Popula todos os dropdowns do sistema
             ui.populateDropdowns(state.condominios, state.taskTypes, state.allUsers, state.allGroups, state.currentUserProfile); //
             ui.populateTemplatesDropdown(state.taskTemplates); //
@@ -2746,56 +2005,56 @@ async function startApp() {
                     document.getElementById('task-condominio').value = selectedValue;
                 }
             );
-            
+
             // Conecta o botão "Limpar Filtros" ao dropdown pesquisável
             const clearFiltersBtn = document.getElementById('clear-filters'); //
-            if(clearFiltersBtn && filterCondoDropdown) {
+            if (clearFiltersBtn && filterCondoDropdown) {
                 clearFiltersBtn.addEventListener('click', () => { //
                     filterCondoDropdown.clear();
                 });
             }
-            
+
             // Mostra a UI principal
             ui.show('main-container'); //
             const lastView = sessionStorage.getItem('lastActiveView');
             ui.showView(lastView || 'create-task-view'); //
             if (lastView) sessionStorage.removeItem('lastActiveView');
-            
+
             // Executa a busca inicial de tarefas (com filtros padrão)
             executeTaskSearch(); //
 
             // Inicia o "ouvinte" de notificações
             await verificarNotificacoes(); //
             const notificationChannel = supabaseClient
-            .channel('public:notificacoes:user_id=eq.' + state.currentUserProfile.id) //
-            .on(
-              'postgres_changes',
-              { event: 'INSERT', schema: 'public', table: 'notificacoes' }, //
-              async (payload) => {
-                console.log('Notificação em tempo real recebida!', payload); //
-                try {
-                    // Recarrega todos os dados (exceto tarefas)
-                    const freshData = await api.fetchInitialData( //
-                        state.currentUserProfile.empresa_id,
-                        state.currentUserProfile.id,
-                        state.currentUserProfile.cargo?.is_admin === true || state.currentUserProfile.cargo?.tem_permissoes_admin === true,
-                        state.currentUserProfile.cargo?.is_client_role === true
-                    );
-                    Object.assign(state, freshData); //
-                    await verificarNotificacoes(); //
-                    
-                    // Atualiza a lista de tarefas se o usuário estiver olhando para ela
-                    if (document.getElementById('view-tasks-view')?.style.display === 'flex') { //
-                        executeTaskSearch(); //
+                .channel('public:notificacoes:user_id=eq.' + state.currentUserProfile.id) //
+                .on(
+                    'postgres_changes',
+                    { event: 'INSERT', schema: 'public', table: 'notificacoes' }, //
+                    async (payload) => {
+                        console.log('Notificação em tempo real recebida!', payload); //
+                        try {
+                            // Recarrega todos os dados (exceto tarefas)
+                            const freshData = await api.fetchInitialData( //
+                                state.currentUserProfile.empresa_id,
+                                state.currentUserProfile.id,
+                                state.currentUserProfile.cargo?.is_admin === true || state.currentUserProfile.cargo?.tem_permissoes_admin === true,
+                                state.currentUserProfile.cargo?.is_client_role === true
+                            );
+                            Object.assign(state, freshData); //
+                            await verificarNotificacoes(); //
+
+                            // Atualiza a lista de tarefas se o usuário estiver olhando para ela
+                            if (document.getElementById('view-tasks-view')?.style.display === 'flex') { //
+                                executeTaskSearch(); //
+                            }
+                        } catch (error) {
+                            console.error("Falha ao recarregar dados em tempo real:", error);
+                        }
                     }
-                } catch (error) {
-                    console.error("Falha ao recarregar dados em tempo real:", error);
-                }
-              }
-            )
-            .subscribe(); //
+                )
+                .subscribe(); //
             setInterval(verificarNotificacoes, 60000); //
-            
+
             // --- FIM DO "RESTO" QUE ESTAVA FALTANDO ---
 
         } catch (error) {

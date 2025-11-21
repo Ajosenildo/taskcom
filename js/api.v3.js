@@ -3,101 +3,6 @@
 import { supabaseClient } from './supabaseClient.js';
 import { SUPABASE_URL } from './config.js';
 
-// --- FUNÇÃO PRINCIPAL DE BUSCA DE DADOS ---
-/* export async function fetchInitialData(empresaId, userId, isAdmin) {
-    if (!empresaId) throw new Error("ID da empresa é necessário");
-
-    const [
-        tasksResult, condosResult, typesResult, templatesResult,
-        usersResult, cargosResult, groupsResult, allAssignmentsResult,
-        unreadNotificationsResult, empresaResult // <-- NOVA BUSCA
-    ] = await Promise.all([
-        supabaseClient.from('tarefas_detalhadas').select('*'),
-        supabaseClient.from('condominios').select('*').eq('empresa_id', empresaId).order('nome_fantasia', { ascending: true }),
-        supabaseClient.from('tipos_tarefa').select('*').eq('empresa_id', empresaId).order('nome_tipo', { ascending: true }),
-        supabaseClient.from('modelos_tarefa').select('*').eq('empresa_id', empresaId),
-        supabaseClient.from('usuarios').select('*').eq('empresa_id', empresaId).order('nome_completo', { ascending: true }),
-        supabaseClient.from('cargos').select('*').eq('empresa_id', empresaId),
-        supabaseClient.from('grupos').select('*').eq('empresa_id', empresaId),
-        supabaseClient.from('usuario_grupo').select('usuario_id, grupo_id'),
-        supabaseClient.from('notificacoes').select('id', { count: 'exact' }).eq('user_id', userId).eq('lida', false),
-        supabaseClient.from('empresas').select('segmento_id').eq('id', empresaId).single() // <-- NOVA BUSCA
-    ]);
-
-        let terminologia = {};
-            if (empresaResult.data && empresaResult.data.segmento_id) {
-            const { data: termos } = await supabaseClient
-                .from('terminologia_segmento')
-                .select('chave, singular, plural')
-                .eq('segmento_id', empresaResult.data.segmento_id);
-
-            if (termos) {
-                termos.forEach(termo => {
-                    terminologia[termo.chave] = {
-                        singular: termo.singular,
-                        plural: termo.plural
-                    };
-                });
-            }
-        }
-
-    // Busca todos os usuários da empresa
-    const allUsers = usersResult.data || [];
-    const currentUserProfile = allUsers.find(u => u.id === userId);
-
-    if (!currentUserProfile) {
-        console.error("Usuário logado não encontrado na tabela 'usuarios'.");
-        // Retorne um status especial para o frontend tratar
-        return { error: 'NO_PROFILE', message: 'Perfil de usuário não encontrado.' };
-    }
-
-    const error = tasksResult.error || condosResult.error || typesResult.error || templatesResult.error ||
-        usersResult.error || cargosResult.error || groupsResult.error || allAssignmentsResult.error || unreadNotificationsResult.error;
-
-    if (error) {
-        console.error("Erro ao buscar dados:", error);
-        throw new Error("Falha ao carregar os dados do sistema.");
-    }
-
-    const allCompanyCondos = condosResult.data || [];
-    const allCompanyTasks = tasksResult.data || [];
-    const allAssignments = allAssignmentsResult.data || [];
-    
-    const companyUserIds = new Set((usersResult.data || []).map(u => u.id));
-    const finalAssignments = allAssignments.filter(a => companyUserIds.has(a.usuario_id));
-
-    let finalCondos = allCompanyCondos;
-    let finalTasks = [];
-
-    if (isAdmin) {
-        finalTasks = allCompanyTasks;
-    } else {
-        // LÓGICA DE FILTRO DE SEGURANÇA PARA NÃO-ADMINS CORRIGIDA
-        // Um não-admin vê todas as tarefas que ele criou OU que foram designadas a ele.
-        finalTasks = allCompanyTasks.filter(t => t.criador_id === userId || t.responsavel_id === userId);
-
-        // A lista de condomínios nos menus de filtro ainda é limitada por grupo
-        const grupoIdsDoUsuario = finalAssignments
-            .filter(a => a.usuario_id === userId)
-            .map(a => a.grupo_id);
-        finalCondos = allCompanyCondos.filter(c => c.grupo_id && grupoIdsDoUsuario.includes(c.grupo_id));
-    }
-
-    return {
-        tasks: finalTasks,
-        condominios: finalCondos,
-        taskTypes: typesResult.data || [],
-        taskTemplates: templatesResult.data || [],
-        allUsers: usersResult.data || [],
-        allCargos: cargosResult.data || [],
-        allGroups: groupsResult.data || [],
-        userGroupAssignments: finalAssignments,
-        unreadCount: unreadNotificationsResult.count,
-        currentUserProfile,
-        terminologia: terminologia // <-- NOVA INFORMAÇÃO SENDO ENVIADA
-    };
-}*/
-
 export async function verificarStatusAcesso() {
     const { data, error } = await supabaseClient.rpc('verificar_status_acesso');
     if (error) {
@@ -115,104 +20,6 @@ export async function fetchAllCompaniesForSuperAdmin() {
     }
     return data || [];
 }
-
-/*
-export async function fetchInitialData(empresaId, userId, isAdmin) {
-    if (!empresaId) throw new Error("ID da empresa é necessário");
-
-    const [
-        tasksResult, condosResult, typesResult, templatesResult,
-        usersResult, cargosResult, groupsResult, allAssignmentsResult,
-        unreadNotificationsResult, empresaResult
-    ] = await Promise.all([
-        supabaseClient.from('tarefas_detalhadas').select('*'),
-        supabaseClient.from('condominios').select('*').eq('empresa_id', empresaId).order('nome_fantasia', { ascending: true }),
-        supabaseClient.from('tipos_tarefa').select('*').eq('empresa_id', empresaId).order('nome_tipo', { ascending: true }),
-        supabaseClient.from('modelos_tarefa').select('*').eq('empresa_id', empresaId),
-        supabaseClient.from('usuarios').select('*').eq('empresa_id', empresaId).order('nome_completo', { ascending: true }),
-        supabaseClient.from('cargos').select('*').eq('empresa_id', empresaId),
-        supabaseClient.from('grupos').select('*').eq('empresa_id', empresaId),
-        supabaseClient.from('usuario_grupo').select('usuario_id, grupo_id'),
-        supabaseClient.from('notificacoes').select('id', { count: 'exact' }).eq('user_id', userId).eq('lida', false),
-        supabaseClient.from('empresas').select('segmento_id').eq('id', empresaId).single()
-    ]);
-
-    // ========================================================================
-    // INÍCIO DA LÓGICA AJUSTADA PARA TERMINOLOGIA
-    // ========================================================================
-    let terminologia = {};
-    if (empresaResult.data && empresaResult.data.segmento_id) {
-        // MUDANÇA 1: Buscando apenas 'chave' e 'valor'
-        const { data: termos } = await supabaseClient
-            .from('terminologia_segmento')
-            .select('chave, valor')
-            .eq('segmento_id', empresaResult.data.segmento_id);
-
-        if (termos) {
-            // MUDANÇA 2: Montando o objeto de terminologia de forma mais simples
-            termos.forEach(termo => {
-                terminologia[termo.chave] = termo.valor; // Ex: { entidade_principal: 'Loja' }
-            });
-        }
-    }
-    // ========================================================================
-    // FIM DA LÓGICA AJUSTADA
-    // ========================================================================
-    
-    // O resto da função continua igual...
-    const allUsers = usersResult.data || [];
-    const currentUserProfile = allUsers.find(u => u.id === userId);
-
-    if (!currentUserProfile) {
-        console.error("Usuário logado não encontrado na tabela 'usuarios'.");
-        return { error: 'NO_PROFILE', message: 'Perfil de usuário não encontrado.' };
-    }
-
-    const error = tasksResult.error || condosResult.error || typesResult.error || templatesResult.error ||
-        usersResult.error || cargosResult.error || groupsResult.error || allAssignmentsResult.error || unreadNotificationsResult.error || empresaResult.error;
-
-    if (error) {
-        console.error("Erro ao buscar dados:", error);
-        throw new Error("Falha ao carregar os dados do sistema.");
-    }
-    
-    // ...lógica de filtro de tarefas e condomínios continua igual...
-    const allCompanyCondos = condosResult.data || [];
-    const allCompanyTasks = tasksResult.data || [];
-    const allAssignments = allAssignmentsResult.data || [];
-    
-    const companyUserIds = new Set((usersResult.data || []).map(u => u.id));
-    const finalAssignments = allAssignments.filter(a => companyUserIds.has(a.usuario_id));
-
-    let finalCondos = allCompanyCondos;
-    let finalTasks = [];
-
-    if (isAdmin) {
-        finalTasks = allCompanyTasks;
-    } else {
-        finalTasks = allCompanyTasks.filter(t => t.criador_id === userId || t.responsavel_id === userId);
-        const grupoIdsDoUsuario = finalAssignments
-            .filter(a => a.usuario_id === userId)
-            .map(a => a.grupo_id);
-        finalCondos = allCompanyCondos.filter(c => c.grupo_id && grupoIdsDoUsuario.includes(c.grupo_id));
-    }
-
-
-    return {
-        tasks: finalTasks,
-        condominios: finalCondos,
-        taskTypes: typesResult.data || [],
-        taskTemplates: templatesResult.data || [],
-        allUsers: usersResult.data || [],
-        allCargos: cargosResult.data || [],
-        allGroups: groupsResult.data || [],
-        userGroupAssignments: finalAssignments,
-        unreadCount: unreadNotificationsResult.count,
-        currentUserProfile,
-        terminologia: terminologia // <-- Enviando a terminologia ajustada
-    };
-}
-    */
 
 export async function fetchInitialData(empresaId, userId, hasAdminPermissions, isClientRole) {
     if (!empresaId) throw new Error("ID da empresa é necessário");
@@ -352,18 +159,10 @@ export async function toggleUserStatusInDB(userId, currentStatus) {
     if (error) throw error;
 }
 
-// --- FUNÇÕES DE TAREFAS ---
-/* export async function createTaskInDB(newTaskData) {
-    const { error } = await supabaseClient.from('tarefas').insert(newTaskData);
-    if (error) throw error;
-}*/
+
 
 export async function createTaskInDB(newTaskData) {
-    // const { error } = await supabaseClient.from('tarefas').insert(newTaskData);
-    // if (error) throw error;
-    
-    // --- INÍCIO DA ALTERAÇÃO ---
-    // Agora pedimos ao Supabase para retornar a linha que foi criada
+   
     const { data, error } = await supabaseClient
         .from('tarefas') //
         .insert(newTaskData) //
@@ -438,17 +237,6 @@ export async function createCondoInDBAndReturn(newCondoData) {
     return { data, error }; 
 }
 
-// Sua função antiga createCondoInDB (pode manter ou remover se não for mais usada)
-/* export async function createCondoInDB(newCondoData) {
-    const { error } = await supabaseClient.from('condominios').insert(newCondoData);
-    if (error) throw error;
-}*/
-
-/* export async function updateCondoInDB(condoId, updatedCondoData) {
-    const { error } = await supabaseClient.from('condominios').update(updatedCondoData).eq('id', condoId);
-    if (error) throw error;
-}*/
-
 export async function updateCondoInDB(condoId, updatedCondoData) {
     // const { error } = await supabaseClient.from('condominios').update(updatedCondoData).eq('id', condoId);
     // if (error) throw error;
@@ -475,18 +263,8 @@ export async function bulkInsertCondos(condosToInsert) {
     if (error) throw error;
 }
 
-// --- FUNÇÕES DE TIPOS DE TAREFA ---
-/* export async function createTaskTypeInDB(newTaskTypeData) {
-    // A função já recebe a empresa_id do app.js
-    const { error } = await supabaseClient.from('tipos_tarefa').insert(newTaskTypeData);
-    if (error) throw error;
-}*/
-
 export async function createTaskTypeInDB(newTaskTypeData) {
-    // A função já recebe a empresa_id do app.js
-    // const { error } = await supabaseClient.from('tipos_tarefa').insert(newTaskTypeData);
-    // if (error) throw error;
-
+  
     // --- INÍCIO DA ALTERAÇÃO ---
     const { data, error } = await supabaseClient
         .from('tipos_tarefa') //
@@ -499,14 +277,7 @@ export async function createTaskTypeInDB(newTaskTypeData) {
     // --- FIM DA ALTERAÇÃO ---
 }
 
-/* export async function updateTaskTypeInDB(typeId, updatedTaskTypeData) {
-    const { error } = await supabaseClient.from('tipos_tarefa').update(updatedTaskTypeData).eq('id', typeId);
-    if (error) throw error;
-}*/
-
 export async function updateTaskTypeInDB(typeId, updatedTaskTypeData) {
-    // const { error } = await supabaseClient.from('tipos_tarefa').update(updatedTaskTypeData).eq('id', typeId);
-    // if (error) throw error;
 
     // --- INÍCIO DA ALTERAÇÃO ---
     const { data, error } = await supabaseClient
@@ -532,17 +303,8 @@ export async function fetchRoles() {
     if (error) throw error;
     return data || [];
 }
-/* export async function createCargoInDB(newCargoData) {
-    // A função já recebe o objeto completo com 'tem_permissoes_admin'
-    const { error } = await supabaseClient.from('cargos').insert(newCargoData);
-    if (error) throw error;
-}*/
 
 export async function createCargoInDB(newCargoData) {
-    // A função já recebe o objeto completo com 'tem_permissoes_admin'
-    // const { error } = await supabaseClient.from('cargos').insert(newCargoData);
-    // if (error) throw error;
-
     // --- INÍCIO DA ALTERAÇÃO ---
     const { data, error } = await supabaseClient
         .from('cargos') //
@@ -555,17 +317,7 @@ export async function createCargoInDB(newCargoData) {
     // --- FIM DA ALTERAÇÃO ---
 }
 
-/* export async function updateCargoInDB(cargoId, updatedCargoData) {
-    // A função já recebe o objeto completo com 'tem_permissoes_admin'
-    const { error } = await supabaseClient.from('cargos').update(updatedCargoData).eq('id', cargoId);
-    if (error) throw error;
-}*/
-
 export async function updateCargoInDB(cargoId, updatedCargoData) {
-    // A função já recebe o objeto completo com 'tem_permissoes_admin'
-    // const { error } = await supabaseClient.from('cargos').update(updatedCargoData).eq('id', cargoId);
-    // if (error) throw error;
-
     // --- INÍCIO DA ALTERAÇÃO ---
     const { data, error } = await supabaseClient
         .from('cargos') //
@@ -590,15 +342,8 @@ export async function fetchGroups() {
     if (error) throw error;
     return data || [];
 }
-/* export async function createGroupInDB(newGroupData) {
-    const { error } = await supabaseClient.from('grupos').insert(newGroupData);
-    if (error) throw error;
-}*/
 
 export async function createGroupInDB(newGroupData) {
-    // const { error } = await supabaseClient.from('grupos').insert(newGroupData);
-    // if (error) throw error;
-
     // --- INÍCIO DA ALTERAÇÃO ---
     const { data, error } = await supabaseClient
         .from('grupos') //
@@ -611,15 +356,7 @@ export async function createGroupInDB(newGroupData) {
     // --- FIM DA ALTERAÇÃO ---
 }
 
-/* export async function updateGroupInDB(groupId, updatedGroupData) {
-    const { error } = await supabaseClient.from('grupos').update(updatedGroupData).eq('id', groupId);
-    if (error) throw error;
-}*/
-
 export async function updateGroupInDB(groupId, updatedGroupData) {
-    // const { error } = await supabaseClient.from('grupos').update(updatedGroupData).eq('id', groupId);
-    // if (error) throw error;
-
     // --- INÍCIO DA ALTERAÇÃO ---
     const { data, error } = await supabaseClient
         .from('grupos') //
@@ -824,4 +561,14 @@ export async function searchTasks(filters, profile) {
     }
     
     return data || [];
+}
+
+export async function fetchDashboardKPIs() {
+    const { data, error } = await supabaseClient.rpc('get_dashboard_kpis');
+    if (error) {
+        console.error("Erro ao carregar KPIs:", error);
+        // Retorna dados zerados em caso de erro para não quebrar a tela
+        return { in_progress: 0, overdue: 0, completed: 0, by_condo: {}, by_assignee_overdue: {} };
+    }
+    return data;
 }

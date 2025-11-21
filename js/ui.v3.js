@@ -78,51 +78,6 @@ export function showView(viewId) {
     window.dispatchEvent(new CustomEvent('viewChanged', { detail: { viewId } }));
 }
 
-/* export function setupRoleBasedUI(currentUserProfile) {
-    // Seleciona os elementos
-    const adminFeatures = document.querySelectorAll('.admin-feature');
-    const superAdminFeatures = document.querySelectorAll('.super-admin-feature');
-    const condominioImportExport = document.querySelector('#admin-condos-view .header-actions.condominio-feature'); // Seleciona especificamente
-
-    // Esconde TUDO primeiro para garantir um estado limpo
-    adminFeatures.forEach(el => el.style.display = 'none');
-    superAdminFeatures.forEach(el => el.style.display = 'none');
-    if (condominioImportExport) condominioImportExport.style.display = 'none'; 
-
-    // Verifica permissões
-    const isSuperAdmin = currentUserProfile?.app_metadata?.is_super_admin === true;
-    let hasCompanyAdminPermissions = false;
-    if (currentUserProfile && currentUserProfile.cargo) {
-        hasCompanyAdminPermissions = (currentUserProfile.cargo.is_admin === true || 
-                                      currentUserProfile.cargo.tem_permissoes_admin === true);
-    }
-    const isAdmin = isSuperAdmin || hasCompanyAdminPermissions; // Flag geral de admin
-
-    // Mostra recursos de Super Admin (se aplicável)
-    if (isSuperAdmin) {
-        superAdminFeatures.forEach(el => {
-            el.style.display = el.tagName === 'BUTTON' || el.tagName === 'A' || el.tagName === 'SPAN' ? 'inline-block' : 'flex';
-        });
-    }
-
-    // Mostra recursos de Admin de Empresa (se aplicável)
-    if (isAdmin) { // Qualquer tipo de admin
-        adminFeatures.forEach(el => {
-            el.style.display = el.tagName === 'BUTTON' || el.tagName === 'A' || el.tagName === 'SPAN' ? 'inline-block' : 'flex';
-        });
-
-        // Lógica específica para os botões de Importar/Exportar
-        const segmentoId = currentUserProfile?.empresa?.segmento_id;
-        console.log("[setupRoleBasedUI] Verificando Segmento ID para Import/Export:", segmentoId); 
-
-        if (segmentoId === 1 && condominioImportExport) { // Se for Admin E Segmento Condomínio
-            condominioImportExport.style.display = 'flex'; // Mostra os botões
-        }
-    } 
-    // Se não for admin, ou se for admin mas não for segmento 1, os botões de Import/Export permanecem escondidos.
-    // O botão '+ Novo' (que não tem a classe .condominio-feature) será mostrado pela regra .admin-feature se o usuário for admin.
-}*/
-
 export function setupRoleBasedUI(currentUserProfile) {
     // 1. Seleciona todos os elementos de permissão
     const adminFeatures = document.querySelectorAll('.admin-feature');
@@ -134,14 +89,6 @@ export function setupRoleBasedUI(currentUserProfile) {
         hasCompanyAdminPermissions = (currentUserProfile.cargo.is_admin === true || 
                                       currentUserProfile.cargo.tem_permissoes_admin === true);
     }
-    
-    // ATENÇÃO: A permissão de Super Admin vem do METADATA, não do perfil
-    // Precisamos buscar a sessão de novo ou (idealmente) passá-la para esta função.
-    // Vamos ajustar a chamada em app.v3.js (Passo 3)
-
-    // Por enquanto, vamos assumir que o app.v3.js nos passará o perfil completo,
-    // incluindo a permissão de super admin que precisamos adicionar lá.
-    // Esta é a lógica correta, mas ela depende de uma pequena alteração no app.v3.js
     
     const isSuperAdmin = currentUserProfile?.is_super_admin === true; // Vamos garantir que app.v3.js adicione isso
 

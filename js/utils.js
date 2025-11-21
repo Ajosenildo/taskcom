@@ -274,29 +274,3 @@ export async function exportTasksToPDF(tasksToExport, CONDOMINIOS, TASK_TYPES, S
 
     doc.save(`relatorio-taskcom-${new Date().toISOString().split('T_')[0]}.pdf`);
 }
-
-// --- FUNÇÃO HELPER PARA CARREGAR IMAGEM DA URL ---
-/* async function getImageData(url) {
-  if (!url) return null;
-
-  // Adiciona um proxy CORS para evitar erros de "tainted canvas"
-  // (Isso é um truque comum para carregar imagens de outros domínios)
-  const proxyUrl = 'https://cors-anywhere.herokuapp.com/'; 
-
-  try {
-    const response = await fetch(proxyUrl + url);
-    if (!response.ok) throw new Error('Resposta da rede não foi OK');
-
-    const blob = await response.blob();
-
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result); // Retorna a imagem como Base64
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    }); 
-  } catch (error) {
-    console.error("Erro ao carregar a imagem da logo:", error.message);
-    return null; // Retorna nulo se a imagem falhar ao carregar
-  }
-}*/

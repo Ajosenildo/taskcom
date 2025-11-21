@@ -1,10 +1,6 @@
 // js/render.js (Versão Definitiva e Corrigida)
 import { state } from './state.js';
 import * as utils from './utils.js';
-//import * as utils from './utils.js'; // Importa TUDO de utils.js como um objeto chamado 'utils'
-// import { createOrUpdateChart, getTermSingular } from './utils.js';
-// A linha de import do 'state' continua igual:
-
 
 function getVisualStatus(task, STATUSES) {
     if (!task || !task.status) return null;
@@ -269,99 +265,71 @@ export function renderUserList(allUsers, currentUserProfile, allCargos, allGroup
     });
 }
 
-export function renderDashboard(state) {
-    const { tasks, condominios, STATUSES, chartInstances, currentUserProfile, allUsers } = state;
+export function renderDashboard(state, kpiData) { // Recebe kpiData direto
+    // Se não houver dados, não faz nada
+    if (!kpiData) return;
 
-    // --- LEITURA E APLICAÇÃO DOS FILTROS ---
-    const dashboardUserFilter = document.getElementById('dashboard-user-filter');
-    const selectedUserId = dashboardUserFilter ? dashboardUserFilter.value : '';
-    const startDateFilter = document.getElementById('dashboard-date-start')?.value;
-    const endDateFilter = document.getElementById('dashboard-date-end')?.value;
+    const { STATUSES, chartInstances } = state;
+
+    // --- 1. Atualiza os Números (Cards) ---
+    document.getElementById('kpi-in-progress').textContent = kpiData.in_progress || 0;
+    document.getElementById('kpi-overdue').textContent = kpiData.overdue || 0;
+    document.getElementById('kpi-completed').textContent = kpiData.completed || 0;
     
-    let tasksInCompany = tasks.filter(t => t.empresa_id === currentUserProfile.empresa_id);
-    let tasksToRender = selectedUserId ? tasksInCompany.filter(t => t.responsavel_id === selectedUserId) : tasksInCompany;
-
-    // --- CÁLCULO DOS INDICADORES E DADOS PARA OS GRÁFICOS ---
-    
-    // 1. Lógica para tarefas Ativas
-    let activeTasks = tasksToRender.filter(t => t.status === 'pending');
-    if (startDateFilter) { activeTasks = activeTasks.filter(t => t.data_conclusao_prevista >= startDateFilter); }
-    if (endDateFilter) { activeTasks = activeTasks.filter(t => t.data_conclusao_prevista <= endDateFilter); }
-    
-    let inProgressCount = 0;
-    let overdueCount = 0;
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const overdueTasks = []; // Array para guardar as tarefas atrasadas para o novo gráfico
-
-    activeTasks.forEach(task => {
-        const dateParts = task.data_conclusao_prevista.split('-');
-        const dueDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
-        if (dueDate < today) {
-            overdueCount++;
-            overdueTasks.push(task); // Adiciona a tarefa à lista de atrasadas
-        } else {
-            inProgressCount++;
-        }
-    });
-
-    // 2. Lógica para tarefas Concluídas
-    let completedTasks = tasksToRender.filter(t => t.status === 'completed');
-    if (startDateFilter) { completedTasks = completedTasks.filter(t => t.data_conclusao_prevista >= startDateFilter); }
-    if (endDateFilter) { completedTasks = completedTasks.filter(t => t.data_conclusao_prevista <= endDateFilter); }
-    const completedInPeriodCount = completedTasks.length;
-
-    // --- ATUALIZAÇÃO DA INTERFACE ---
-
-    // Atualiza KPIs
-    document.getElementById('kpi-in-progress').textContent = inProgressCount;
-    document.getElementById('kpi-overdue').textContent = overdueCount;
-    document.getElementById('kpi-completed').textContent = completedInPeriodCount;
-    
-    // Atualiza Gráfico de Status
+    // --- 2. Gráfico de Status (Rosca) ---
     const statusData = {
-        labels: ['Em Andamento', 'Atrasadas', 'Concluídas (Período)'],
-        datasets: [{ data: [inProgressCount, overdueCount, completedInPeriodCount], backgroundColor: [STATUSES.in_progress.color, STATUSES.overdue.color, STATUSES.completed.color] }]
+        labels: ['Em Andamento', 'Atrasadas', 'Concluídas'],
+        datasets: [{ 
+            data: [kpiData.in_progress, kpiData.overdue, kpiData.completed], 
+            backgroundColor: [STATUSES.in_progress.color, STATUSES.overdue.color, STATUSES.completed.color] 
+        }]
     };
-    utils.createOrUpdateChart('statusChart', 'doughnut', statusData, chartInstances, 'status');
+    
+    const utils = window.appUtils || require('./utils.js'); // Ajuste conforme seu import    
+    createOrUpdateChartWrapper('statusChart', 'doughnut', statusData, chartInstances, 'status');
 
-    // NOVO: Lógica para Gráfico de Atrasadas por Responsável
-    const assigneeCounts = {};
-    overdueTasks.forEach(task => {
-        assigneeCounts[task.responsavel_id] = (assigneeCounts[task.responsavel_id] || 0) + 1;
-    });
-    
-    const assigneeLabels = Object.keys(assigneeCounts).map(userId => {
-        const user = allUsers.find(u => u.id === userId);
-        return user ? user.nome_completo : 'Desconhecido';
-    });
-    
+    // --- 3. Gráfico de Atrasadas por Responsável (Barras) ---
+    const assigneeDataObj = kpiData.by_assignee_overdue || {};
     const assigneeData = {
-        labels: assigneeLabels,
+        labels: Object.keys(assigneeDataObj),
         datasets: [{
             label: 'Tarefas Atrasadas',
-            data: Object.values(assigneeCounts),
-            backgroundColor: STATUSES.overdue.color, // Cor laranja de "Atrasadas"
+            data: Object.values(assigneeDataObj),
+            backgroundColor: STATUSES.overdue.color,
             borderColor: 'rgba(217, 119, 6, 1)',
             borderWidth: 1
         }]
     };
-    utils.createOrUpdateChart('assigneeChart', 'bar', assigneeData, chartInstances, 'assignee', { indexAxis: 'y' });
+    createOrUpdateChartWrapper('assigneeChart', 'bar', assigneeData, chartInstances, 'assignee', { indexAxis: 'y' });
 
-    // Atualiza Gráfico de Condomínios
-    const condoCounts = {};
-    activeTasks.forEach(task => {
-        condoCounts[task.condominio_id] = (condoCounts[task.condominio_id] || 0) + 1;
-    });
-    
-    const condoLabels = Object.keys(condoCounts).map(id => {
-        const condo = condominios.find(c => c.id == id);
-        return condo ? (condo.nome_fantasia || condo.nome) : 'Desconhecido';
-    });
+    // --- 4. Gráfico de Tarefas Ativas por Condomínio (Barras) ---
+    const condoDataObj = kpiData.by_condo || {};
     const condoData = {
-        labels: condoLabels,
-        datasets: [{ label: 'Tarefas Ativas', data: Object.values(condoCounts), backgroundColor: 'rgba(30, 58, 138, 0.8)' }]
+        labels: Object.keys(condoDataObj),
+        datasets: [{ 
+            label: 'Tarefas Ativas', 
+            data: Object.values(condoDataObj), 
+            backgroundColor: 'rgba(30, 58, 138, 0.8)' 
+        }]
     };
-    utils.createOrUpdateChart('condoChart', 'bar', condoData, chartInstances, 'condo');
+    createOrUpdateChartWrapper('condoChart', 'bar', condoData, chartInstances, 'condo');
+}
+
+// Helper interno para lidar com a importação do utils
+function createOrUpdateChartWrapper(canvasId, type, data, chartInstances, instanceKey, options = {}) {    
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return;
+    
+    if (chartInstances[instanceKey]) {
+        chartInstances[instanceKey].data = data;
+        chartInstances[instanceKey].options = options;
+        chartInstances[instanceKey].update();
+    } else {
+        // Chart é global (carregado no index.html)
+        if (typeof Chart !== 'undefined') {
+            chartInstances[instanceKey] = new Chart(ctx, { type, data, options });
+        }
+    }
 }
 
 
