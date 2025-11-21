@@ -141,7 +141,14 @@
                 <input type="text" id="search-term-input" placeholder="Buscar por palavra-chave... (ex: limpeza)">
                 <button id="search-tasks-btn" type="button">Buscar</button>
               </div>
-              <select id="filter-status"><option value="active">Ativas</option><option value="in_progress">Em Andamento</option><option value="overdue">Atrasadas</option><option value="completed">Concluídas</option><option value="deleted">Excluídas</option></select>
+              <select id="filter-status">
+                <option value="all">Todas</option> 
+                <option value="active">Ativas</option> 
+                <option value="in_progress">Em Andamento</option>
+                <option value="overdue">Atrasadas</option>
+                <option value="completed">Concluídas</option>
+                <option value="deleted">Excluídas</option>
+              </select>
               <select id="filter-task-type"><option value="">Todos os Tipos</option></select>
               <select id="filter-group"><option value="">Todos os Grupos</option></select>
               <div id="admin-filters" class="admin-feature">

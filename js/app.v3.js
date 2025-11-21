@@ -1400,19 +1400,24 @@ function handleCargoListClick(event) {
 }
 
 // --- FUNÇÃO CENTRAL DE BUSCA (CORRIGIDA) ---
+// --- FUNÇÃO CENTRAL DE BUSCA (COM FILTRO 'TODAS') ---
 async function executeTaskSearch() {
     // 1. Pega todos os filtros ativos do 'state'
     const filters = { ...state.activeFilters }; //
-
+    
     // 2. Pega o termo de busca do input
-    const searchTerm = document.getElementById('search-term-input').value.trim();
+    const searchTerm = document.getElementById('search-term-input').value.trim(); //
     filters.searchTerm = searchTerm;
     state.activeFilters.searchTerm = searchTerm; //
 
-    if (filters.status === 'active') {
-        filters.status = null; // Envia NULO para o SQL
-    }
-    // --- FIM DA CORREÇÃO ---
+    // --- INÍCIO DA LÓGICA DE STATUS ---
+    // Lógica para o filtro "Todas" e "Ativas"
+    if (filters.status === 'all') {
+        filters.status = null; // NULO = Busca tudo (sem filtro no SQL)
+    } 
+    // Se for 'active', enviamos 'active' mesmo (o SQL já sabe tratar)
+    // Se for 'in_progress', 'overdue', 'completed', etc., enviamos normalmente.
+    // --- FIM DA LÓGICA DE STATUS ---
 
     // 3. Mostra feedback de carregamento
     const list = document.getElementById('task-list');
@@ -1421,10 +1426,10 @@ async function executeTaskSearch() {
     try {
         // 4. Chama a API (backend) com os filtros
         const tasks = await api.searchTasks(filters, state.currentUserProfile); //
-
+        
         // 5. Atualiza o 'state.tasks'
         state.tasks = tasks; //
-
+        
         // 6. Renderiza os resultados
         state.tasksToDisplayForPdf = render.renderTasks(state); //
 
