@@ -1803,46 +1803,50 @@ function setupEventListeners() {
     });
 
     // Listener para cliques DENTRO da lista de notificações
+    // Listener para cliques DENTRO da lista de notificações
     document.getElementById('notifications-list')?.addEventListener('click', async (event) => {
         const item = event.target.closest('.notification-item');
         if (item && item.dataset.taskId) {
             const taskId = item.dataset.taskId;
-
-            // Fecha o modal e muda para a tela de visualização de tarefas
-            ui.closeNotificationsModal();
-            ui.showView('view-tasks-view');
-
-
+            const notificationId = item.dataset.notificationId;
+            
+            // 1. Fecha o modal e mostra a tela
+            ui.closeNotificationsModal(); //
+            ui.showView('view-tasks-view'); //
+            
             try {
-                const freshData = await api.fetchInitialData(
-                    state.currentUserProfile.empresa_id,
-                    state.currentUserProfile.id,
-                    state.currentUserProfile.cargo?.is_admin === true
-                );
-                Object.assign(state, freshData);
-                // Redesenha a lista de tarefas com os dados mais recentes.
-                state.tasksToDisplayForPdf = render.renderTasks(state);
-            } catch (error) {
-                console.error("Falha ao recarregar dados após clique na notificação:", error);
-            }
-
-            setTimeout(() => {
-                const cardToFocus = document.querySelector(`.task-card .btn-edit[data-taskid="${taskId}"]`)?.closest('.task-card');
-
-                if (cardToFocus) {
-                    cardToFocus.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    cardToFocus.classList.add('highlight');
+                // 2. Busca a tarefa específica no banco (Dados frescos)
+                const task = await api.fetchTaskById(taskId); //
+                
+                if (task) {
+                    // 3. Força a lista a mostrar APENAS essa tarefa (Modo Foco)
+                    state.tasks = [task]; //
+                    
+                    // 4. Renderiza usando os dados de condomínio que JÁ estão no state
+                    // (Não recarregamos fetchInitialData aqui para evitar limpar os condomínios)
+                    state.tasksToDisplayForPdf = render.renderTasks(state); //
+                    
+                    // 5. Destaca visualmente o card
                     setTimeout(() => {
-                        cardToFocus.classList.remove('highlight');
-                    }, 2000);
-                } else {
-                    console.warn(`Card da tarefa com ID ${taskId} não encontrado na tela após a atualização.`);
+                        const cardToFocus = document.querySelector(`.task-card .btn-edit[data-taskid="${taskId}"]`)?.closest('.task-card');
+                        if (cardToFocus) {
+                            cardToFocus.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            cardToFocus.classList.add('highlight');
+                            setTimeout(() => cardToFocus.classList.remove('highlight'), 2000);
+                        }
+                    }, 100);
                 }
-            }, 100); // 100ms de espera para o DOM renderizar.
 
-            // ========================================================================
-            // FIM DA CORREÇÃO DE SINCRONIA
-            // ========================================================================
+                // 6. Marca a notificação como lida (se existir ID)
+                if (notificationId) {
+                    await api.markNotificationAsRead([notificationId]); //
+                    await verificarNotificacoes(); // Atualiza o contador
+                }
+
+            } catch (error) {
+                console.error("Erro ao carregar tarefa da notificação:", error);
+                alert("Não foi possível carregar a tarefa. Ela pode ter sido excluída.");
+            }
         }
     });
 

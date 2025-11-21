@@ -138,7 +138,9 @@ export function renderTasks(state) {
             if (visualStatusInfo) {
                 card.style.borderLeft = `5px solid ${visualStatusInfo.status.color}`;
             }
-            const condoDisplayName = condominio ? (condominio.nome_fantasia || condominio.nome) : 'N/A';
+            const condoDisplayName = condominio 
+                ? (condominio.nome_fantasia || condominio.nome) 
+                : (task.condominio_nome_view || 'N/A');
             let overdueText = '';
             if (visualStatusInfo && visualStatusInfo.status.key === 'overdue' && visualStatusInfo.days > 0) {
                 overdueText = ` (${visualStatusInfo.days} dia${visualStatusInfo.days > 1 ? 's' : ''} de atraso)`;
