@@ -265,16 +265,20 @@ export function renderUserList(allUsers, currentUserProfile, allCargos, allGroup
     });
 }
 
-export function renderDashboard(state, kpiData) { // Recebe kpiData direto
+export function renderDashboard(state, kpiData) {
     // Se não houver dados, não faz nada
     if (!kpiData) return;
 
     const { STATUSES, chartInstances } = state;
 
     // --- 1. Atualiza os Números (Cards) ---
-    document.getElementById('kpi-in-progress').textContent = kpiData.in_progress || 0;
-    document.getElementById('kpi-overdue').textContent = kpiData.overdue || 0;
-    document.getElementById('kpi-completed').textContent = kpiData.completed || 0;
+    const kpiInProgress = document.getElementById('kpi-in-progress');
+    const kpiOverdue = document.getElementById('kpi-overdue');
+    const kpiCompleted = document.getElementById('kpi-completed');
+
+    if (kpiInProgress) kpiInProgress.textContent = kpiData.in_progress || 0;
+    if (kpiOverdue) kpiOverdue.textContent = kpiData.overdue || 0;
+    if (kpiCompleted) kpiCompleted.textContent = kpiData.completed || 0;
     
     // --- 2. Gráfico de Status (Rosca) ---
     const statusData = {
@@ -285,8 +289,10 @@ export function renderDashboard(state, kpiData) { // Recebe kpiData direto
         }]
     };
     
-    const utils = window.appUtils || require('./utils.js'); // Ajuste conforme seu import    
-    createOrUpdateChartWrapper('statusChart', 'doughnut', statusData, chartInstances, 'status');
+    // Usa a função utils.createOrUpdateChart diretamente (importada no topo)
+    if (utils && typeof utils.createOrUpdateChart === 'function') {
+        utils.createOrUpdateChart('statusChart', 'doughnut', statusData, chartInstances, 'status');
+    }
 
     // --- 3. Gráfico de Atrasadas por Responsável (Barras) ---
     const assigneeDataObj = kpiData.by_assignee_overdue || {};
@@ -300,7 +306,9 @@ export function renderDashboard(state, kpiData) { // Recebe kpiData direto
             borderWidth: 1
         }]
     };
-    createOrUpdateChartWrapper('assigneeChart', 'bar', assigneeData, chartInstances, 'assignee', { indexAxis: 'y' });
+    if (utils && typeof utils.createOrUpdateChart === 'function') {
+        utils.createOrUpdateChart('assigneeChart', 'bar', assigneeData, chartInstances, 'assignee', { indexAxis: 'y' });
+    }
 
     // --- 4. Gráfico de Tarefas Ativas por Condomínio (Barras) ---
     const condoDataObj = kpiData.by_condo || {};
@@ -312,7 +320,9 @@ export function renderDashboard(state, kpiData) { // Recebe kpiData direto
             backgroundColor: 'rgba(30, 58, 138, 0.8)' 
         }]
     };
-    createOrUpdateChartWrapper('condoChart', 'bar', condoData, chartInstances, 'condo');
+    if (utils && typeof utils.createOrUpdateChart === 'function') {
+        utils.createOrUpdateChart('condoChart', 'bar', condoData, chartInstances, 'condo');
+    }
 }
 
 // Helper interno para lidar com a importação do utils
