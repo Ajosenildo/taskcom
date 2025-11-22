@@ -297,23 +297,6 @@ async function handleToggleStatus(taskId) {
     }
 }
 
-async function handleDeleteTask(taskId) {
-    const task = state.tasks.find(t => t.id === taskId);
-    if (!task) return;
-    if (window.confirm(`Tem certeza que deseja marcar a tarefa "${task.titulo}" como excluída?`)) {
-        try {
-            await api.deleteTaskInDB(taskId);
-            const taskIndex = state.tasks.findIndex(t => t.id === taskId);
-            if (taskIndex !== -1) {
-                state.tasks[taskIndex].status = 'deleted';
-            }
-            state.tasksToDisplayForPdf = render.renderTasks(state);
-        } catch (error) {
-            alert('Erro ao excluir tarefa: ' + error.message);
-        }
-    }
-}
-
 async function handleCreateUser(event) {
     event.preventDefault(); //
     const form = event.target; //
@@ -441,47 +424,76 @@ function loadScript(src) {
 }
 
 async function handleExportToPDF() {
+    const exportBtn = document.getElementById('export-pdf-btn');
+    
+    // 1. Feedback Visual
+    const originalText = exportBtn.textContent;
+    exportBtn.textContent = 'Processando...';
+    exportBtn.disabled = true;
+    exportBtn.style.opacity = '0.7';
+
     try {
-        if (state.tasksToDisplayForPdf.length === 0) {
-            return alert("Não há tarefas na lista atual para exportar.");
-        }
-
-        // Mostra um feedback para o usuário de que o PDF está sendo preparado
-        const exportBtn = document.getElementById('export-pdf-btn');
-        const originalText = exportBtn.textContent;
-        exportBtn.textContent = 'Gerando PDF...';
-        exportBtn.disabled = true;
-
-        // CARREGAMENTO DINÂMICO DOS SCRIPTS
+        // 2. CARREGAMENTO DINÂMICO (Mantido do seu código original)
+        // Isso garante que o jsPDF exista antes de tentarmos usá-lo
         await loadScript('https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js');
         await loadScript('https://unpkg.com/jspdf-autotable@3.5.23/dist/jspdf.plugin.autotable.js');
 
-        const includeDesc = document.getElementById('pdf-include-desc').checked;
-        const includeHistory = document.getElementById('pdf-include-history').checked;
-        const empresaNome = state.currentUserProfile?.empresa?.nome_empresa || 'Relatório Geral';
-        let reportOwnerName = null;
-        if (state.currentUserProfile && !state.currentUserProfile.cargo?.is_admin) {
-            reportOwnerName = state.currentUserProfile.nome_completo;
-        }
-        const emitterName = state.currentUserProfile?.nome_completo || 'Usuário Desconhecido';
-        const logoUrl = state.currentUserProfile?.empresa?.logo_url || null; // <<<--- ADICIONE ESTA LINHA
+        // 3. Prepara os Filtros
+        const filters = { ...state.activeFilters };
+        const searchTerm = document.getElementById('search-term-input')?.value.trim() || '';
+        filters.searchTerm = searchTerm;
+        if (filters.status === 'all') filters.status = null;
 
-        // A chamada para a função de exportação continua a mesma
+        // 4. BUSCA COMPLETA NO SERVIDOR (A Melhoria)
+        // Busca até 100.000 tarefas para garantir que o relatório seja completo
+        const allTasksForReport = await api.searchTasks(filters, state.currentUserProfile, 100000, 0);
+
+        if (!allTasksForReport || allTasksForReport.length === 0) {
+            alert("Não há tarefas correspondentes para gerar o relatório.");
+            return;
+        }
+
+        // 5. Opções (Mantido do seu código original - Checkboxes são melhores que popups)
+        const includeDescEl = document.getElementById('pdf-include-desc');
+        const includeHistoryEl = document.getElementById('pdf-include-history');
+        
+        const includeDesc = includeDescEl ? includeDescEl.checked : false;
+        const includeHistory = includeHistoryEl ? includeHistoryEl.checked : false;
+
+        // 6. Prepara dados do cabeçalho
+        let reportOwnerName = null;
+        if (filters.assigneeId) {
+            const user = state.allUsers.find(u => u.id === filters.assigneeId);
+            if (user) reportOwnerName = user.nome_completo;
+        }
+
+        const empresaNome = state.currentUserProfile?.empresa?.nome_empresa || 'Relatório Geral';
+        const emitterName = state.currentUserProfile?.nome_completo || 'Usuário Desconhecido';
+        const logoUrl = state.currentUserProfile?.empresa?.logo_url || null;
+
+        // 7. Gera o PDF
         await utils.exportTasksToPDF(
-            state.tasksToDisplayForPdf, state.condominios, state.taskTypes,
-            state.STATUSES, includeDesc, includeHistory,
-            reportOwnerName, empresaNome, emitterName,
-            logoUrl // <<<--- ADICIONE ESTE NOVO PARÂMETRlogoUrl // <<<--- ADICIONE ESTE NOVO PARÂMETR
+            allTasksForReport, // Lista completa
+            state.condominios, 
+            state.taskTypes,
+            state.STATUSES, 
+            includeDesc, 
+            includeHistory,
+            reportOwnerName, 
+            empresaNome, 
+            emitterName,
+            logoUrl
         );
 
     } catch (error) {
-        alert("Ocorreu um erro crítico ao gerar o PDF: " + error.message);
+        console.error("Erro ao gerar PDF:", error);
+        alert("Ocorreu um erro ao gerar o relatório: " + error.message);
     } finally {
-        // Restaura o botão ao seu estado original, mesmo se houver erro
-        const exportBtn = document.getElementById('export-pdf-btn');
+        // 8. Restaura o botão
         if (exportBtn) {
-            exportBtn.textContent = 'Exportar PDF';
+            exportBtn.textContent = originalText;
             exportBtn.disabled = false;
+            exportBtn.style.opacity = '1';
         }
     }
 }
@@ -1328,27 +1340,210 @@ function updateFavicon(count) {
     };
 }
 
-function handleTaskListClick(event) {
-    const button = event.target.closest('.task-action-btn, #load-more-btn');
-    if (!button) return;
+// --- FUNÇÕES DE AÇÃO DA TAREFA (RESTAURADAS) ---
 
-    // Ação para o botão "Carregar Mais"
-    if (button.id === 'load-more-btn') {
-        state.displayLimit += 20; // Aumenta o limite de exibição
-        state.tasksToDisplayForPdf = render.renderTasks(state); // Redesenha a lista
-        return;
+async function handleOpenEditTaskModal(taskId) {
+    const task = state.tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    // 1. Preenche os dados do formulário (Lógica mantida)
+    const form = document.getElementById('edit-task-form');
+    if (form) {
+        document.getElementById('edit-task-id').value = task.id;
+        document.getElementById('edit-task-title').value = task.titulo;
+        document.getElementById('edit-task-desc').value = task.descricao || '';
+        
+        const dataFormatada = task.data_conclusao_prevista ? task.data_conclusao_prevista.split('T')[0] : '';
+        document.getElementById('edit-task-due-date').value = dataFormatada;
+
+        const typeSelect = document.getElementById('edit-task-type');
+        if (typeSelect) typeSelect.value = task.tipo_tarefa_id;
+
+        const assigneeSelect = document.getElementById('edit-task-assignee');
+        if (assigneeSelect) assigneeSelect.value = task.responsavel_id;
+
+        const condoInput = document.getElementById('edit-task-condominio');
+        if (condoInput) condoInput.value = task.condominio_id;
+        
+        const condoSearch = document.getElementById('edit-task-condo-search');
+        if (condoSearch) {
+            const condo = state.condominios.find(c => c.id == task.condominio_id);
+            condoSearch.value = condo ? (condo.nome_fantasia || condo.nome) : '';
+        }
     }
 
-    // Lógica existente para os outros botões
-    const taskId = button.dataset.taskid;
+    // 2. Lógica de Histórico (CORRIGIDA)
+    const historyList = document.getElementById('task-history-list');
+    if (historyList) {
+        historyList.innerHTML = '<p style="color: #6b7280; font-style: italic;">Carregando histórico...</p>';
+        
+        try {
+            // Busca o histórico atualizado do banco
+            const history = await api.fetchTaskHistory(taskId); //
+
+            if (!history || history.length === 0) {
+                historyList.innerHTML = '<p style="color: #6b7280;">Nenhum histórico registrado.</p>';
+            } else {
+                // Formata cada item do histórico para HTML
+                historyList.innerHTML = history.map(h => {
+                    const date = new Date(h.created_at).toLocaleString('pt-BR');
+                    let text = '';
+
+                    // --- TRADUÇÃO DO JSON 'DETALHES' ---
+                    if (h.evento === 'Criação') {
+                        const criadoPor = h.detalhes?.criado_por || 'Sistema';
+                        const designadoPara = h.detalhes?.designado_para || 'Ninguém';
+                        text = `Criada por <strong>${criadoPor}</strong> para <strong>${designadoPara}</strong>`;
+                    } 
+                    else if (h.evento === 'Alteração de Status') {
+                        // Traduz o status técnico (pending) para visual (Em Andamento)
+                        const deKey = h.detalhes?.de;
+                        const paraKey = h.detalhes?.para;
+                        const deTexto = state.STATUSES[deKey]?.text || deKey;
+                        const paraTexto = state.STATUSES[paraKey]?.text || paraKey;
+                        
+                        text = `Status alterado de <strong>${deTexto}</strong> para <strong>${paraTexto}</strong>`;
+                    } 
+                    else if (h.evento === 'Re-designação') {
+                        const de = h.detalhes?.de || 'Ninguém';
+                        const para = h.detalhes?.para || 'Alguém';
+                        text = `Re-designada de <strong>${de}</strong> para <strong>${para}</strong>`;
+                    } 
+                    else {
+                        // Fallback para eventos desconhecidos
+                        text = h.evento;
+                    }
+                    // ------------------------------------
+
+                    return `
+                        <div class="history-item" style="border-bottom: 1px solid #eee; padding: 8px 0;">
+                            <div style="font-size: 0.8rem; color: #9ca3af;">${date}</div>
+                            <div style="font-size: 0.9rem;">${text}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        } catch (error) {
+            console.error("Erro ao carregar histórico:", error);
+            historyList.innerHTML = '<p style="color: red;">Erro ao carregar histórico.</p>';
+        }
+    }
+
+    // 3. Abre o modal
+    const modal = document.getElementById('edit-task-modal');
+    if (modal) modal.style.display = 'flex';
+}
+
+async function handleToggleTaskStatus(taskId) {
+    const task = state.tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const currentStatus = task.status;
+    // Define o novo status visualmente para feedback imediato (opcional, mas bom para UX)
+    const newStatus = currentStatus === 'pending' ? 'completed' : 'pending';
+
+    try {
+        // Chama a API
+        await api.toggleStatusInDB(taskId, currentStatus); //
+
+        // Atualiza o estado local
+        task.status = newStatus;
+        
+        // Se completou, atualiza a data de conclusão localmente para refletir na UI
+        if (newStatus === 'completed') {
+            task.data_conclusao = new Date().toISOString();
+        } else {
+            task.data_conclusao = null;
+        }
+
+        // Redesenha a lista
+        state.tasksToDisplayForPdf = render.renderTasks(state); //
+
+    } catch (error) {
+        console.error("Erro ao alterar status:", error);
+        alert("Não foi possível alterar o status da tarefa.");
+    }
+}
+
+async function handleDeleteTask(taskId, taskTitle) {
+    if (confirm(`Tem certeza que deseja excluir a tarefa "${taskTitle}"?`)) {
+        try {
+            await api.deleteTaskInDB(taskId); //
+            
+            // Remove a tarefa da lista local
+            state.tasks = state.tasks.filter(t => t.id !== taskId);
+            
+            // Redesenha a lista
+            state.tasksToDisplayForPdf = render.renderTasks(state); //
+            alert("Tarefa excluída com sucesso.");
+
+        } catch (error) {
+            console.error("Erro ao excluir tarefa:", error);
+            alert("Erro ao excluir tarefa: " + error.message);
+        }
+    }
+}
+
+
+async function handleTaskListClick(event) {
+    const button = event.target.closest('button');
+    if (!button) return;
+
+    // --- 1. LÓGICA DO BOTÃO "CARREGAR MAIS" ---
+    if (button.id === 'load-more-btn') {
+        const btnOriginalText = button.textContent;
+        button.textContent = "Carregando...";
+        button.disabled = true;
+
+        const filters = { ...state.activeFilters };
+        const searchTerm = document.getElementById('search-term-input').value.trim();
+        filters.searchTerm = searchTerm;
+        if (filters.status === 'all') filters.status = null;
+
+        // Calcula quantas tarefas já temos (para saber o offset)
+        const currentCount = state.tasks.length;
+
+        try {
+            // Busca as PRÓXIMAS 20 tarefas no servidor
+            const newTasks = await api.searchTasks(filters, state.currentUserProfile, 20, currentCount); 
+            
+            if (newTasks.length > 0) {
+                // Adiciona as novas tarefas à lista existente
+                state.tasks = [...state.tasks, ...newTasks];
+                
+                // Aumenta o limite de exibição
+                state.displayLimit += 20;
+                
+                // Redesenha a tela
+                state.tasksToDisplayForPdf = render.renderTasks(state);
+            } else {
+                button.remove();
+                alert("Não há mais tarefas para carregar.");
+            }
+        } catch (error) {
+            console.error("Erro ao carregar mais tarefas:", error);
+            alert("Erro ao carregar mais tarefas.");
+            button.textContent = btnOriginalText;
+            button.disabled = false;
+        }
+        return; // Para aqui se foi o botão de carregar mais
+    }
+
+    // --- 2. LÓGICA DAS AÇÕES DE TAREFA (RESTAURADA) ---
     const action = button.dataset.action;
+    const taskId = button.dataset.taskid ? parseInt(button.dataset.taskid, 10) : null;
+
+    if (!action || !taskId) return;
 
     if (action === 'edit-task') {
-        handleOpenEditModal(parseInt(taskId, 10));
+        handleOpenEditTaskModal(taskId);
     } else if (action === 'toggle-task-status') {
-        handleToggleStatus(parseInt(taskId, 10));
+        handleToggleTaskStatus(taskId);
     } else if (action === 'delete-task') {
-        handleDeleteTask(parseInt(taskId, 10));
+        const task = state.tasks.find(t => t.id === taskId);
+        if (task) {
+            handleDeleteTask(taskId, task.titulo);
+        }
     }
 }
 
@@ -1401,42 +1596,28 @@ function handleCargoListClick(event) {
 
 // --- FUNÇÃO CENTRAL DE BUSCA (COM FILTRO 'TODAS') ---
 async function executeTaskSearch() {
-    // 1. Pega todos os filtros ativos do 'state'
-    const filters = { ...state.activeFilters }; //
-    
-    // 2. Pega o termo de busca do input
-    const searchTerm = document.getElementById('search-term-input').value.trim(); //
+    const filters = { ...state.activeFilters };
+    const searchTerm = document.getElementById('search-term-input').value.trim();
     filters.searchTerm = searchTerm;
-    state.activeFilters.searchTerm = searchTerm; //
+    state.activeFilters.searchTerm = searchTerm;
 
-    // --- INÍCIO DA CORREÇÃO (TRADUÇÃO DE FILTROS) ---
-    
-    // Regra 1: Se for "Todas" ('all'), enviamos NULL para o banco trazer tudo
-    if (filters.status === 'all') {
-        filters.status = null;
-    } 
-    
-    // Regra 2: Se for "Ativas" ('active'), mantemos 'active'.
-    // (O seu SQL já tem uma regra: OR (p_status = 'active' AND t.status = 'pending'))
-    
-    // --- FIM DA CORREÇÃO ---
+    // Lógica do filtro "Todas"
+    if (filters.status === 'all') filters.status = null;
 
-    // 3. Mostra feedback de carregamento
     const list = document.getElementById('task-list');
     if (list) list.innerHTML = '<p style="text-align:center; color:#6b7280;">Buscando tarefas...</p>';
 
     try {
-        // 4. Chama a API (backend) com os filtros
-        // Nota: Sem paginação por enquanto, traz tudo o que o banco permitir
-        const tasks = await api.searchTasks(filters, state.currentUserProfile); //
+        // --- RESET DA PAGINAÇÃO ---
+        state.displayLimit = 20; // Reinicia o contador visual
         
-        // 5. Atualiza o 'state.tasks'
-        state.tasks = tasks; //
+        // Busca APENAS as primeiras 20 tarefas (página 1)
+        const tasks = await api.searchTasks(filters, state.currentUserProfile, 20, 0); // limit 20, offset 0
         
-        // 6. Renderiza os resultados
-        // O 'renderTasks' vai usar o 'displayLimit' (20) do state para mostrar apenas as primeiras 20
-        // e o botão "Carregar Mais" vai mostrar o resto que já está na memória.
-        state.tasksToDisplayForPdf = render.renderTasks(state); //
+        state.tasks = tasks; // Substitui a lista atual
+        
+        // Renderiza
+        state.tasksToDisplayForPdf = render.renderTasks(state);
 
     } catch (error) {
         if (list) list.innerHTML = `<p style="text-align:center; color:#ef4444;">Erro ao buscar tarefas: ${error.message}</p>`;
@@ -1579,7 +1760,24 @@ function setupEventListeners() {
         document.getElementById('edit-empresa-modal').style.display = 'none';
     });
 
-
+// --- INÍCIO DA CORREÇÃO (LOGIN COM ENTER) ---
+    // Permite fazer login apertando ENTER nos campos de email ou senha
+    const loginInputs = ['email', 'password'];
+    
+    loginInputs.forEach(id => {
+        const inputElement = document.getElementById(id);
+        if (inputElement) {
+            inputElement.addEventListener('keypress', (event) => {
+                // Se a tecla pressionada for ENTER
+                if (event.key === 'Enter') {
+                    event.preventDefault(); // Evita comportamentos padrão estranhos
+                    // Simula um clique no botão de entrar
+                    document.getElementById('login-btn')?.click();
+                }
+            });
+        }
+    });
+    // --- FIM DA CORREÇÃO ---
 
     // --- Autenticação ---
     document.getElementById('login-btn')?.addEventListener('click', login);

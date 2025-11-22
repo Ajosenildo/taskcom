@@ -532,7 +532,7 @@ export async function fetchAllPlans() {
 
 // --- INÍCIO DA NOVA FUNÇÃO DE BUSCA ---
 
-export async function searchTasks(filters, profile) {
+export async function searchTasks(filters, profile, limit = 20, offset = 0) { // Recebe limit e offset
     if (!profile || !profile.empresa_id) {
         throw new Error("Perfil ou ID da empresa ausente para a busca.");
     }
@@ -552,7 +552,11 @@ export async function searchTasks(filters, profile) {
         p_task_type_id: filters.taskTypeId ? parseInt(filters.taskTypeId, 10) : null,
         p_group_id: filters.groupId ? parseInt(filters.groupId, 10) : null,
         p_date_start: filters.dateStart || null,
-        p_date_end: filters.dateEnd || null
+        p_date_end: filters.dateEnd || null,
+        
+        // --- Novos Parâmetros ---
+        p_limit: limit,
+        p_offset: offset
     });
 
     if (error) {

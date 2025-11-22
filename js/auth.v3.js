@@ -89,10 +89,17 @@ export async function logout() {
         // Independentemente do erro, o processo continuará no bloco 'finally'.
         
     } finally {
-        // ESTE BLOCO DE CÓDIGO É EXECUTADO SEMPRE, COM SUCESSO OU FALHA.
-        // Isso garante que o usuário seja deslogado da interface.
+        // ESTE BLOCO DE CÓDIGO É EXECUTADO SEMPRE
         console.log("Limpando dados da sessão local e recarregando a página.");
-        sessionStorage.clear();
+        
+        // Limpa a sessão temporária (se houver algo lá)
+        sessionStorage.clear(); 
+        
+        // --- NOVA LINHA OBRIGATÓRIA ---
+        // Limpa a sessão persistente (token de login) para garantir a saída
+        localStorage.clear(); 
+        // ------------------------------
+
         location.reload();
     }
 }

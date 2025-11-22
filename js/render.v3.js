@@ -76,36 +76,29 @@ export function renderSuperAdminDashboard(empresas) {
 }
 // Em js/render.v3.js
 export function renderTasks(state) {
-    const { tasks, condominios, taskTypes, STATUSES, displayLimit } = state; //
-    const list = document.getElementById('task-list'); //
+    const { tasks, condominios, taskTypes, STATUSES, displayLimit } = state;
+    const list = document.getElementById('task-list');
     if (!list) return [];
     list.innerHTML = '';
 
-    // --- CORREÇÃO PRINCIPAL: REMOVIDA TODA A LÓGICA DE FILTRO CLIENT-SIDE ---
-    // Como o SQL já filtrou os dados (busca no servidor), nós apenas confiamos no 'state.tasks'.
-    
-    // 1. Prepara os dados para exibição (Mapeia status visual)
+    // 1. Prepara os dados
     let tasksToDisplay = tasks.map(task => ({ 
         ...task, 
         visualStatusInfo: getVisualStatus(task, STATUSES) //
     }));
 
-    // (A ordenação já vem do SQL, mas mantemos aqui por segurança visual)
-    // tasksToDisplay.sort((a, b) => ...); // Removido para respeitar a ordem do banco
-
-    // 2. Aplica apenas o limite de exibição (Paginação visual "Carregar Mais")
+    // 2. Aplica o limite de exibição (Slicing)
     const tasksToRenderOnScreen = tasksToDisplay.slice(0, displayLimit);
 
     if (tasksToRenderOnScreen.length === 0) {
         list.innerHTML = '<p style="text-align:center; color:#6b7280;">Nenhuma tarefa encontrada.</p>';
     } else {
         tasksToRenderOnScreen.forEach(task => {
-            // ... (Código de desenho do Card mantido igual ao original) ...
+            // ... (Lógica de desenho do card - MANTIDA IGUAL) ...
             const condominio = condominios.find(c => c.id == task.condominio_id);
             const type = taskTypes.find(t => t.id == task.tipo_tarefa_id);
             const visualStatusInfo = task.visualStatusInfo;
             
-            // Correção para nome do condomínio (usa o do banco se não achar na lista)
             const condoDisplayName = condominio 
                 ? (condominio.nome_fantasia || condominio.nome) 
                 : (task.condominio_nome_view || 'N/A');
@@ -146,7 +139,6 @@ export function renderTasks(state) {
                 </div>
             `;
             
-            // Remove botões se necessário (lógica visual)
             if (task.status === 'deleted' || task.status === 'completed') {
                 card.querySelector('.btn-edit')?.remove();
                 if (task.status === 'deleted') card.querySelector('.task-card-actions')?.remove();
@@ -155,14 +147,18 @@ export function renderTasks(state) {
         });
     }
 
-    // 3. Botão Carregar Mais (Mantido)
-    if (tasksToDisplay.length > tasksToRenderOnScreen.length) {
+    // --- INÍCIO DA CORREÇÃO (Botão Carregar Mais) ---
+    // Regra: Se tivermos tarefas E a quantidade for múltiplo de 20, mostramos o botão.
+    // Isso assume que se vieram 20 cheias, provavelmente tem mais na próxima página.
+    if (tasksToDisplay.length > 0 && tasksToDisplay.length % 20 === 0) {
         const loadMoreBtn = document.createElement('button');
         loadMoreBtn.id = 'load-more-btn';
         loadMoreBtn.className = 'load-more-btn';
-        loadMoreBtn.textContent = `Carregar Mais ${Math.min(20, tasksToDisplay.length - tasksToRenderOnScreen.length)} Tarefas`;
+        // Ajuste visual do texto
+        loadMoreBtn.textContent = `Carregar Mais Tarefas...`; 
         list.appendChild(loadMoreBtn);
     }
+    // --- FIM DA CORREÇÃO ---
 
     return tasksToDisplay;
 }

@@ -268,7 +268,20 @@ export async function exportTasksToPDF(tasksToExport, CONDOMINIOS, TASK_TYPES, S
         // --- FIM DA CORREÇÃO DO RODAPÉ ---
     });
 
-    // (O Título no final foi REMOVIDO)
+    // --- 8. ADICIONA O TOTALIZADOR (NOVO) ---
+    // Pega a posição Y onde a tabela terminou
+    const finalYAfterTable = doc.lastAutoTable.finalY + 10; 
+    
+    // Verifica se estamos muito perto do fim da página (se sim, adiciona nova página)
+    if (finalYAfterTable > doc.internal.pageSize.getHeight() - 20) {
+        doc.addPage();
+        doc.text(`Total de tarefas listadas: ${body.length}`, 14, 20);
+    } else {
+        doc.setFontSize(10).setFont(undefined, 'bold');
+        doc.setTextColor(0); // Preto
+        doc.text(`Total de tarefas listadas: ${body.length}`, 14, finalYAfterTable);
+    }
+    // --- FIM DO TOTALIZADOR ---
 
     // --- FIM DAS ALTERAÇÕES NO LAYOUT ---
 
