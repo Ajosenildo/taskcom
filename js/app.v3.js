@@ -2307,6 +2307,37 @@ function setupEventListeners() {
         }
     }, { once: true });
 
+    // --- LÓGICA DE DEPURAÇÃO (Remover depois) ---
+    document.getElementById('btn-debug-notification')?.addEventListener('click', async () => {
+        // 1. Tenta tocar o som
+        const sound = document.getElementById('notification-sound');
+        if (sound) {
+            sound.currentTime = 0;
+            sound.play().then(() => alert("Som tocou!")).catch(e => alert("Erro som: " + e.message));
+        }
+
+        // 2. Tenta disparar notificação visual
+        if (Notification.permission !== 'granted') {
+            alert("Permissão não concedida: " + Notification.permission);
+            await Notification.requestPermission();
+        }
+
+        if ('serviceWorker' in navigator) {
+            const reg = await navigator.serviceWorker.getRegistration();
+            if (reg) {
+                reg.showNotification('Teste TaskCom', {
+                    body: 'Se você está vendo isso, o sistema funciona!',
+                    icon: '/favicon/favicon-96x96.png',
+                    vibrate: [200, 100, 200]
+                }).catch(e => alert("Erro SW showNotification: " + e.message));
+            } else {
+                alert("Service Worker não encontrado! Verifique se sw.js está na raiz.");
+            }
+        } else {
+            alert("Navegador não suporta Service Worker.");
+        }
+    });
+
     // Evento global para troca de view
     window.addEventListener('viewChanged', handleViewChange);
 }
