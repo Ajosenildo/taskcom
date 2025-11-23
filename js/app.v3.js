@@ -2485,18 +2485,31 @@ async function startApp() {
                         async (payload) => {
                             console.log('Notificação em tempo real recebida!', payload);
                             
-                            // --- NOVA LÓGICA DE NOTIFICAÇÃO ESPECÍFICA ---
-                            // Pega a mensagem exata que veio do banco
-                            const mensagemReal = payload.new.mensagem; 
-                            
+                           // --- CORREÇÃO PARA ANDROID (USANDO SERVICE WORKER) ---
                             if (mensagemReal && Notification.permission === 'granted') {
-                                new Notification('TasKCom', {
-                                    body: mensagemReal, // Ex: "Ajosenildo Silva concluiu a tarefa PISCINA"
-                                    icon: 'favicon/favicon-96x96.png',
-                                    badge: 'favicon/favicon-96x96.png',
-                                    tag: 'taskcom-notification-realtime'
-                                });
+                                
+                                // Tenta usar o Service Worker (Padrão Ouro para Android)
+                                if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
+                                    navigator.serviceWorker.ready.then(registration => {
+                                        registration.showNotification('TasKCom', {
+                                            body: mensagemReal,
+                                            icon: 'favicon/favicon-96x96.png', // Ícone na barra
+                                            badge: 'favicon/favicon-96x96.png', // Ícone pequeno (Android)
+                                            tag: 'taskcom-notification',
+                                            vibrate: [200, 100, 200], // Vibra o celular: Bzz-Bzz
+                                            requireInteraction: true // Mantém na tela até o usuário interagir
+                                        });
+                                    });
+                                } 
+                                // Fallback para Desktop (se SW falhar)
+                                else {
+                                    new Notification('TasKCom', {
+                                        body: mensagemReal,
+                                        icon: 'favicon/favicon-96x96.png'
+                                    });
+                                }
                             }
+                            // ---------------------------------------------
                         try {
                             // Recarrega todos os dados (exceto tarefas)
                             const freshData = await api.fetchInitialData( //
