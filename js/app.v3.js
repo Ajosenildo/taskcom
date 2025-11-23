@@ -162,44 +162,45 @@ async function handleCreateTask(event) {
 
 // --- NOVA FUNÇÃO PARA GRAVAÇÃO DE ÁUDIO ---
 async function handleAudioTranscription(event) {
-    event.preventDefault();
+    event.preventDefault(); 
     const recordBtn = document.getElementById('record-desc-btn');
-    const descTextarea = document.getElementById('task-desc'); //
-    if (!recordBtn || !descTextarea) return;
+    const descTextarea = document.getElementById('task-desc'); 
+    if (!recordBtn || !descTextarea) return; 
 
+    // Verifica compatibilidade (Cobre Chrome, Edge, Android Webview)
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-        return alert("Seu navegador não suporta a gravação de áudio para texto. Tente usar o Chrome ou Edge.");
+        return alert("Seu navegador não suporta a transcrição de áudio. Por favor, use o Google Chrome.");
     }
 
-    const baseText = descTextarea.value.trim();
+    const baseText = descTextarea.value.trim(); 
     const recognition = new SpeechRecognition();
-    recognition.lang = 'pt-BR';
-    recognition.interimResults = true;
+    
+    // CONFIGURAÇÕES CRÍTICAS PARA MOBILE
+    recognition.lang = 'pt-BR'; 
+    recognition.interimResults = true; // Mostra o texto aparecendo enquanto fala
+    recognition.continuous = false; // IMPORTANTE: false é mais estável no Android
+    recognition.maxAlternatives = 1;
 
-    // Se já estiver gravando, para
-    if (recordBtn.classList.contains('recording')) {
-        recognition.stop();
-        // (O 'onend' cuidará de resetar o botão)
-        return;
+    // Se já estiver gravando (botão vermelho), para a gravação
+    if (recordBtn.classList.contains('recording')) { 
+        // Nota: Não chamamos .stop() aqui diretamente, recarregamos a função para limpar o estado
+        // Apenas mudamos o visual para o usuário saber que parou
+        recordBtn.textContent = '🎙️'; 
+        recordBtn.classList.remove('recording');
+        return; // O objeto recognition anterior morrerá sozinho ou via garbage collection
     }
 
-    // Pede permissão para o microfone
-    try {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-        recognition.start();
+    // --- EVENTOS ---
 
-        // --- ALTERAÇÃO DE TEXTO ---
-        recordBtn.textContent = '🔴'; // Mostra ícone de gravação
-        recordBtn.classList.add('recording'); //
+    // 1. Quando o microfone realmente abre
+    recognition.onstart = () => {
+        recordBtn.textContent = '🔴'; 
+        recordBtn.classList.add('recording'); 
+    };
 
-    } catch (err) {
-        alert("Permissão para microfone negada. Verifique se o microfone está ativado e se a permissão foi concedida ao site.");
-        return;
-    }
-
-    // Evento: Enquanto o usuário fala
-    recognition.onresult = (event) => {
+    // 2. Quando o áudio é processado (Texto chegando)
+    recognition.onresult = (event) => { 
         let interim_transcript = '';
         let final_transcript = '';
 
@@ -210,28 +211,56 @@ async function handleAudioTranscription(event) {
                 interim_transcript += event.results[i][0].transcript;
             }
         }
-
-        descTextarea.value = baseText + (baseText ? ' ' : '') + final_transcript + interim_transcript;
-    };
-
-    // Evento: Quando a gravação para
-    recognition.onend = () => {
-        // --- ALTERAÇÃO DE TEXTO ---
-        recordBtn.textContent = '🎙️'; // Volta ao ícone de microfone
-        recordBtn.classList.remove('recording'); //
-    };
-
-    // Evento: Em caso de erro
-    recognition.onerror = (event) => {
-
-        if (event.error === 'no-speech') {
-            alert("Voz não identificada, tente novamente."); //
-        } else {
-            alert(`Erro no reconhecimento de voz: ${event.error}`); //
+        
+        // Atualiza o texto preservando o que já estava escrito
+        // Adiciona espaço apenas se houver texto novo e texto antigo
+        const separator = baseText ? ' ' : '';
+        const novoTexto = final_transcript || interim_transcript;
+        
+        if (novoTexto) {
+            descTextarea.value = baseText + separator + novoTexto;
         }
-        recordBtn.textContent = '🎙️'; // Volta ao ícone de microfone
-        recordBtn.classList.remove('recording'); //
     };
+
+    // 3. Quando a gravação termina (silêncio ou fim)
+    recognition.onend = () => { 
+        recordBtn.textContent = '🎙️'; 
+        recordBtn.classList.remove('recording'); 
+    };
+
+    // 4. Tratamento de Erros (Específico para Mobile)
+    recognition.onerror = (event) => { 
+        // Ignora erro de 'no-speech' se for apenas silêncio rápido
+        if (event.error === 'no-speech') {
+            return; 
+        }
+        
+        recordBtn.textContent = '🎙️'; 
+        recordBtn.classList.remove('recording');
+
+        if (event.error === 'audio-capture') {
+            alert("O microfone está ocupado ou indisponível. Verifique se outro app está usando o microfone.");
+        }
+        else if (event.error === 'not-allowed') {
+             alert("Permissão de microfone negada. Verifique as configurações do site no seu navegador.");
+        }
+        else if (event.error === 'network') {
+             alert("A transcrição precisa de internet para funcionar no celular. Verifique sua conexão.");
+        }
+        else {
+            alert(`Erro: ${event.error}`);
+        }
+    };
+
+    // --- INICIA A GRAVAÇÃO ---
+    // Removemos o getUserMedia manual. Chamamos start direto.
+    // O próprio navegador vai pedir permissão se precisar.
+    try {
+        recognition.start();
+    } catch (e) {
+        console.error("Erro ao iniciar reconhecimento:", e);
+        alert("Não foi possível iniciar o microfone.");
+    }
 }
 
 function handleViewChange(event) {
