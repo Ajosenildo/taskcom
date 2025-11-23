@@ -2485,31 +2485,38 @@ async function startApp() {
                         async (payload) => {
                             console.log('Notificação em tempo real recebida!', payload);
                             
-                           // --- CORREÇÃO PARA ANDROID (USANDO SERVICE WORKER) ---
+                           const mensagemReal = payload.new.mensagem; 
+                
+                            // --- CORREÇÃO FINAL PARA NOTIFICAÇÃO ANDROID ---
                             if (mensagemReal && Notification.permission === 'granted') {
-                                
-                                // Tenta usar o Service Worker (Padrão Ouro para Android)
-                                if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
-                                    navigator.serviceWorker.ready.then(registration => {
-                                        registration.showNotification('TasKCom', {
+                                try {
+                                    // 1. Tenta obter o registro do Service Worker diretamente
+                                    // (O 'await' aqui é crucial para garantir que pegamos o SW ativo)
+                                    const swRegistration = await navigator.serviceWorker.getRegistration();
+
+                                    if (swRegistration) {
+                                        // Padrão Ouro: Notificação via Service Worker (Android adora isso)
+                                        swRegistration.showNotification('TasKCom', {
                                             body: mensagemReal,
-                                            icon: 'favicon/favicon-96x96.png', // Ícone na barra
-                                            badge: 'favicon/favicon-96x96.png', // Ícone pequeno (Android)
-                                            tag: 'taskcom-notification',
-                                            vibrate: [200, 100, 200], // Vibra o celular: Bzz-Bzz
-                                            requireInteraction: true // Mantém na tela até o usuário interagir
+                                            // IMPORTANTE: Usar a barra '/' no início para garantir caminho absoluto
+                                            icon: '/favicon/favicon-96x96.png', 
+                                            badge: '/favicon/favicon-96x96.png', // Ícone monocromático pequeno
+                                            vibrate: [200, 100, 200],
+                                            tag: 'taskcom-' + Date.now(), // Tag única para garantir que o Android mostre todas
+                                            data: { url: '/' } // Dados para o clique abrir o app
                                         });
-                                    });
-                                } 
-                                // Fallback para Desktop (se SW falhar)
-                                else {
-                                    new Notification('TasKCom', {
-                                        body: mensagemReal,
-                                        icon: 'favicon/favicon-96x96.png'
-                                    });
+                                    } else {
+                                        // Fallback: Se o SW falhar, tenta o método clássico (PC)
+                                        new Notification('TasKCom', {
+                                            body: mensagemReal,
+                                            icon: '/favicon/favicon-96x96.png'
+                                        });
+                                    }
+                                } catch (err) {
+                                    console.error("Tentativa de notificação falhou:", err);
                                 }
                             }
-                            // ---------------------------------------------
+                            // -------------------------------------------------
                         try {
                             // Recarrega todos os dados (exceto tarefas)
                             const freshData = await api.fetchInitialData( //
