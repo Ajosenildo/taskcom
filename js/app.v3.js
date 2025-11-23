@@ -1283,7 +1283,63 @@ function updateFavicon(count) {
     };
 }
 
+// Função para verificar contagem e atualizar ícones (Sem Popup Genérico)
 async function verificarNotificacoes() {
+    if (!state.currentUserProfile) return;
+
+    try {
+        const { count, error } = await supabaseClient
+            .from('notificacoes')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', state.currentUserProfile.id)
+            .eq('lida', false);
+
+        if (error) throw error;
+
+        // 1. Atualiza UI Interna
+        const badge = document.getElementById('notification-badge');
+        if (badge) {
+            if (count > 0) {
+                badge.textContent = count > 99 ? '99+' : count;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        // 2. Atualiza Favicon (PC)
+        if (typeof updateFavicon === 'function') updateFavicon(count);
+
+        // 3. Atualiza App Badge (Mobile/PWA - Bolinha no ícone)
+        if ('setAppBadge' in navigator) {
+            if (count > 0) {
+                navigator.setAppBadge(count).catch(() => {});
+            } else {
+                navigator.clearAppBadge().catch(() => {});
+            }
+        }
+
+        // 4. Toca o Som (Mantido aqui para garantir alerta sonoro)
+        if (
+            typeof state.lastNotifiedCount === 'number' &&
+            count > state.lastNotifiedCount &&
+            state.audioUnlocked
+        ) {
+            const sound = document.getElementById('notification-sound');
+            if (sound) {
+                sound.currentTime = 0;
+                sound.play().catch(e => console.warn("Erro ao tocar som:", e));
+            }
+        }
+
+        state.lastNotifiedCount = count;
+
+    } catch (error) {
+        console.error("Erro ao verificar notificações:", error);
+    }
+}
+
+/* async function verificarNotificacoes() {
     if (!state.currentUserProfile) return;
 
     try {
@@ -1355,45 +1411,9 @@ async function verificarNotificacoes() {
     } catch (error) {
         console.error("Erro ao verificar notificações:", error);
     }
-}
-
-/* async function verificarNotificacoes() {
-    const { data: count, error } = await supabaseClient.rpc('contar_notificacoes_nao_lidas');
-
-    if (error) {
-        console.error("Erro ao verificar notificações:", error);
-        return;
-    }
-
-    const badge = document.getElementById('notification-badge');
-    state.unreadNotifications = count;
-
-    if (badge) {
-        if (count > 0) {
-            badge.textContent = count;
-            badge.style.display = 'block';
-        } else {
-            badge.style.display = 'none';
-        }
-    }
-
-    updateFavicon(count);
-
-    if (
-        typeof state.lastNotifiedCount === 'number' &&
-        count > state.lastNotifiedCount &&
-        state.audioUnlocked
-    ) {
-        const sound = document.getElementById('notification-sound');
-        if (sound) {
-            sound.currentTime = 0;
-            sound.play().catch(e => console.warn("Erro ao tocar som de notificação:", e));
-        }
-    }
-
-    // ADICIONE ESTA LINHA NO FINAL DA FUNÇÃO
-    state.lastNotifiedCount = count;
 }*/
+
+
 
 function unlockAudio() {
     const sound = document.getElementById('notification-sound');
@@ -2370,11 +2390,29 @@ async function startApp() {
             await verificarNotificacoes(); //
             const notificationChannel = supabaseClient
                 .channel('public:notificacoes:user_id=eq.' + state.currentUserProfile.id) //
-                .on(
+                /*.on(
                     'postgres_changes',
                     { event: 'INSERT', schema: 'public', table: 'notificacoes' }, //
                     async (payload) => {
-                        console.log('Notificação em tempo real recebida!', payload); //
+                        console.log('Notificação em tempo real recebida!', payload); //*/
+                        .on(
+                        'postgres_changes',
+                        { event: 'INSERT', schema: 'public', table: 'notificacoes' },
+                        async (payload) => {
+                            console.log('Notificação em tempo real recebida!', payload);
+                            
+                            // --- NOVA LÓGICA DE NOTIFICAÇÃO ESPECÍFICA ---
+                            // Pega a mensagem exata que veio do banco
+                            const mensagemReal = payload.new.mensagem; 
+                            
+                            if (mensagemReal && Notification.permission === 'granted') {
+                                new Notification('TasKCom', {
+                                    body: mensagemReal, // Ex: "Ajosenildo Silva concluiu a tarefa PISCINA"
+                                    icon: 'favicon/favicon-96x96.png',
+                                    badge: 'favicon/favicon-96x96.png',
+                                    tag: 'taskcom-notification-realtime'
+                                });
+                            }
                         try {
                             // Recarrega todos os dados (exceto tarefas)
                             const freshData = await api.fetchInitialData( //
