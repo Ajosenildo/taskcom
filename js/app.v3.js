@@ -1287,44 +1287,57 @@ async function verificarNotificacoes() {
     if (!state.currentUserProfile) return;
 
     try {
-        // 1. Busca a contagem (Usando SELECT count para garantir compatibilidade com RLS)
         const { count, error } = await supabaseClient
             .from('notificacoes')
             .select('id', { count: 'exact', head: true })
             .eq('user_id', state.currentUserProfile.id)
             .eq('lida', false);
 
-        if (error) {
-            console.error("Erro ao verificar notificações:", error);
-            return;
-        }
+        if (error) throw error;
 
-        // 2. Atualiza UI Interna (Sininho)
+        // 1. Atualiza UI Interna
         const badge = document.getElementById('notification-badge');
-        state.unreadNotifications = count;
-
         if (badge) {
             if (count > 0) {
                 badge.textContent = count > 99 ? '99+' : count;
-                badge.style.display = 'flex'; // Flex para alinhar o texto no centro da bolinha
+                badge.style.display = 'flex';
             } else {
                 badge.style.display = 'none';
             }
         }
 
-        // 3. Atualiza Favicon (PC) - Chama a função auxiliar acima
-        updateFavicon(count);
+        // 2. Atualiza Favicon (PC)
+        if (typeof updateFavicon === 'function') updateFavicon(count);
 
-        // 4. Atualiza App Badge (Mobile/PWA) - NOVA FUNCIONALIDADE
-        if ('setAppBadge' in navigator) {
-            if (count > 0) {
+        // 3. Lógica de Notificação do Sistema (Mobile/Desktop)
+        if (count > 0) {
+            // A. Tenta definir o Badge (funciona bem em Desktop/iOS)
+            if ('setAppBadge' in navigator) {
                 navigator.setAppBadge(count).catch(() => {});
-            } else {
-                navigator.clearAppBadge().catch(() => {});
             }
+
+            // B. Dispara Notificação Visual (O Segredo para o Android)
+            // Só dispara se tiver permissão E se a contagem aumentou (para não flodar)
+            if (Notification.permission === 'granted') {
+                // Verifica se chegou notificação nova comparando com o estado anterior
+                if (typeof state.lastNotifiedCount === 'number' && count > state.lastNotifiedCount) {
+                    
+                    // Cria a notificação visual no Android
+                    // (Isso geralmente faz a bolinha aparecer no ícone)
+                    new Notification('TasKCom', {
+                        body: `Você tem ${count} nova(s) tarefa(s) pendente(s).`,
+                        icon: 'favicon/favicon-96x96.png', // Ícone que aparece na barra
+                        badge: 'favicon/favicon-96x96.png', // Ícone pequeno (Android)
+                        tag: 'taskcom-notification' // Evita spam (substitui a anterior)
+                    });
+                }
+            }
+        } else {
+            // Limpa tudo se for zero
+            if ('clearAppBadge' in navigator) navigator.clearAppBadge().catch(() => {});
         }
 
-        // 5. Toca Som (Sua lógica original)
+        // 4. Toca o Som
         if (
             typeof state.lastNotifiedCount === 'number' &&
             count > state.lastNotifiedCount &&
@@ -1333,15 +1346,14 @@ async function verificarNotificacoes() {
             const sound = document.getElementById('notification-sound');
             if (sound) {
                 sound.currentTime = 0;
-                sound.play().catch(e => console.warn("Erro ao tocar som de notificação:", e));
+                sound.play().catch(e => console.warn("Erro ao tocar som:", e));
             }
         }
 
-        // 6. Atualiza estado
         state.lastNotifiedCount = count;
 
-    } catch (err) {
-        console.error("Erro crítico em verificarNotificacoes:", err);
+    } catch (error) {
+        console.error("Erro ao verificar notificações:", error);
     }
 }
 
@@ -2162,6 +2174,12 @@ function setupEventListeners() {
             }
         }
     });
+
+    document.addEventListener('click', async () => {
+        if (Notification.permission === 'default') {
+            await Notification.requestPermission();
+        }
+    }, { once: true });
 
     // Evento global para troca de view
     window.addEventListener('viewChanged', handleViewChange);
