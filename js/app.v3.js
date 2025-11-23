@@ -34,92 +34,129 @@ let appInitialized = false;
 let listenersInitialized = false;
 let isPasswordUpdateInProgress = false;
 
+// Função auxiliar para validar se o responsável pertence ao condomínio
+function validarVinculoSindico(responsavelId, condominioId) {
+    if (!responsavelId || !condominioId) return true; // Se faltar dados, deixa passar (outras validações pegam)
+
+    // 1. Encontra o usuário responsável
+    const responsavel = state.allUsers.find(u => u.id === responsavelId);
+    
+    // 2. Se não achou ou não é cargo de cliente (é staff interno), permite tudo
+    if (!responsavel || !responsavel.cargo || !responsavel.cargo.is_client_role) {
+        return true;
+    }
+
+    // 3. Verifica se existe o vínculo na lista de associações
+    // (Nota: state.allCondoAssignments deve estar carregado pelo fetchInitialData)
+    const temVinculo = state.allCondoAssignments.some(
+        a => a.usuario_id === responsavelId && a.condominio_id == condominioId
+    );
+
+    if (!temVinculo) {
+        alert(`Atenção: O usuário "${responsavel.nome_completo}" é um cliente externo (Síndico) e NÃO está vinculado ao condomínio selecionado.\n\nPor favor, selecione um condomínio que pertença a este usuário ou mude o responsável.`);
+        return false;
+    }
+
+    return true;
+}
+
 async function handleCreateTask(event) {
-    event.preventDefault(); //
-    try {
-        const form = event.target; //
-        const title = form.elements['task-title'].value.trim(); //
-        const assigneeId = form.elements['task-assignee'].value; //
-        const typeId = form.elements['task-type'].value; //
-        const condominioId = document.getElementById('task-condominio').value; //
-        const dueDate = form.elements['task-due-date'].value; //
+    event.preventDefault();
+    const form = event.target;
 
-        if (!title || !typeId || !condominioId || !dueDate || !assigneeId) { //
-            return alert('Todos os campos obrigatórios precisam ser preenchidos.'); //
+    // 1. Coleta de Dados
+    const title = form.elements['task-title'].value.trim();
+    const assigneeId = form.elements['task-assignee'].value;
+    const typeId = form.elements['task-type'].value;
+    const condominioId = document.getElementById('task-condominio').value; // Input hidden
+    const dueDate = form.elements['task-due-date'].value;
+    const description = form.elements['task-desc'].value;
+
+    // 2. Validação Básica
+    if (!title || !typeId || !condominioId || !dueDate || !assigneeId) {
+        return alert('Todos os campos obrigatórios precisam ser preenchidos.');
+    }
+
+    // 3. Validação de Regra de Negócio (Síndico x Condomínio)
+    // Garante que não estamos atribuindo tarefa de um condomínio errado ao síndico
+    if (typeof validarVinculoSindico === 'function') {
+        if (!validarVinculoSindico(assigneeId, condominioId)) {
+            return; // Para tudo se a validação falhar
         }
+    }
 
-        const taskData = {
-            titulo: title,
-            descricao: form.elements['task-desc'].value,
-            data_conclusao_prevista: dueDate,
-            condominio_id: parseInt(condominioId),
-            tipo_tarefa_id: parseInt(typeId),
-            status: form.elements['create-as-completed'].checked ? 'completed' : 'pending', //
-            criador_id: state.currentUserProfile.id, //
-            responsavel_id: assigneeId,
-            empresa_id: state.currentUserProfile.empresa_id //
-        };
+    // 4. Montagem do Objeto
+    const taskData = {
+        titulo: title,
+        descricao: description,
+        data_conclusao_prevista: dueDate,
+        condominio_id: parseInt(condominioId),
+        tipo_tarefa_id: parseInt(typeId),
+        status: form.elements['create-as-completed'].checked ? 'completed' : 'pending',
+        // Se criar como concluída, já grava a data de conclusão
+        data_conclusao: form.elements['create-as-completed'].checked ? new Date().toISOString() : null,
+        criador_id: state.currentUserProfile.id,
+        responsavel_id: assigneeId,
+        empresa_id: state.currentUserProfile.empresa_id
+    };
 
-        // --- INÍCIO DO REFINAMENTO ---
+    try {
+        // 5. Envio para o Banco de Dados
+        await api.createTaskInDB(taskData); //
 
-        // 1. Chama a API (que agora retorna a nova tarefa)
-        const novaTarefaBase = await api.createTaskInDB(taskData); //
-
-        // 2. "Enriquece" a tarefa com os nomes (para o renderizador)
-        //    Usamos os dados que já temos no 'state'
-        const criador = state.allUsers.find(u => u.id === novaTarefaBase.criador_id); //
-        const responsavel = state.allUsers.find(u => u.id === novaTarefaBase.responsavel_id); //
-
-        const novaTarefaDetalhada = {
-            ...novaTarefaBase,
-            // Adiciona os nomes que o render.renderTasks precisa
-            criador_nome: criador ? criador.nome_completo : 'Sistema',
-            responsavel_nome: responsavel ? responsavel.nome_completo : 'Não definido'
-        };
-
-        // 3. Adiciona a nova tarefa detalhada ao 'state' local
-        state.tasks.push(novaTarefaDetalhada); //
-
-        // 4. Renderiza a lista de tarefas, que agora contém a nova tarefa
-        //    (Esta é a linha que estava faltando e que faz a tarefa aparecer na tela)
-        state.tasksToDisplayForPdf = render.renderTasks(state); //
-
-        // 5. Lógica para "Salvar como modelo"
-        if (form.elements['save-as-template'].checked) { //
-            // (Para esta otimização, ainda vamos recarregar os dados *apenas* se
-            // um novo template for salvo, pois precisamos atualizar o dropdown de templates)
-
-            // NOTA: Esta parte ainda usa a lógica antiga.
-            // Para otimizá-la, teríamos que modificar 'api.createTemplateInDB' também.
-            await api.createTemplateInDB({ //
+        // 6. Lógica de Salvar Modelo (Opcional)
+        if (form.elements['save-as-template']?.checked) {
+            await api.createTemplateInDB({
                 titulo: title,
                 tipo_tarefa_id: parseInt(typeId),
                 empresa_id: state.currentUserProfile.empresa_id,
                 criador_id: state.currentUserProfile.id
             });
-
-            // Recarrega Apenas os templates
-            const { data: templates } = await supabaseClient.from('modelos_tarefa').select('*').eq('empresa_id', state.currentUserProfile.empresa_id);
-            state.taskTemplates = templates || []; //
-            ui.populateTemplatesDropdown(state.taskTemplates); //
+            
+            // Recarrega os templates para aparecerem no dropdown na próxima vez
+            // (Opcional: você pode adicionar uma chamada para recarregar templates aqui se quiser)
         }
 
-        // 6. Limpa o formulário e avisa o usuário
-        form.reset(); //
-        document.getElementById('task-condo-search').value = ''; //
-        alert('Tarefa criada com sucesso!'); //
+        alert('Tarefa criada com sucesso!');
 
-        // (A chamada demorada para 'fetchInitialData' foi removida)
+        // 7. Limpeza do Formulário
+        form.reset();
+        
+        // Limpa o campo visual de busca de condomínio
+        const condoSearchInput = document.getElementById('task-condo-search');
+        if (condoSearchInput) condoSearchInput.value = '';
+        document.getElementById('task-condominio').value = '';
 
-        // --- FIM DO REFINAMENTO ---
+        // Se o botão de gravação de áudio estiver "vermelho", reseta ele
+        const recordBtn = document.getElementById('record-desc-btn');
+        if (recordBtn) {
+            recordBtn.textContent = '🎙️';
+            recordBtn.classList.remove('recording');
+        }
+
+        // 8. Atualização da Lista (Usando a nova Paginação)
+        // Chama a busca para recarregar a lista (resetando para a página 1)
+        if (typeof executeTaskSearch === 'function') {
+            await executeTaskSearch(); 
+        }
 
     } catch (error) {
-        // Lógica de erro mantida
-        if (error.message && error.message.includes('modelos_tarefa_empresa_id_titulo_key')) { //
-            alert('Erro ao criar tarefa: O título desta tarefa já está salvo como um modelo. Desmarque a opção "Salvar como modelo" ou use um título diferente.'); //
-        } else {
-            alert("Ocorreu um erro ao criar a tarefa: " + error.message); //
+        console.error("Erro ao criar tarefa:", error);
+        
+        // Tratamento especial para erro de modelo duplicado
+        if (error.message && error.message.includes('modelos_tarefa_empresa_id_titulo_key')) {
+            alert('Erro: O título desta tarefa já está salvo como um modelo. Desmarque a opção "Salvar como modelo" ou mude o título.');
+        } 
+        // --- INÍCIO DA CORREÇÃO ---
+        // Se for um erro de validação de negócio (Ação bloqueada), mostra apenas a mensagem
+        else if (error.message && error.message.includes('Ação bloqueada')) {
+            alert(error.message);
         }
+        // Para outros erros genéricos, mantém o prefixo para contexto
+        else {
+            alert("Erro ao criar a tarefa: " + error.message);
+        }
+        // --- FIM DA CORREÇÃO ---
     }
 }
 
@@ -1948,7 +1985,26 @@ function setupEventListeners() {
 
     // --- Formulários ---
     document.getElementById('task-form')?.addEventListener('submit', handleCreateTask);
-    document.getElementById('edit-task-form')?.addEventListener('submit', handleUpdateTask);
+
+    // --- CORREÇÃO: Listener unificado com validação para edição de tarefa ---
+    document.getElementById('edit-task-form')?.addEventListener('submit', async (event) => {
+        // 1. Previne o envio padrão para podermos validar
+        // (Se a função handleUpdateTask também tiver preventDefault, não tem problema chamar aqui antes)
+        
+        const assigneeId = document.getElementById('edit-task-assignee').value;
+        const condominioId = document.getElementById('edit-task-condominio').value; 
+
+        // 2. Executa a Nova Validação (Síndico x Condomínio)
+        if (!validarVinculoSindico(assigneeId, condominioId)) {
+            event.preventDefault(); // Cancela o envio se falhar
+            return; // Para a execução
+        }
+
+        // 3. Se passou na validação, chama a função original de atualização
+        handleUpdateTask(event);
+    });
+    // -----------------------------------------------------------------------
+
     document.getElementById('create-user-form')?.addEventListener('submit', handleCreateUser);
     document.getElementById('edit-user-form')?.addEventListener('submit', handleUpdateUser);
     document.getElementById('edit-condo-form')?.addEventListener('submit', handleUpdateCondo);
@@ -1958,7 +2014,6 @@ function setupEventListeners() {
     document.getElementById('cargo-form')?.addEventListener('submit', handleCreateOrUpdateCargo);
     document.getElementById('change-password-form')?.addEventListener('submit', handleUpdatePassword);
     document.getElementById('set-password-form')?.addEventListener('submit', handleSetPassword);
-
     // --- LISTENERS RESTAURADOS PARA "VER TAREFAS" ---
     const filters = ['filter-status', 'filter-assignee', 'filter-date-start', 'filter-date-end', 'filter-task-type', 'filter-group'];
     filters.forEach(id => {
