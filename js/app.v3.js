@@ -1240,7 +1240,112 @@ async function handleCreateCondo(event) {
     }
 }
 
+// Função auxiliar para desenhar a notificação no ícone da aba (Favicon)
+function updateFavicon(count) {
+    const favicon = document.getElementById('favicon');
+    if (!favicon) return;
+
+    const img = new Image();
+    img.src = 'favicon/favicon-96x96.png'; 
+    img.crossOrigin = "anonymous";
+
+    img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 32;
+        canvas.height = 32;
+        const ctx = canvas.getContext('2d');
+
+        ctx.drawImage(img, 0, 0, 32, 32);
+
+        if (count > 0) {
+            const x = 22, y = 10, radius = 8;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
+            ctx.fillStyle = '#ef4444';
+            ctx.fill();
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = '#ffffff';
+            ctx.stroke();
+
+            ctx.font = 'bold 10px sans-serif';
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const text = count > 9 ? '9+' : count.toString();
+            ctx.fillText(text, x, y + 1);
+            
+            document.title = `(${count}) TasKCom`;
+        } else {
+            document.title = 'TasKCom - Gestão de Tarefas';
+        }
+
+        favicon.href = canvas.toDataURL('image/png');
+    };
+}
+
 async function verificarNotificacoes() {
+    if (!state.currentUserProfile) return;
+
+    try {
+        // 1. Busca a contagem (Usando SELECT count para garantir compatibilidade com RLS)
+        const { count, error } = await supabaseClient
+            .from('notificacoes')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', state.currentUserProfile.id)
+            .eq('lida', false);
+
+        if (error) {
+            console.error("Erro ao verificar notificações:", error);
+            return;
+        }
+
+        // 2. Atualiza UI Interna (Sininho)
+        const badge = document.getElementById('notification-badge');
+        state.unreadNotifications = count;
+
+        if (badge) {
+            if (count > 0) {
+                badge.textContent = count > 99 ? '99+' : count;
+                badge.style.display = 'flex'; // Flex para alinhar o texto no centro da bolinha
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        // 3. Atualiza Favicon (PC) - Chama a função auxiliar acima
+        updateFavicon(count);
+
+        // 4. Atualiza App Badge (Mobile/PWA) - NOVA FUNCIONALIDADE
+        if ('setAppBadge' in navigator) {
+            if (count > 0) {
+                navigator.setAppBadge(count).catch(() => {});
+            } else {
+                navigator.clearAppBadge().catch(() => {});
+            }
+        }
+
+        // 5. Toca Som (Sua lógica original)
+        if (
+            typeof state.lastNotifiedCount === 'number' &&
+            count > state.lastNotifiedCount &&
+            state.audioUnlocked
+        ) {
+            const sound = document.getElementById('notification-sound');
+            if (sound) {
+                sound.currentTime = 0;
+                sound.play().catch(e => console.warn("Erro ao tocar som de notificação:", e));
+            }
+        }
+
+        // 6. Atualiza estado
+        state.lastNotifiedCount = count;
+
+    } catch (err) {
+        console.error("Erro crítico em verificarNotificacoes:", err);
+    }
+}
+
+/* async function verificarNotificacoes() {
     const { data: count, error } = await supabaseClient.rpc('contar_notificacoes_nao_lidas');
 
     if (error) {
@@ -1276,7 +1381,7 @@ async function verificarNotificacoes() {
 
     // ADICIONE ESTA LINHA NO FINAL DA FUNÇÃO
     state.lastNotifiedCount = count;
-}
+}*/
 
 function unlockAudio() {
     const sound = document.getElementById('notification-sound');
@@ -1292,7 +1397,7 @@ function unlockAudio() {
     }
 }
 
-function updateFavicon(count) {
+/* function updateFavicon(count) {
     const favicon = document.getElementById('favicon');
     if (!favicon) return;
 
@@ -1338,7 +1443,7 @@ function updateFavicon(count) {
         // 6. Converte o desenho do canvas em uma imagem e atualiza o favicon
         favicon.href = canvas.toDataURL('image/png');
     };
-}
+}*/ 
 
 // --- FUNÇÕES DE AÇÃO DA TAREFA (RESTAURADAS) ---
 
