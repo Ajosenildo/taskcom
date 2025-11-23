@@ -1963,7 +1963,7 @@ function setupEventListeners() {
         document.getElementById('edit-empresa-modal').style.display = 'none';
     });
 
-// --- INÍCIO DA CORREÇÃO (LOGIN COM ENTER) ---
+    // --- INÍCIO DA CORREÇÃO (LOGIN COM ENTER) ---
     // Permite fazer login apertando ENTER nos campos de email ou senha
     const loginInputs = ['email', 'password'];
     
@@ -2279,6 +2279,28 @@ function setupEventListeners() {
         }
     });
 
+    // --- CORREÇÃO PARA ÁUDIO NO ANDROID ---
+    // Toca um som mudo no primeiro clique para desbloquear o Autoplay
+    const unlockAudio = () => {
+        const sound = document.getElementById('notification-sound');
+        if (sound) {
+            sound.volume = 0; // Mudo
+            sound.play().then(() => {
+                sound.pause();
+                sound.currentTime = 0;
+                sound.volume = 1; // Restaura volume
+                state.audioUnlocked = true; // Marca como desbloqueado
+                console.log("Sistema de áudio desbloqueado para Android.");
+            }).catch(e => console.log("Tentativa de desbloqueio de áudio falhou:", e));
+        }
+        // Remove o listener após a primeira vez
+        document.removeEventListener('click', unlockAudio);
+        document.removeEventListener('touchstart', unlockAudio);
+    };
+
+    document.addEventListener('click', unlockAudio);
+    document.addEventListener('touchstart', unlockAudio); // Essencial para celular
+
     document.addEventListener('click', async () => {
         if (Notification.permission === 'default') {
             await Notification.requestPermission();
@@ -2487,36 +2509,42 @@ async function startApp() {
                             
                            const mensagemReal = payload.new.mensagem; 
                 
-                            // --- CORREÇÃO FINAL PARA NOTIFICAÇÃO ANDROID ---
+                            // --- NOTIFICAÇÃO AGRESSIVA PARA ANDROID ---
                             if (mensagemReal && Notification.permission === 'granted') {
-                                try {
-                                    // 1. Tenta obter o registro do Service Worker diretamente
-                                    // (O 'await' aqui é crucial para garantir que pegamos o SW ativo)
-                                    const swRegistration = await navigator.serviceWorker.getRegistration();
+                                
+                                // Função interna para disparar
+                                const showAndroidNotification = async () => {
+                                    try {
+                                        // Tenta pegar o Service Worker ATIVO
+                                        const registration = await navigator.serviceWorker.getRegistration();
+                                        
+                                        const options = {
+                                            body: mensagemReal,
+                                            icon: '/favicon/favicon-96x96.png', // Caminho absoluto
+                                            badge: '/favicon/favicon-96x96.png',
+                                            vibrate: [200, 100, 200, 100, 200], // Vibração longa
+                                            tag: 'taskcom-alert', // Tag fixa para substituir a anterior se acumular
+                                            renotify: true, // <<<--- OBRIGATÓRIO: Força o som/vibração mesmo se já tiver notificação
+                                            requireInteraction: false, // Sai sozinho após alguns segundos (padrão mobile)
+                                            data: { url: '/' }
+                                        };
 
-                                    if (swRegistration) {
-                                        // Padrão Ouro: Notificação via Service Worker (Android adora isso)
-                                        swRegistration.showNotification('TasKCom', {
-                                            body: mensagemReal,
-                                            // IMPORTANTE: Usar a barra '/' no início para garantir caminho absoluto
-                                            icon: '/favicon/favicon-96x96.png', 
-                                            badge: '/favicon/favicon-96x96.png', // Ícone monocromático pequeno
-                                            vibrate: [200, 100, 200],
-                                            tag: 'taskcom-' + Date.now(), // Tag única para garantir que o Android mostre todas
-                                            data: { url: '/' } // Dados para o clique abrir o app
-                                        });
-                                    } else {
-                                        // Fallback: Se o SW falhar, tenta o método clássico (PC)
-                                        new Notification('TasKCom', {
-                                            body: mensagemReal,
-                                            icon: '/favicon/favicon-96x96.png'
-                                        });
+                                        if (registration && registration.active) {
+                                            await registration.showNotification('TasKCom', options);
+                                        } else {
+                                            // Fallback se o SW não estiver pronto
+                                            new Notification('TasKCom', options);
+                                        }
+                                    } catch (err) {
+                                        console.error("Falha na notificação Android:", err);
+                                        // Tenta o método básico se o avançado falhar
+                                        new Notification('TasKCom', { body: mensagemReal });
                                     }
-                                } catch (err) {
-                                    console.error("Tentativa de notificação falhou:", err);
-                                }
+                                };
+
+                                showAndroidNotification();
                             }
-                            // -------------------------------------------------
+                            // ---------------------------------------------
                         try {
                             // Recarrega todos os dados (exceto tarefas)
                             const freshData = await api.fetchInitialData( //
