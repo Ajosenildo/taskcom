@@ -2351,20 +2351,20 @@ function setupPasswordToggle(toggleId, inputId) {
 }*/
 
 function setupEventListeners() {
-    // 1. PROTEÇÃO DE PERFORMANCE
+    // 1. PROTEÇÃO DE PERFORMANCE (No topo para evitar lentidão)
     if (listenersInitialized) return;
     listenersInitialized = true;
 
-    // 2. DEFINIÇÃO DE FUNÇÕES AUXILIARES
+    // 2. AUXILIAR DE ÁUDIO (Definida antes de usar)
     const unlockAudio = () => {
         const sound = document.getElementById('notification-sound');
         if (sound) {
-            sound.volume = 0;
+            sound.volume = 0; // Mudo
             sound.play().then(() => {
                 sound.pause();
                 sound.currentTime = 0;
-                sound.volume = 1;
-                state.audioUnlocked = true;
+                sound.volume = 1; // Restaura volume
+                state.audioUnlocked = true; // Marca como desbloqueado
                 console.log("Sistema de áudio desbloqueado para Android.");
             }).catch(e => console.log("Tentativa de desbloqueio de áudio falhou:", e));
         }
@@ -2372,27 +2372,25 @@ function setupEventListeners() {
         document.removeEventListener('touchstart', unlockAudio);
     };
 
-    // 3. REGISTRO DE EVENTOS GLOBAIS
+    // 3. LISTENERS GLOBAIS DE INICIALIZAÇÃO
     document.addEventListener('click', unlockAudio);
     document.addEventListener('touchstart', unlockAudio);
 
-    // --- LINHA RESTAURADA (NAVEGAÇÃO VIA CÓDIGO) ---
-    window.addEventListener('viewChanged', handleViewChange);
-    // -----------------------------------------------
-
+    // Permissão de Notificação (Primeiro clique)
     document.addEventListener('click', async () => {
         if (Notification.permission === 'default') {
             await Notification.requestPermission().catch(err => console.log("Erro permissão:", err));
         }
     }, { once: true });
 
-    // --- LOGIN / LOGOUT ---
+    // --- 4. AUTENTICAÇÃO ---
     const loginBtn = document.getElementById('login-btn');
-    if (loginBtn) loginBtn.addEventListener('click', login);
+    if (loginBtn) loginBtn.addEventListener('click', login); // Corrigido para 'login'
 
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) logoutBtn.addEventListener('click', logout);
 
+    // Login com Enter
     const loginInputs = ['email', 'password'];
     loginInputs.forEach(id => {
         const inputElement = document.getElementById(id);
@@ -2405,8 +2403,98 @@ function setupEventListeners() {
             });
         }
     });
+    
+    // Senha e Recuperação
+    setupPasswordToggle('toggle-password', 'password');
+    setupPasswordToggle('toggle-new-password', 'change-new-password'); 
+    setupPasswordToggle('toggle-confirm-password', 'change-confirm-password');
+    document.getElementById('forgot-password-link')?.addEventListener('click', handleForgotPassword);
+    document.getElementById('change-password-btn')?.addEventListener('click', ui.openChangePasswordModal);
+    document.getElementById('change-password-close-btn')?.addEventListener('click', ui.closeChangePasswordModal);
+    document.getElementById('change-password-cancel-btn')?.addEventListener('click', ui.closeChangePasswordModal);
+    document.getElementById('change-password-form')?.addEventListener('submit', handleUpdatePassword);
+    document.getElementById('set-password-form')?.addEventListener('submit', handleSetPassword);
 
-    // --- NAVEGAÇÃO (MENU) ---
+    // --- 5. SUPER ADMIN (Lógica Completa Restaurada) ---
+    document.getElementById('nav-super-admin')?.addEventListener('click', async () => {
+        try {
+            ui.showView('super-admin-view');
+            const todasAsEmpresas = await api.fetchAllCompaniesForSuperAdmin();
+            state.todasAsEmpresas = todasAsEmpresas; 
+            render.renderSuperAdminDashboard(todasAsEmpresas);
+        } catch (error) {
+            alert("Acesso negado ou erro ao carregar dados: " + error.message);
+            ui.showView('view-tasks-view');
+        }
+    });
+
+    // Edição de Empresa (Tabela)
+    document.getElementById('super-admin-table-body')?.addEventListener('click', async (event) => {
+        const editButton = event.target.closest('.btn-edit');
+        if (editButton) {
+            const empresaId = parseInt(editButton.dataset.empresaId, 10);
+            const empresa = state.todasAsEmpresas.find(e => e.id === empresaId);
+            
+            if (empresa) {
+                try {
+                    const planos = await api.fetchAllPlans(); 
+                    const planoSelect = document.getElementById('edit-empresa-plano');
+                    planoSelect.innerHTML = ''; 
+                    planos.forEach(plano => {
+                        const option = document.createElement('option');
+                        option.value = plano.id;
+                        option.textContent = plano.nome;
+                        planoSelect.appendChild(option);
+                    });
+
+                    document.getElementById('edit-empresa-id').value = empresa.id;
+                    document.getElementById('edit-empresa-nome').value = empresa.nome_empresa;
+                    document.getElementById('edit-empresa-cnpj').value = empresa.cnpj_cpf;
+                    document.getElementById('edit-empresa-status').value = empresa.status_assinatura;
+                    planoSelect.value = empresa.plano_id || ''; 
+                    document.getElementById('edit-empresa-logo-url').value = empresa.logo_url || ''; 
+
+                    document.getElementById('edit-empresa-modal').style.display = 'flex';
+                } catch (error) {
+                    alert("Erro ao carregar dados para edição: " + error.message);
+                }
+            }
+        }
+    });
+
+    // Salvar Empresa
+    document.getElementById('edit-empresa-form')?.addEventListener('submit', async (event) => {
+        event.preventDefault(); 
+        const form = event.target;
+        const empresaId = parseInt(form.elements['edit-empresa-id'].value, 10);
+
+        const dadosAtualizados = {
+            nome_empresa: form.elements['edit-empresa-nome'].value,
+            cnpj: form.elements['edit-empresa-cnpj'].value,
+            status_assinatura: form.elements['edit-empresa-status'].value,
+            plano_id: parseInt(form.elements['edit-empresa-plano'].value, 10),
+            logo_url: form.elements['edit-empresa-logo-url'].value.trim() || null
+        };
+
+        try {
+            await api.updateCompanyBySuperAdmin(empresaId, dadosAtualizados);
+            alert('Empresa atualizada com sucesso!');
+            document.getElementById('edit-empresa-modal').style.display = 'none';
+            document.getElementById('nav-super-admin').click(); 
+        } catch (error) {
+            alert('Falha ao atualizar a empresa: ' + error.message);
+        }
+    });
+
+    document.getElementById('edit-empresa-modal-close-btn')?.addEventListener('click', () => {
+        document.getElementById('edit-empresa-modal').style.display = 'none';
+    });
+    document.getElementById('edit-empresa-modal-cancel-btn')?.addEventListener('click', () => {
+        document.getElementById('edit-empresa-modal').style.display = 'none';
+    });
+
+
+    // --- 6. NAVEGAÇÃO ---
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const viewId = e.target.closest('.nav-btn').dataset.view;
@@ -2414,15 +2502,30 @@ function setupEventListeners() {
         });
     });
 
-    // --- TAREFAS ---
-    document.getElementById('task-list')?.addEventListener('click', handleTaskListClick);
-
-    document.getElementById('fab-add-task')?.addEventListener('click', () => {
-        ui.showView('create-task-view');
+    document.getElementById('nav-create')?.addEventListener('click', () => ui.showView('create-task-view'));
+    document.getElementById('nav-view')?.addEventListener('click', () => ui.showView('view-tasks-view'));
+    document.getElementById('nav-dashboard')?.addEventListener('click', () => ui.showView('dashboard-view'));
+    document.getElementById('nav-admin')?.addEventListener('click', () => ui.showView('admin-menu-view'));
+    
+    document.getElementById('admin-menu-view')?.addEventListener('click', (event) => {
+        const button = event.target.closest('.admin-menu-btn');
+        if (button && button.dataset.view) ui.showView(button.dataset.view);
+    });
+    
+    document.getElementById('main-container').addEventListener('click', (event) => {
+        const backButton = event.target.closest('.btn-back');
+        if (backButton && backButton.dataset.view) ui.showView(backButton.dataset.view);
     });
 
+
+    // --- 7. TAREFAS (Criação e Edição) ---
+    document.getElementById('task-list')?.addEventListener('click', handleTaskListClick);
+    document.getElementById('fab-add-task')?.addEventListener('click', () => ui.showView('create-task-view'));
+    
+    // Criar Tarefa
     document.getElementById('task-form')?.addEventListener('submit', handleCreateTask);
 
+    // Editar Tarefa (Com Validação de Síndico)
     document.getElementById('edit-task-form')?.addEventListener('submit', async (event) => {
         const assigneeId = document.getElementById('edit-task-assignee').value;
         const condominioId = document.getElementById('edit-task-condominio').value; 
@@ -2436,42 +2539,79 @@ function setupEventListeners() {
         handleUpdateTask(event);
     });
 
-    // --- OUTROS FORMULÁRIOS ---
-    document.getElementById('create-user-form')?.addEventListener('submit', handleCreateUser);
-    document.getElementById('edit-user-form')?.addEventListener('submit', handleUpdateUser);
-    document.getElementById('edit-condo-form')?.addEventListener('submit', handleUpdateCondo);
-    document.getElementById('create-condo-form')?.addEventListener('submit', handleCreateCondo);
-    document.getElementById('task-type-form')?.addEventListener('submit', handleCreateOrUpdateTaskType);
-    document.getElementById('group-form')?.addEventListener('submit', handleCreateOrUpdateGroup);
-    document.getElementById('cargo-form')?.addEventListener('submit', handleCreateOrUpdateCargo);
-    document.getElementById('change-password-form')?.addEventListener('submit', handleUpdatePassword);
-    document.getElementById('set-password-form')?.addEventListener('submit', handleSetPassword);
-
-    // --- BOTÕES DE FECHAR MODAIS ---
     document.getElementById('edit-task-modal-close-btn')?.addEventListener('click', ui.closeEditTaskModal);
     document.getElementById('edit-task-modal-cancel-btn')?.addEventListener('click', ui.closeEditTaskModal);
+    document.getElementById('record-desc-btn')?.addEventListener('click', handleAudioTranscription);
+
+
+    // --- 8. BUSCA (SEARCH) ---
+    document.getElementById('search-tasks-btn')?.addEventListener('click', executeTaskSearch);
+    document.getElementById('search-term-input')?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            executeTaskSearch();
+        }
+    });
+
+    // Botão Limpar Filtros
+    document.getElementById('clear-filters')?.addEventListener('click', () => {
+        state.displayLimit = 20;
+        const filterBarForm = document.getElementById('filter-bar')?.closest('div');
+        if (filterBarForm) {
+            Array.from(filterBarForm.querySelectorAll('select, input[type="date"]')).forEach(input => input.value = '');
+        }
+        document.getElementById('filter-condo-search').value = '';
+        document.getElementById('search-term-input').value = '';
+        state.activeFilters = { searchTerm: '', condominioId: '', status: 'in_progress', dateStart: '', dateEnd: '', assigneeId: '', taskTypeId: '', groupId: '' };
+        document.getElementById('filter-status').value = 'in_progress';
+        executeTaskSearch();
+    });
+
+    // Filtros da Barra Superior
+    const filters = ['filter-status', 'filter-assignee', 'filter-date-start', 'filter-date-end', 'filter-task-type', 'filter-group'];
+    filters.forEach(id => {
+        document.getElementById(id)?.addEventListener('change', (e) => {
+            state.displayLimit = 20;
+            const filterMap = {
+                'filter-status': 'status',
+                'filter-assignee': 'assigneeId',
+                'filter-date-start': 'dateStart',
+                'filter-date-end': 'dateEnd',
+                'filter-task-type': 'taskTypeId',
+                'filter-group': 'groupId'
+            };
+            state.activeFilters[filterMap[id]] = e.target.value;
+            executeTaskSearch();
+        });
+    });
+
+
+    // --- 9. CRUD ADMIN (Usuários, Condos, etc) ---
+    document.getElementById('add-user-btn')?.addEventListener('click', handleOpenCreateUserModal);
+    document.getElementById('create-user-form')?.addEventListener('submit', handleCreateUser);
+    document.getElementById('edit-user-form')?.addEventListener('submit', handleUpdateUser);
     document.getElementById('create-user-modal-close-btn')?.addEventListener('click', ui.closeCreateUserModal);
     document.getElementById('create-user-modal-cancel-btn')?.addEventListener('click', ui.closeCreateUserModal);
     document.getElementById('edit-user-modal-close-btn')?.addEventListener('click', ui.closeEditUserModal);
     document.getElementById('edit-user-modal-cancel-btn')?.addEventListener('click', ui.closeEditUserModal);
+
+    document.getElementById('add-condo-btn')?.addEventListener('click', handleOpenCreateCondoModal);
+    document.getElementById('create-condo-form')?.addEventListener('submit', handleCreateCondo);
+    document.getElementById('edit-condo-form')?.addEventListener('submit', handleUpdateCondo);
     document.getElementById('edit-condo-modal-close-btn')?.addEventListener('click', ui.closeEditCondoModal);
     document.getElementById('edit-condo-modal-cancel-btn')?.addEventListener('click', ui.closeEditCondoModal);
     document.getElementById('create-condo-modal-close-btn')?.addEventListener('click', ui.closeCreateCondoModal);
     document.getElementById('create-condo-modal-cancel-btn')?.addEventListener('click', ui.closeCreateCondoModal);
-    document.getElementById('notifications-modal-close-btn')?.addEventListener('click', ui.closeNotificationsModal);
-    document.getElementById('access-denied-logout-btn')?.addEventListener('click', logout);
-
-    // --- BOTÕES DIVERSOS ---
-    document.getElementById('notification-btn')?.addEventListener('click', ui.openNotificationsModal);
+    document.getElementById('import-condo-btn')?.addEventListener('click', () => document.getElementById('condo-csv-input').click());
+    document.getElementById('condo-csv-input')?.addEventListener('change', handleCondoImport);
     
-    if (typeof handleMarkAllRead !== 'undefined') {
-        document.getElementById('mark-all-read-btn')?.addEventListener('click', handleMarkAllRead);
-    }
-    
-    document.getElementById('export-pdf-btn')?.addEventListener('click', handleExportToPDF);
-    document.getElementById('record-desc-btn')?.addEventListener('click', handleAudioTranscription);
+    document.getElementById('task-type-form')?.addEventListener('submit', handleCreateOrUpdateTaskType);
+    document.getElementById('group-form')?.addEventListener('submit', handleCreateOrUpdateGroup);
+    document.getElementById('cargo-form')?.addEventListener('submit', handleCreateOrUpdateCargo);
+    document.getElementById('template-select')?.addEventListener('change', handleTemplateSelect);
+    document.getElementById('download-template-btn')?.addEventListener('click', handleDownloadTemplate);
 
-    // --- DASHBOARD ---
+    // --- 10. DASHBOARD ---
     document.getElementById('dashboard-user-filter')?.addEventListener('change', () => {
         if (typeof refreshDashboard === 'function') refreshDashboard();
     });
@@ -2482,35 +2622,115 @@ function setupEventListeners() {
         if (typeof refreshDashboard === 'function') refreshDashboard();
     });
 
-    // --- BOTÃO DE DEBUG (Teste de Notificação) ---
-    document.getElementById('btn-debug-notification')?.addEventListener('click', async () => {
-        const sound = document.getElementById('notification-sound');
-        if (sound) {
-            sound.currentTime = 0;
-            sound.play().then(() => console.log("Som OK")).catch(e => alert("Erro som: " + e.message));
+
+    // --- 11. NOTIFICAÇÕES ---
+    document.getElementById('notification-btn')?.addEventListener('click', ui.openNotificationsModal);
+    document.getElementById('notification-bell-container')?.addEventListener('click', async () => {
+        const { data: notifications, error } = await supabaseClient
+            .from('notificacoes_detalhadas')
+            .select('*')
+            .eq('user_id', state.currentUserProfile.id)
+            .order('created_at', { ascending: false })
+            .limit(10);
+
+        if (error) { console.error("Erro ao buscar notificações:", error); return; }
+
+        const listContainer = document.getElementById('notifications-list');
+        if (!listContainer) return;
+
+        if (notifications && notifications.length > 0) {
+            listContainer.innerHTML = notifications.map(n => {
+                const data = new Date(n.created_at).toLocaleString('pt-BR');
+                return `
+                    <div class="notification-item ${n.lida ? '' : 'unread'}" data-task-id="${n.tarefa_id}" data-notification-id="${n.id}">
+                        <p>${n.mensagem}</p>
+                        <small>${data}</small>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            listContainer.innerHTML = '<p style="text-align: center; color: #6b7280;">Nenhuma notificação recente.</p>';
         }
 
-        if (Notification.permission !== 'granted') {
-            const permission = await Notification.requestPermission();
-            if (permission !== 'granted') {
-                alert("Permissão negada pelo usuário.");
-                return;
-            }
-        }
+        ui.openNotificationsModal();
 
-        if ('serviceWorker' in navigator) {
-            const reg = await navigator.serviceWorker.getRegistration();
-            if (reg) {
-                reg.showNotification('Teste TaskCom', {
-                    body: 'Teste de notificação Android!',
-                    icon: '/favicon/favicon-96x96.png',
-                    vibrate: [200, 100, 200]
-                }).catch(e => alert("Erro SW: " + e.message));
-            } else {
-                alert("SW não encontrado.");
+        const badge = document.getElementById('notification-badge');
+        if (badge) badge.style.display = 'none';
+        state.unreadNotifications = 0;
+        if (typeof updateFavicon === 'function') updateFavicon(0);
+
+        const unreadIds = notifications.filter(n => !n.lida).map(n => n.id);
+        if (unreadIds.length > 0) {
+            await api.markNotificationAsRead(unreadIds);
+        }
+    });
+
+    // Clique na Notificação (Ir para Tarefa)
+    document.getElementById('notifications-list')?.addEventListener('click', async (event) => {
+        const item = event.target.closest('.notification-item');
+        if (item && item.dataset.taskId) {
+            const taskId = item.dataset.taskId;
+            const notificationId = item.dataset.notificationId;
+            
+            ui.closeNotificationsModal();
+            ui.showView('view-tasks-view');
+            
+            try {
+                const task = await api.fetchTaskById(taskId);
+                if (task) {
+                    state.tasks = [task];
+                    state.tasksToDisplayForPdf = render.renderTasks(state);
+                    setTimeout(() => {
+                        const cardToFocus = document.querySelector(`.task-card .btn-edit[data-taskid="${taskId}"]`)?.closest('.task-card');
+                        if (cardToFocus) {
+                            cardToFocus.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            cardToFocus.classList.add('highlight');
+                            setTimeout(() => cardToFocus.classList.remove('highlight'), 2000);
+                        }
+                    }, 100);
+                }
+                if (notificationId) {
+                    await api.markNotificationAsRead([notificationId]);
+                    await verificarNotificacoes();
+                }
+            } catch (error) {
+                console.error("Erro ao carregar tarefa da notificação:", error);
+                alert("Não foi possível carregar a tarefa.");
             }
         }
     });
+
+    document.getElementById('notifications-modal-close-btn')?.addEventListener('click', ui.closeNotificationsModal);
+    document.getElementById('notifications-modal-ok-btn')?.addEventListener('click', ui.closeNotificationsModal);
+    if (typeof handleMarkAllRead !== 'undefined') {
+        document.getElementById('mark-all-read-btn')?.addEventListener('click', handleMarkAllRead);
+    }
+    document.getElementById('access-denied-logout-btn')?.addEventListener('click', logout);
+
+    // Exportação e Instruções
+    document.getElementById('export-pdf-btn')?.addEventListener('click', handleExportToPDF);
+    
+    document.getElementById('open-instructions-link')?.addEventListener('click', (event) => {
+        event.preventDefault();
+        ui.openInstructionsModal();
+    });
+    document.getElementById('instructions-modal-close-btn')?.addEventListener('click', ui.closeInstructionsModal);
+    document.getElementById('instructions-modal-ok-btn')?.addEventListener('click', ui.closeInstructionsModal);
+
+    // Event Delegation para Listas Dinâmicas (Admin)
+    document.getElementById('user-list')?.removeEventListener('click', handleUserListClick);
+    document.getElementById('user-list')?.addEventListener('click', handleUserListClick);
+    document.getElementById('condo-list')?.removeEventListener('click', handleCondoListClick);
+    document.getElementById('condo-list')?.addEventListener('click', handleCondoListClick);
+    document.getElementById('task-type-list')?.removeEventListener('click', handleTaskTypeListClick);
+    document.getElementById('task-type-list')?.addEventListener('click', handleTaskTypeListClick);
+    document.getElementById('group-list')?.removeEventListener('click', handleGroupListClick);
+    document.getElementById('group-list')?.addEventListener('click', handleGroupListClick);
+    document.getElementById('cargo-list')?.removeEventListener('click', handleCargoListClick);
+    document.getElementById('cargo-list')?.addEventListener('click', handleCargoListClick);
+    
+    // Evento global para troca de view
+    window.addEventListener('viewChanged', handleViewChange);
 }
 
 // O restante da inicialização... */
