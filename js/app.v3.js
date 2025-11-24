@@ -1856,9 +1856,34 @@ function setupPasswordToggle(toggleId, inputId) {
 
 
 // --- SETUP INICIAL E LISTENERS ---
-function setupEventListeners() {
-    if (listenersInitialized) return;
+/* function setupEventListeners() {
+
+     if (listenersInitialized) return;
     listenersInitialized = true;
+
+    const unlockAudio = () => {
+        const sound = document.getElementById('notification-sound');
+        if (sound) {
+            sound.volume = 0; // Mudo
+            sound.play().then(() => {
+                sound.pause();
+                sound.currentTime = 0;
+                sound.volume = 1; // Restaura volume
+                state.audioUnlocked = true; // Marca como desbloqueado
+                console.log("Sistema de áudio desbloqueado para Android.");
+            }).catch(e => console.log("Tentativa de desbloqueio de áudio falhou:", e));
+        }
+        // Remove o listener após a primeira vez
+        document.removeEventListener('click', unlockAudio);
+        document.removeEventListener('touchstart', unlockAudio);
+
+        // 2. Ativa a função (ISSO FALTAVA NO SEU TRECHO)
+        document.addEventListener('click', unlockAudio);
+        document.addEventListener('touchstart', unlockAudio);
+        
+        // --- FIM DO BLOCO DE ÁUDIO ---
+    };
+  
 
     document.addEventListener('click', unlockAudio, { once: true });
 
@@ -2281,25 +2306,8 @@ function setupEventListeners() {
 
     // --- CORREÇÃO PARA ÁUDIO NO ANDROID ---
     // Toca um som mudo no primeiro clique para desbloquear o Autoplay
-    const unlockAudio = () => {
-        const sound = document.getElementById('notification-sound');
-        if (sound) {
-            sound.volume = 0; // Mudo
-            sound.play().then(() => {
-                sound.pause();
-                sound.currentTime = 0;
-                sound.volume = 1; // Restaura volume
-                state.audioUnlocked = true; // Marca como desbloqueado
-                console.log("Sistema de áudio desbloqueado para Android.");
-            }).catch(e => console.log("Tentativa de desbloqueio de áudio falhou:", e));
-        }
-        // Remove o listener após a primeira vez
-        document.removeEventListener('click', unlockAudio);
-        document.removeEventListener('touchstart', unlockAudio);
-    };
-
-    document.addEventListener('click', unlockAudio);
-    document.addEventListener('touchstart', unlockAudio); // Essencial para celular
+    // document.addEventListener('click', unlockAudio);
+    // document.addEventListener('touchstart', unlockAudio); // Essencial para celular
 
     document.addEventListener('click', async () => {
         if (Notification.permission === 'default') {
@@ -2340,6 +2348,169 @@ function setupEventListeners() {
 
     // Evento global para troca de view
     window.addEventListener('viewChanged', handleViewChange);
+}*/
+
+function setupEventListeners() {
+    // 1. PROTEÇÃO DE PERFORMANCE
+    if (listenersInitialized) return;
+    listenersInitialized = true;
+
+    // 2. DEFINIÇÃO DE FUNÇÕES AUXILIARES
+    const unlockAudio = () => {
+        const sound = document.getElementById('notification-sound');
+        if (sound) {
+            sound.volume = 0;
+            sound.play().then(() => {
+                sound.pause();
+                sound.currentTime = 0;
+                sound.volume = 1;
+                state.audioUnlocked = true;
+                console.log("Sistema de áudio desbloqueado para Android.");
+            }).catch(e => console.log("Tentativa de desbloqueio de áudio falhou:", e));
+        }
+        document.removeEventListener('click', unlockAudio);
+        document.removeEventListener('touchstart', unlockAudio);
+    };
+
+    // 3. REGISTRO DE EVENTOS GLOBAIS
+    document.addEventListener('click', unlockAudio);
+    document.addEventListener('touchstart', unlockAudio);
+
+    // --- LINHA RESTAURADA (NAVEGAÇÃO VIA CÓDIGO) ---
+    window.addEventListener('viewChanged', handleViewChange);
+    // -----------------------------------------------
+
+    document.addEventListener('click', async () => {
+        if (Notification.permission === 'default') {
+            await Notification.requestPermission().catch(err => console.log("Erro permissão:", err));
+        }
+    }, { once: true });
+
+    // --- LOGIN / LOGOUT ---
+    const loginBtn = document.getElementById('login-btn');
+    if (loginBtn) loginBtn.addEventListener('click', login);
+
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) logoutBtn.addEventListener('click', logout);
+
+    const loginInputs = ['email', 'password'];
+    loginInputs.forEach(id => {
+        const inputElement = document.getElementById(id);
+        if (inputElement) {
+            inputElement.addEventListener('keypress', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    document.getElementById('login-btn')?.click();
+                }
+            });
+        }
+    });
+
+    // --- NAVEGAÇÃO (MENU) ---
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const viewId = e.target.closest('.nav-btn').dataset.view;
+            handleViewChange(viewId);
+        });
+    });
+
+    // --- TAREFAS ---
+    document.getElementById('task-list')?.addEventListener('click', handleTaskListClick);
+
+    document.getElementById('fab-add-task')?.addEventListener('click', () => {
+        ui.showView('create-task-view');
+    });
+
+    document.getElementById('task-form')?.addEventListener('submit', handleCreateTask);
+
+    document.getElementById('edit-task-form')?.addEventListener('submit', async (event) => {
+        const assigneeId = document.getElementById('edit-task-assignee').value;
+        const condominioId = document.getElementById('edit-task-condominio').value; 
+
+        if (typeof validarVinculoSindico === 'function') {
+            if (!validarVinculoSindico(assigneeId, condominioId)) {
+                event.preventDefault();
+                return;
+            }
+        }
+        handleUpdateTask(event);
+    });
+
+    // --- OUTROS FORMULÁRIOS ---
+    document.getElementById('create-user-form')?.addEventListener('submit', handleCreateUser);
+    document.getElementById('edit-user-form')?.addEventListener('submit', handleUpdateUser);
+    document.getElementById('edit-condo-form')?.addEventListener('submit', handleUpdateCondo);
+    document.getElementById('create-condo-form')?.addEventListener('submit', handleCreateCondo);
+    document.getElementById('task-type-form')?.addEventListener('submit', handleCreateOrUpdateTaskType);
+    document.getElementById('group-form')?.addEventListener('submit', handleCreateOrUpdateGroup);
+    document.getElementById('cargo-form')?.addEventListener('submit', handleCreateOrUpdateCargo);
+    document.getElementById('change-password-form')?.addEventListener('submit', handleUpdatePassword);
+    document.getElementById('set-password-form')?.addEventListener('submit', handleSetPassword);
+
+    // --- BOTÕES DE FECHAR MODAIS ---
+    document.getElementById('edit-task-modal-close-btn')?.addEventListener('click', ui.closeEditTaskModal);
+    document.getElementById('edit-task-modal-cancel-btn')?.addEventListener('click', ui.closeEditTaskModal);
+    document.getElementById('create-user-modal-close-btn')?.addEventListener('click', ui.closeCreateUserModal);
+    document.getElementById('create-user-modal-cancel-btn')?.addEventListener('click', ui.closeCreateUserModal);
+    document.getElementById('edit-user-modal-close-btn')?.addEventListener('click', ui.closeEditUserModal);
+    document.getElementById('edit-user-modal-cancel-btn')?.addEventListener('click', ui.closeEditUserModal);
+    document.getElementById('edit-condo-modal-close-btn')?.addEventListener('click', ui.closeEditCondoModal);
+    document.getElementById('edit-condo-modal-cancel-btn')?.addEventListener('click', ui.closeEditCondoModal);
+    document.getElementById('create-condo-modal-close-btn')?.addEventListener('click', ui.closeCreateCondoModal);
+    document.getElementById('create-condo-modal-cancel-btn')?.addEventListener('click', ui.closeCreateCondoModal);
+    document.getElementById('notifications-modal-close-btn')?.addEventListener('click', ui.closeNotificationsModal);
+    document.getElementById('access-denied-logout-btn')?.addEventListener('click', logout);
+
+    // --- BOTÕES DIVERSOS ---
+    document.getElementById('notification-btn')?.addEventListener('click', ui.openNotificationsModal);
+    
+    if (typeof handleMarkAllRead !== 'undefined') {
+        document.getElementById('mark-all-read-btn')?.addEventListener('click', handleMarkAllRead);
+    }
+    
+    document.getElementById('export-pdf-btn')?.addEventListener('click', handleExportToPDF);
+    document.getElementById('record-desc-btn')?.addEventListener('click', handleAudioTranscription);
+
+    // --- DASHBOARD ---
+    document.getElementById('dashboard-user-filter')?.addEventListener('change', () => {
+        if (typeof refreshDashboard === 'function') refreshDashboard();
+    });
+    document.getElementById('dashboard-date-start')?.addEventListener('change', () => {
+        if (typeof refreshDashboard === 'function') refreshDashboard();
+    });
+    document.getElementById('dashboard-date-end')?.addEventListener('change', () => {
+        if (typeof refreshDashboard === 'function') refreshDashboard();
+    });
+
+    // --- BOTÃO DE DEBUG (Teste de Notificação) ---
+    document.getElementById('btn-debug-notification')?.addEventListener('click', async () => {
+        const sound = document.getElementById('notification-sound');
+        if (sound) {
+            sound.currentTime = 0;
+            sound.play().then(() => console.log("Som OK")).catch(e => alert("Erro som: " + e.message));
+        }
+
+        if (Notification.permission !== 'granted') {
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                alert("Permissão negada pelo usuário.");
+                return;
+            }
+        }
+
+        if ('serviceWorker' in navigator) {
+            const reg = await navigator.serviceWorker.getRegistration();
+            if (reg) {
+                reg.showNotification('Teste TaskCom', {
+                    body: 'Teste de notificação Android!',
+                    icon: '/favicon/favicon-96x96.png',
+                    vibrate: [200, 100, 200]
+                }).catch(e => alert("Erro SW: " + e.message));
+            } else {
+                alert("SW não encontrado.");
+            }
+        }
+    });
 }
 
 // O restante da inicialização... */
