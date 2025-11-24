@@ -1350,7 +1350,7 @@ function updateFavicon(count) {
 }
 
 // Função para verificar contagem e atualizar ícones (Sem Popup Genérico)
-async function verificarNotificacoes() {
+/* async function verificarNotificacoes() {
     if (!state.currentUserProfile) return;
 
     try {
@@ -1395,6 +1395,57 @@ async function verificarNotificacoes() {
             if (sound) {
                 sound.currentTime = 0;
                 sound.play().catch(e => console.warn("Erro ao tocar som:", e));
+            }
+        }
+
+        state.lastNotifiedCount = count;
+
+    } catch (error) {
+        console.error("Erro ao verificar notificações:", error);
+    }
+} */
+
+    async function verificarNotificacoes() {
+    if (!state.currentUserProfile) return;
+
+    try {
+        // 1. Busca a contagem
+        const { count, error } = await supabaseClient
+            .from('notificacoes')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', state.currentUserProfile.id)
+            .eq('lida', false);
+
+        if (error) throw error;
+
+        // 2. Atualiza UI Interna
+        const badge = document.getElementById('notification-badge');
+        if (badge) {
+            if (count > 0) {
+                badge.textContent = count > 99 ? '99+' : count;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        // 3. Atualiza Favicon e Badge
+        if (typeof updateFavicon === 'function') updateFavicon(count);
+        if ('setAppBadge' in navigator) {
+            if (count > 0) navigator.setAppBadge(count).catch(() => {});
+            else navigator.clearAppBadge().catch(() => {});
+        }
+
+        // 4. Toca o Som (Se permitido e se houver novidade)
+        if (
+            typeof state.lastNotifiedCount === 'number' &&
+            count > state.lastNotifiedCount &&
+            state.audioUnlocked
+        ) {
+            const sound = document.getElementById('notification-sound');
+            if (sound) {
+                sound.currentTime = 0;
+                sound.play().catch(e => console.warn("Som bloqueado pelo navegador (falta interação):", e));
             }
         }
 
@@ -2356,21 +2407,63 @@ function setupEventListeners() {
     listenersInitialized = true;
 
     // 2. AUXILIAR DE ÁUDIO (Definida antes de usar)
-    const unlockAudio = () => {
+    // 2. AUXILIAR DE ÁUDIO (LÓGICA CORRIGIDA)
+    /* const unlockAudio = () => {
+        // Se já estiver desbloqueado, não faz nada
+       // if (state.audioUnlocked) return;
+
         const sound = document.getElementById('notification-sound');
         if (sound) {
             sound.volume = 0; // Mudo
+            
+            // Tenta tocar
             sound.play().then(() => {
+                // SUCESSO: O navegador deixou tocar!
+                state.audioUnlocked = true;
                 sound.pause();
                 sound.currentTime = 0;
                 sound.volume = 1; // Restaura volume
-                state.audioUnlocked = true; // Marca como desbloqueado
-                console.log("Sistema de áudio desbloqueado para Android.");
-            }).catch(e => console.log("Tentativa de desbloqueio de áudio falhou:", e));
+                
+                state.audioUnlocked = true; // <--- AGORA SIM: Só marca true aqui dentro
+                console.log("Áudio desbloqueado com sucesso.");
+
+                // Só remove os ouvintes se tivermos SUCESSO
+                document.removeEventListener('click', unlockAudio);
+                document.removeEventListener('touchstart', unlockAudio);
+            }).catch(e => {
+                // FALHA: O navegador bloqueou.
+                // Não marcamos true. Não removemos o listener.
+                // Assim, no próximo clique do usuário, ele tentará novamente.
+                console.warn("Tentativa de desbloqueio falhou (tentará de novo no próximo clique):", e);
+            });
         }
-        document.removeEventListener('click', unlockAudio);
-        document.removeEventListener('touchstart', unlockAudio);
-    };
+    };*/
+                            const unlockAudio = () => {
+                    // 1. Marca como desbloqueado IMEDIATAMENTE ao primeiro toque
+                    // (Assume que a interação do usuário já liberou a permissão do navegador)
+                    state.audioUnlocked = true;
+                    console.log("Interação detectada. Áudio desbloqueado.");
+
+                    // 2. Tenta tocar o som mudo apenas para "aquecer" o motor de áudio
+                    const sound = document.getElementById('notification-sound');
+                    if (sound) {
+                        sound.volume = 0; // Mudo
+                        sound.play().then(() => {
+                            sound.pause();
+                            sound.currentTime = 0;
+                            sound.volume = 1; // Restaura volume
+                        }).catch(e => {
+                            // Se falhar aqui, não tem problema, pois a flag 'audioUnlocked' já é true.
+                            // O som real vai tocar quando a notificação chegar.
+                            console.warn("Tentativa silenciosa falhou, mas permissão foi registrada:", e);
+                            sound.volume = 1; 
+                        });
+                    }
+                    
+                    // 3. Remove os ouvintes imediatamente para não repetir
+                    document.removeEventListener('click', unlockAudio);
+                    document.removeEventListener('touchstart', unlockAudio);
+                };
 
     // 3. LISTENERS GLOBAIS DE INICIALIZAÇÃO
     document.addEventListener('click', unlockAudio);
