@@ -93,22 +93,52 @@ export function createOrUpdateChart(canvasId, type, data, chartInstances, instan
 export async function exportTasksToPDF(tasksToExport, CONDOMINIOS, TASK_TYPES, STATUSES, includeDesc, includeHistory, reportOwnerName = null, empresaNome = 'Relatório Geral', emitterName = 'N/A', logoUrl = null) {
     const { jsPDF } = window.jspdf;
     
-    // 1. Carrega o histórico (Lógica mantida, sem alterações)
+    // 1. CARREGAMENTO DO HISTÓRICO (COM CORREÇÃO DE AUTENTICAÇÃO)
     let historyData = [];
     if (includeHistory) {
         const taskIds = tasksToExport.filter(task => task).map(t => t.id);
         if (taskIds.length > 0) {
             try {
-                const tempSupabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { storage: sessionStorage } });
-                const { data: { session } } = await tempSupabaseClient.auth.getSession();
-                if (!session?.access_token) throw new Error("Token de acesso não encontrado...");
+                // --- INÍCIO DA CORREÇÃO DE TOKEN ---
+                // 1. Tenta achar o token no localStorage (Padrão do Supabase)
+                let tokenKey = Object.keys(localStorage).find(key => key.startsWith('sb-') && key.endsWith('-auth-token'));
+                let storageSource = localStorage;
+
+                // 2. Se não achar, tenta no sessionStorage (Fallback)
+                if (!tokenKey) {
+                    tokenKey = Object.keys(sessionStorage).find(key => key.startsWith('sb-') && key.endsWith('-auth-token'));
+                    storageSource = sessionStorage;
+                }
+
+                // 3. Pega o token
+                const sessionData = tokenKey ? JSON.parse(storageSource.getItem(tokenKey)) : null;
+                const accessToken = sessionData ? sessionData.access_token : null;
+
+                if (!accessToken) {
+                    console.error("DEBUG: Token não encontrado nem no LocalStorage nem no SessionStorage.");
+                    throw new Error("Sessão não encontrada. Por favor, recarregue a página ou faça login novamente.");
+                }
+
+                // 4. Cria o cliente injetando o token manualmente
+                const tempSupabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+                    global: {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`
+                        }
+                    }
+                });
+                // --- FIM DA CORREÇÃO DE TOKEN ---
+
+                // Chama a função RPC segura usando o cliente autenticado
                 const { data, error } = await tempSupabaseClient.rpc('get_history_for_tasks', { task_ids: taskIds });
+                
                 if (error) throw error;
                 historyData = data || [];
+
             } catch (error) {
                 console.error("Falha ao buscar histórico dentro de utils.js:", error);
                 alert("Não foi possível buscar o histórico das tarefas para o PDF: " + error.message);
-                return;
+                return; // Para a execução se falhar o histórico (opcional, poderia continuar sem histórico)
             }
         }
     }
@@ -117,34 +147,26 @@ export async function exportTasksToPDF(tasksToExport, CONDOMINIOS, TASK_TYPES, S
     const doc = new jsPDF({ orientation });
     const pageCenterX = doc.internal.pageSize.getWidth() / 2;
 
-    // --- INÍCIO DAS ALTERAÇÕES DE LAYOUT (VERSÃO FINAL) ---
+    // --- MONTAGEM DO LAYOUT DO PDF ---
 
-    // Define a posição Y inicial
     let finalY = 15; // Margem do topo
 
-    // 2. Adiciona a Logo (Centralizada no Topo)
+    // 2. Adiciona a Logo (Centralizada)
     const imageData = await getImageData(logoUrl);
     if (imageData) {
         const imageType = imageData.substring(imageData.indexOf('/') + 1, imageData.indexOf(';'));
-        // Adiciona a logo centralizada
-        doc.addImage(imageData, imageType.toUpperCase(), pageCenterX - 20, finalY, 40, 15, '', 'FAST', 0); // (..., x, y, largura, altura)
-        finalY += 20; // Aumenta a posição Y para o próximo elemento
+        doc.addImage(imageData, imageType.toUpperCase(), pageCenterX - 20, finalY, 40, 15, '', 'FAST', 0);
+        finalY += 20; 
     }
-
     
-    finalY += 5; // Aumenta a posição Y
+    finalY += 5; 
 
-    // 4. Adiciona o Cabeçalho (Emitter, Date, etc.)
+    // 3. Cabeçalho (Nome da Empresa)
     doc.setFontSize(14).setFont(undefined, 'normal');
-    doc.text(
-        empresaNome,
-        pageCenterX, // A variável de centro (já definida no topo da função)
-        finalY,
-        { align: 'center' } // A opção de centralizar
-    );
+    doc.text(empresaNome, pageCenterX, finalY, { align: 'center' });
     finalY += 10;
      
-
+    // Sub-cabeçalho (Emissor)
     doc.setFontSize(9).setFont(undefined, 'italic');
     doc.setTextColor(100);
     if (reportOwnerName) {
@@ -154,23 +176,18 @@ export async function exportTasksToPDF(tasksToExport, CONDOMINIOS, TASK_TYPES, S
     }
     finalY += 6;
 
+    // Data de Emissão
     doc.setFontSize(9).setFont(undefined, 'normal');
     doc.setTextColor(0);
     doc.text(`Data de Emissão: ${new Date().toLocaleDateString('pt-BR')}`, 14, finalY);
     finalY += 5;
 
-    // 3. Adiciona o TÍTULO (Abaixo da Logo)
+    // Título Principal
     doc.setFontSize(16).setFont(undefined, 'bold');
-    doc.text(
-        "Relatório de Tarefas", //
-        pageCenterX, // Posição X (Centro)
-        finalY, // Posição Y (Abaixo da logo)
-        { align: 'center' }
-    );
-     
-    finalY += 3; // Aumenta a posição Y
+    doc.text("Relatório de Tarefas", pageCenterX, finalY, { align: 'center' });
+    finalY += 3;
 
-    // 5. Gera a Tabela (Lógica 100% mantida, sem alterações)
+    // 4. Preparação da Tabela
     const head = [['ID', 'Título', 'Tipo', getTermSingular(), 'Status', 'Concluir Até']];
     if (!reportOwnerName) head[0].splice(4, 0, 'Responsável');
     if (includeDesc) head[0].push('Descrição');
@@ -230,60 +247,50 @@ export async function exportTasksToPDF(tasksToExport, CONDOMINIOS, TASK_TYPES, S
             return row;
         });
 
-    // 6. Desenha a Tabela e o Rodapé (Lógica do rodapé mantida)
+    // 5. Gera a Tabela com Rodapé Personalizado
     doc.autoTable({
         head: head, 
         body: body, 
-        startY: finalY, // Começa a tabela após todo o cabeçalho
+        startY: finalY, 
         theme: 'striped', 
         headStyles: { fillColor: [30, 58, 138] },
         columnStyles: {
             [head[0].indexOf('Histórico')]: { cellWidth: 'wrap' } 
         },
-        // --- INÍCIO DA CORREÇÃO DO RODAPÉ (COM LINK) ---
         didDrawPage: function (data) {
             const pageHeight = doc.internal.pageSize.getHeight();
             const startX = data.settings.margin.left;
-            const startY = pageHeight - 10; // 10mm from bottom
+            const startY = pageHeight - 10; 
             
             doc.setFontSize(9);
             
             const staticText = 'Sistema TaskCom | site: ';
             const linkText = ' iadev.app';
-            const linkUrl = 'https://www.iadev.app/'; //
+            const linkUrl = 'https://www.iadev.app/';
 
-            // 1. Escreve o texto normal (cinza)
+            // Texto estático
             doc.setTextColor(150);
             doc.text(staticText, startX, startY);
 
-            // 2. Calcula a largura do texto normal
+            // Link clicável
             const staticTextWidth = doc.getTextWidth(staticText);
-            
-            // 3. Escreve o texto do link (em azul) e o torna clicável
-            doc.setTextColor(0, 0, 238); // Cor de link azul padrão
-            doc.textWithLink(linkText, startX + staticTextWidth, startY, {
-                url: linkUrl,
-            });
+            doc.setTextColor(0, 0, 238);
+            doc.textWithLink(linkText, startX + staticTextWidth, startY, { url: linkUrl });
         }
-        // --- FIM DA CORREÇÃO DO RODAPÉ ---
     });
 
-    // --- 8. ADICIONA O TOTALIZADOR (NOVO) ---
-    // Pega a posição Y onde a tabela terminou
+    // 6. Totalizador Final
     const finalYAfterTable = doc.lastAutoTable.finalY + 10; 
     
-    // Verifica se estamos muito perto do fim da página (se sim, adiciona nova página)
     if (finalYAfterTable > doc.internal.pageSize.getHeight() - 20) {
         doc.addPage();
         doc.text(`Total de tarefas listadas: ${body.length}`, 14, 20);
     } else {
         doc.setFontSize(10).setFont(undefined, 'bold');
-        doc.setTextColor(0); // Preto
+        doc.setTextColor(0);
         doc.text(`Total de tarefas listadas: ${body.length}`, 14, finalYAfterTable);
     }
-    // --- FIM DO TOTALIZADOR ---
 
-    // --- FIM DAS ALTERAÇÕES NO LAYOUT ---
-
-    doc.save(`relatorio-taskcom-${new Date().toISOString().split('T_')[0]}.pdf`);
+    // 7. Salva o Arquivo
+    doc.save(`relatorio-taskcom-${new Date().toISOString().split('T')[0]}.pdf`);
 }

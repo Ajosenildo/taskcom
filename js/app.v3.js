@@ -1760,21 +1760,64 @@ function handleOpenEditTaskModal(taskId) {
     }
 
     // 3. Carrega Histórico (Sem travar a UI)
+    // 3. Carrega Histórico Detalhado
     const historyList = document.getElementById('task-history-list');
     if (historyList) {
         historyList.innerHTML = '<p style="color: #6b7280; font-style: italic;">Carregando...</p>';
+        
         api.fetchTaskHistory(taskId).then(history => {
              if (!history || history.length === 0) {
                 historyList.innerHTML = '<p style="color: #6b7280;">Nenhum histórico.</p>';
             } else {
-                // Formatação simples e segura
                 historyList.innerHTML = history.map(h => {
                     const date = new Date(h.created_at).toLocaleString('pt-BR');
-                    let text = h.evento;
-                    if (h.detalhes && h.detalhes.de && h.detalhes.para) {
-                         text += `: de ${h.detalhes.de} para ${h.detalhes.para}`;
+                    
+                    // Lógica de fallback para o nome do usuário
+                    let userName = h.usuario_nome; 
+                    if (!userName && state.allUsers) {
+                        const userFound = state.allUsers.find(u => u.id === h.usuario_id);
+                        if (userFound) userName = userFound.nome_completo;
                     }
-                    return `<div style="border-bottom:1px solid #eee;padding:5px;font-size:0.85em"><strong>${date}</strong>: ${text}</div>`;
+                    userName = userName || 'Sistema'; 
+                    
+                    let text = '';
+
+                    if (h.evento === 'Criação') {
+                        const criadorNoJson = h.detalhes?.criado_por;
+                        const designadoNoJson = h.detalhes?.designado_para;
+
+                        // Define o nome final do criador
+                        const nomeCriadorFinal = criadorNoJson || userName;
+
+                        text = `Criado por <strong>${nomeCriadorFinal}</strong>`;
+
+                        // --- LÓGICA DE COMPARAÇÃO ---
+                        // Só mostra "designado para" se existir E se for DIFERENTE do criador
+                        if (designadoNoJson && designadoNoJson !== nomeCriadorFinal) {
+                             text += ` e designado para <strong>${designadoNoJson}</strong>`;
+                        }
+                        // ----------------------------
+                    } 
+                    else if (h.evento === 'Re-designação') {
+                        const de = h.detalhes?.de || '?';
+                        const para = h.detalhes?.para || '?';
+                        text = `Re-designado de <em>${de}</em> para <strong>${para}</strong> por ${userName}`;
+                    }
+                    else if (h.evento === 'Alteração de Status') {
+                         const para = h.detalhes?.para || 'novo status';
+                         text = `Status alterado para <strong>${para}</strong> por ${userName}`;
+                    }
+                    else if (h.detalhes && h.detalhes.de && h.detalhes.para) {
+                         text = `${h.evento}: de ${h.detalhes.de} para ${h.detalhes.para} (por ${userName})`;
+                    }
+                    else {
+                        text = `${h.evento} (por ${userName})`;
+                    }
+
+                    return `<div style="border-bottom:1px solid #eee;padding:8px 5px;font-size:0.85em;line-height:1.4;">
+                                <span style="color:#666;font-size:0.9em;">${date}</span><br>
+                                ${text}
+                            </div>`;
                 }).join('');
             }
         });
