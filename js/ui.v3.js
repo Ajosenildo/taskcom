@@ -118,97 +118,78 @@ export function setupRoleBasedUI(currentUserProfile) {
     // Se não for nenhum dos dois, tudo permanece 'none'
 }
 
-export function populateDropdowns(CONDOMINIOS, TASK_TYPES, allUsers, allGroups, currentUserProfile) {
-    const filterGroupSelect = document.getElementById('filter-group');
-    const createTaskAssigneeSelect = document.getElementById('task-assignee');
-    const filterAssigneeSelect = document.getElementById('filter-assignee');
-    const createTaskTypeSelect = document.getElementById('task-type');
-    const editTaskTypeSelect = document.getElementById('edit-task-type');
-    const filterTaskTypeSelect = document.getElementById('filter-task-type');
-    const editTaskCondoSelect = document.getElementById('edit-task-condominio');
-    const condoGroupSelect = document.getElementById('condo-group-select');
-    const dashboardUserFilter = document.getElementById('dashboard-user-filter');
-    if (dashboardUserFilter) {
-        dashboardUserFilter.innerHTML = '<option value="">Todos os Usuários</option>';
-        allUsers.forEach(user => {
-            const option = document.createElement('option');
-            option.value = user.id;
-            option.textContent = user.nome_completo;
-            dashboardUserFilter.appendChild(option);
-        });
-    }
+// js/ui.v3.js
 
-    // Popula os seletores de Tipo de Tarefa
-    const typeElements = [createTaskTypeSelect, editTaskTypeSelect, filterTaskTypeSelect];
-    typeElements.forEach(s => { 
-        if (s) {
-            s.innerHTML = '<option value="">Selecione um Tipo...</option>';
-            if (s.id === 'filter-task-type') s.options[0].textContent = "Todos os Tipos";
-            TASK_TYPES.forEach(type => {
+export function populateDropdowns(condominios, taskTypes, allUsers, allGroups, currentUser) {
+    // Função auxiliar interna para preencher um select específico
+    const fillSelect = (elementId, dataList, valueKey, textKey, defaultText, filterFn = null) => {
+        const select = document.getElementById(elementId);
+        if (!select) return;
+
+        // Salva o valor atual caso já tenha algo selecionado (para não perder na edição)
+        const currentValue = select.value;
+
+        select.innerHTML = `<option value="">${defaultText}</option>`;
+        
+        if (dataList && dataList.length > 0) {
+            dataList.forEach(item => {
+                if (filterFn && !filterFn(item)) return; // Aplica filtro se houver
+
                 const option = document.createElement('option');
-                option.value = type.id;
-                option.textContent = type.nome_tipo;
-                s.appendChild(option); // Correção: removido cloneNode desnecessário
-            });
-        }
-    });
-
-    if (editTaskCondoSelect) {
-        editTaskCondoSelect.innerHTML = '<option value="">Selecione um Condomínio...</option>';
-        CONDOMINIOS.forEach(condo => {
-            const option = document.createElement('option');
-            option.value = condo.id;
-            option.textContent = condo.nome_fantasia || condo.nome;
-            editTaskCondoSelect.appendChild(option);
-        });
-    }
-
-    if (condoGroupSelect) {
-        condoGroupSelect.innerHTML = '<option value="">Nenhum</option>';
-        allGroups.forEach(group => {
-            const option = document.createElement('option');
-            option.value = group.id;
-            option.textContent = group.nome_grupo;
-            condoGroupSelect.appendChild(option);
-        });
-    }
-
-    if (filterGroupSelect) {
-        filterGroupSelect.innerHTML = '<option value="">Todos os Grupos</option>';
-        allGroups.forEach(group => {
-            const option = document.createElement('option');
-            option.value = group.id;
-            option.textContent = group.nome_grupo;
-            filterGroupSelect.appendChild(option);
-        });
-    }  
-
-    // Lógica para os seletores de Responsável (Designar para:)
-    const assigneeElements = [createTaskAssigneeSelect, filterAssigneeSelect];
-    assigneeElements.forEach(select => {
-        if (select) {
-            // ALTERAÇÃO 2: Usamos o perfil do usuário passado como parâmetro, que é mais confiável.
-            const currentUserId = currentUserProfile ? currentUserProfile.id : null;
-            
-            select.innerHTML = (select.id === 'filter-assignee') 
-                ? '<option value="">Todos</option>' 
-                : '<option value="">Selecione um Responsável...</option>';
-            
-            allUsers.forEach(user => {
-                const option = document.createElement('option');
-                option.value = user.id;
-                option.textContent = user.nome_completo;
+                option.value = item[valueKey];
+                // Verifica se o campo de texto existe, senão usa fallback
+                option.textContent = item[textKey] || item['nome'] || 'Sem nome';
                 select.appendChild(option);
             });
-
-            // ALTERAÇÃO 3: Lógica para pré-selecionar o usuário logado na tela de criação
-            if (select.id === 'task-assignee' && currentUserId) {
-                select.value = currentUserId;
-            }
         }
-    });
-}
 
+        // Tenta restaurar o valor anterior se ainda existir na lista
+        if (currentValue) {
+            select.value = currentValue;
+        }
+    };
+
+    // --- 1. PREENCHER FORMULÁRIO DE CRIAÇÃO ---
+    
+    // Condomínios
+    // (Lógica de filtro: Se for síndico, só mostra os dele. Se for admin/staff, mostra todos ou do grupo)
+    // Essa filtragem já deve vir pronta no 'condominios' passado como argumento, então preenchemos direto.
+    // (Nota: Para o campo pesquisável, usamos o createSearchableDropdown no app.js, mas se houver select simples:)
+    fillSelect('task-condominio-select', condominios, 'id', 'nome_fantasia', 'Selecione um condomínio...'); 
+    // (Nota: O ID 'task-condominio' geralmente é um input hidden no seu código novo, mas mantemos compatibilidade)
+
+    // Tipos de Tarefa
+    fillSelect('task-type', taskTypes, 'id', 'nome_tipo', 'Selecione um Tipo...');
+
+    // Usuários (Designar para)
+    // Mostra apenas usuários ativos
+    fillSelect('task-assignee', allUsers, 'id', 'nome_completo', 'Selecione o responsável...', (u) => u.ativo);
+
+
+    // --- 2. PREENCHER FORMULÁRIO DE EDIÇÃO (A CORREÇÃO) ---
+    
+    // Tipos de Tarefa (Edição)
+    fillSelect('edit-task-type', taskTypes, 'id', 'nome_tipo', 'Selecione um Tipo...');
+
+    // Usuários (Edição) - CRUCIAL PARA O SEU ERRO
+    fillSelect('edit-task-assignee', allUsers, 'id', 'nome_completo', 'Selecione o responsável...', (u) => u.ativo);
+
+    // --- 3. OUTROS DROPDOWNS (Filtros, etc) ---
+    
+    // Filtro de Status (Geralmente é estático no HTML, mas se for dinâmico vai aqui)
+    
+    // Filtro de Responsável (Barra de busca)
+    fillSelect('filter-assignee', allUsers, 'id', 'nome_completo', 'Todos os Responsáveis');
+
+    // Filtro de Tipo de Tarefa
+    fillSelect('filter-task-type', taskTypes, 'id', 'nome_tipo', 'Todos os Tipos');
+    
+    // Filtro de Grupo
+    fillSelect('filter-group', allGroups, 'id', 'nome_grupo', 'Todos os Grupos');
+
+    // Modais de Admin (Criação de Usuário)
+    fillSelect('create-user-group', allGroups, 'id', 'nome_grupo', 'Selecione um grupo...');
+}
 
 
 export function populateTemplatesDropdown(taskTemplates) {
@@ -690,4 +671,37 @@ export function openNotificationsModal() {
 export function closeNotificationsModal() {
     const modal = document.getElementById('notifications-modal');
     if (modal) modal.style.display = 'none';
+}
+
+// Adicione no final de js/ui.v3.js
+export function setupSearchableDropdownLogic(searchInput, optionsContainer, hiddenInput, dataList) {
+    // (Re)aplica a lógica de filtro e clique
+    const filterOptions = () => {
+        const term = searchInput.value.toLowerCase();
+        optionsContainer.innerHTML = '';
+        const filtered = dataList.filter(item => (item.nome_fantasia || item.nome).toLowerCase().includes(term));
+        
+        filtered.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'option-item';
+            div.textContent = item.nome_fantasia || item.nome;
+            div.onclick = () => {
+                searchInput.value = item.nome_fantasia || item.nome;
+                hiddenInput.value = item.id;
+                optionsContainer.style.display = 'none';
+            };
+            optionsContainer.appendChild(div);
+        });
+        optionsContainer.style.display = filtered.length ? 'block' : 'none';
+    };
+
+    searchInput.oninput = filterOptions;
+    searchInput.onfocus = filterOptions;
+    
+    // Fecha ao clicar fora
+    document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !optionsContainer.contains(e.target)) {
+            optionsContainer.style.display = 'none';
+        }
+    });
 }

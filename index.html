@@ -388,8 +388,14 @@
         <label for="edit-task-type">Tipo:</label>
         <select id="edit-task-type" name="edit-task-type" required></select>
         
-        <label for="edit-task-condominio"><span data-term-singular="entidade_principal">Condomínio</span>:</label>
-        <select id="edit-task-condominio" name="edit-task-condominio" required></select>
+        <label for="edit-task-condo-search"><span data-term-singular="entidade_principal">Condomínio</span>:</label>
+      <div class="searchable-select-container">
+          <input type="text" id="edit-task-condo-search" class="search-input" placeholder="Digite para buscar..." autocomplete="off">
+          
+          <input type="hidden" id="edit-task-condominio" name="edit-task-condominio">
+          
+          <div id="edit-task-condo-options" class="options-container"></div>
+      </div>
         
         <label for="edit-task-desc">Descrição:</label>
         <textarea id="edit-task-desc" name="edit-task-desc"></textarea>

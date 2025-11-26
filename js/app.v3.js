@@ -263,7 +263,7 @@ async function handleAudioTranscription(event) {
     }
 }
 
-function handleViewChange(event) {
+/* function handleViewChange(event) {
     const { viewId } = event.detail;
     try {
         // Lógica de renderização principal
@@ -317,34 +317,160 @@ function handleViewChange(event) {
     } catch (error) {
         console.error(`Erro fatal ao renderizar a view '${viewId}':`, error);
         alert(`Ocorreu um erro ao tentar exibir a tela '${viewId}'.`);
+    } 
+}*/
+
+async function handleViewChange(input) {
+    let viewId;
+   
+
+    // 1. PROTEÇÃO DE ENTRADA (Acorreção do erro 'reading detail')
+    if (!input) {
+        console.warn("handleViewChange chamado sem argumentos.");
+        return;
+    }
+
+    // 2. Verifica o tipo de entrada para pegar o ID corretamente
+    if (typeof input === 'string') {
+        // Chamada direta: handleViewChange('dashboard-view')
+        viewId = input;
+    } else if (input.detail && input.detail.viewId) {
+        // Chamada via Evento: dispatchEvent(...)
+        viewId = input.detail.viewId;
+    } else {
+        // Proteção final
+        console.warn("handleViewChange recebeu formato inválido:", input);
+        return;
+    }
+
+    // 3. Atualiza Menu e Telas
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.view === viewId);
+    });
+
+    document.querySelectorAll('.view').forEach(view => view.style.display = 'none');
+    const targetView = document.getElementById(viewId);
+    if (targetView) {
+        targetView.style.display = 'flex';
+        
+        if (viewId !== 'login-screen' && viewId !== 'admin-menu-view') {
+            sessionStorage.setItem('lastActiveView', viewId);
+        }
+    }
+
+    // 4. Lógica Específica por Tela
+    try {
+        if (viewId === 'view-tasks-view') {
+            if (typeof executeTaskSearch === 'function') executeTaskSearch();
+        } 
+        else if (viewId === 'dashboard-view') {
+            if (typeof refreshDashboard === 'function') refreshDashboard();
+        }
+        else if (viewId === 'admin-users-view') {
+            render.renderUserList(state.allUsers, state.currentUserProfile, state.allCargos, state.allGroups, state.userGroupAssignments, state.condominios, state.allCondoAssignments);
+            
+            // Lógica de Limite de Usuários
+            const addUserBtn = document.getElementById('add-user-btn');
+            const userLimit = state.plano?.limite_usuarios;
+            const activeUserCount = state.allUsers.filter(u => u.ativo).length;
+            
+            const oldLimitMessage = document.getElementById('user-limit-message');
+            if (oldLimitMessage) oldLimitMessage.remove();
+
+            if (addUserBtn) {
+                if (userLimit && activeUserCount >= userLimit) {
+                    addUserBtn.disabled = true;
+                    addUserBtn.style.backgroundColor = '#9ca3af';
+                    addUserBtn.style.cursor = 'not-allowed';
+                    const limitMessage = document.createElement('p');
+                    limitMessage.id = 'user-limit-message';
+                    limitMessage.style.color = 'red';
+                    limitMessage.style.textAlign = 'center';
+                    limitMessage.textContent = `Limite de ${userLimit} usuários ativos atingido para o ${state.plano.nome}.`;
+                    addUserBtn.after(limitMessage);
+                } else {
+                    addUserBtn.disabled = false;
+                    addUserBtn.style.backgroundColor = '';
+                    addUserBtn.style.cursor = 'pointer';
+                }
+            }
+        } 
+        else if (viewId === 'admin-cargos-view') {
+            render.renderCargoList(state.allCargos);
+        } 
+        else if (viewId === 'admin-groups-view') {
+            render.renderGroupList(state.allGroups);
+        } 
+        else if (viewId === 'admin-types-view') {
+            render.renderTaskTypeList(state.taskTypes);
+        } 
+        else if (viewId === 'admin-condos-view') {
+            render.renderCondoList(state.condominios, state.allGroups);
+        }
+
+    } catch (error) {
+        console.error(`Erro ao renderizar a view '${viewId}':`, error);
     }
 }
 
+// Cole esta função no final do arquivo ou junto com as outras 'handle...'
 async function handleUpdateTask(event) {
+    console.log("[DEBUG SAVE] Botão salvar clicado!");
     event.preventDefault();
-    const form = event.target;
-    const taskId = form.elements['edit-task-id'].value;
-    const dadosParaAtualizar = {
-        titulo: form.elements['edit-task-title'].value,
-        descricao: form.elements['edit-task-desc'].value,
-        data_conclusao_prevista: form.elements['edit-task-due-date'].value,
-        tipo_tarefa_id: parseInt(form.elements['edit-task-type'].value),
-        condominio_id: parseInt(form.elements['edit-task-condominio'].value),
-        responsavel_id: form.elements['edit-task-assignee'].value
+    
+    // 1. Coleta dados
+    const taskIdVal = document.getElementById('edit-task-id').value;
+    const title = document.getElementById('edit-task-title').value.trim();
+    const description = document.getElementById('edit-task-desc').value;
+    const dueDate = document.getElementById('edit-task-due-date').value;
+    const typeId = document.getElementById('edit-task-type').value;
+    const assigneeId = document.getElementById('edit-task-assignee').value;
+    const condominioId = document.getElementById('edit-task-condominio').value;
+
+    console.log("[DEBUG SAVE] Dados:", { taskIdVal, title, assigneeId });
+
+    if (!title || !typeId || !condominioId || !dueDate || !assigneeId) {
+        console.warn("[DEBUG SAVE] Validação falhou.");
+        return alert('Todos os campos obrigatórios precisam ser preenchidos.');
+    }
+
+    const updatedData = {
+        titulo: title,
+        descricao: description,
+        data_conclusao_prevista: dueDate,
+        tipo_tarefa_id: parseInt(typeId),
+        responsavel_id: assigneeId,
+        condominio_id: parseInt(condominioId)
     };
 
     try {
-        await api.updateTaskInDB(taskId, dadosParaAtualizar);
-        const updatedTaskData = await api.fetchTaskById(taskId);
-        const taskIndex = state.tasks.findIndex(t => t.id == taskId);
+        // 2. Envia ao banco
+        console.log("[DEBUG SAVE] Enviando ao banco...");
+        const { error } = await api.updateTaskInDB(parseInt(taskIdVal), updatedData);
+        if (error) throw error;
+        
+        // 3. Atualiza localmente
+        const taskIndex = state.tasks.findIndex(t => t.id == taskIdVal);
         if (taskIndex !== -1) {
-            state.tasks[taskIndex] = updatedTaskData;
+            state.tasks[taskIndex] = { ...state.tasks[taskIndex], ...updatedData };
+            
+            // Atualiza nomes visuais
+            const responsavel = state.allUsers.find(u => u.id === assigneeId);
+            state.tasks[taskIndex].responsavel_nome = responsavel ? responsavel.nome_completo : 'N/A';
+
+            const tipo = state.taskTypes.find(t => t.id == typeId);
+            state.tasks[taskIndex].tipo_tarefa_nome = tipo ? tipo.nome_tipo : 'N/A';
         }
-        ui.closeEditModal();
+
+        // 4. Redesenha e fecha
         state.tasksToDisplayForPdf = render.renderTasks(state);
+        ui.closeEditModal(); // <--- Nome corrigido (igual ao usado nos botões de fechar)
+        console.log("[DEBUG SAVE] Sucesso! Modal fechado.");
         alert('Tarefa atualizada com sucesso!');
+
     } catch (error) {
-        alert(`Falha ao salvar alterações: ${error.message}`);
+        console.error("[DEBUG SAVE] Erro:", error);
+        alert("Erro ao atualizar: " + error.message);
     }
 }
 
@@ -1596,11 +1722,14 @@ function unlockAudio() {
 
 // --- FUNÇÕES DE AÇÃO DA TAREFA (RESTAURADAS) ---
 
-async function handleOpenEditTaskModal(taskId) {
+function handleOpenEditTaskModal(taskId) {
     const task = state.tasks.find(t => t.id === taskId);
     if (!task) return;
 
-    // 1. Preenche os dados do formulário (Lógica mantida)
+    // 1. Garante que os dropdowns (Usuários, Tipos) estejam preenchidos
+    ui.populateDropdowns(state.condominios, state.taskTypes, state.allUsers, state.allGroups, state.currentUserProfile);
+
+    // 2. Preenche os campos do formulário
     const form = document.getElementById('edit-task-form');
     if (form) {
         document.getElementById('edit-task-id').value = task.id;
@@ -1610,80 +1739,48 @@ async function handleOpenEditTaskModal(taskId) {
         const dataFormatada = task.data_conclusao_prevista ? task.data_conclusao_prevista.split('T')[0] : '';
         document.getElementById('edit-task-due-date').value = dataFormatada;
 
+        // Selects simples
         const typeSelect = document.getElementById('edit-task-type');
         if (typeSelect) typeSelect.value = task.tipo_tarefa_id;
 
         const assigneeSelect = document.getElementById('edit-task-assignee');
         if (assigneeSelect) assigneeSelect.value = task.responsavel_id;
 
+        // --- CORREÇÃO DO CONDOMÍNIO (Preenche ambos os campos) ---
         const condoInput = document.getElementById('edit-task-condominio');
         if (condoInput) condoInput.value = task.condominio_id;
         
         const condoSearch = document.getElementById('edit-task-condo-search');
         if (condoSearch) {
+            // Tenta achar o nome na lista de condomínios carregada
             const condo = state.condominios.find(c => c.id == task.condominio_id);
-            condoSearch.value = condo ? (condo.nome_fantasia || condo.nome) : '';
+            // Se achar, usa o nome. Se não, usa o nome que veio com a tarefa (fallback)
+            condoSearch.value = condo ? (condo.nome_fantasia || condo.nome) : (task.condominio_nome_view || '');
         }
     }
 
-    // 2. Lógica de Histórico (CORRIGIDA)
+    // 3. Carrega Histórico (Sem travar a UI)
     const historyList = document.getElementById('task-history-list');
     if (historyList) {
-        historyList.innerHTML = '<p style="color: #6b7280; font-style: italic;">Carregando histórico...</p>';
-        
-        try {
-            // Busca o histórico atualizado do banco
-            const history = await api.fetchTaskHistory(taskId); //
-
-            if (!history || history.length === 0) {
-                historyList.innerHTML = '<p style="color: #6b7280;">Nenhum histórico registrado.</p>';
+        historyList.innerHTML = '<p style="color: #6b7280; font-style: italic;">Carregando...</p>';
+        api.fetchTaskHistory(taskId).then(history => {
+             if (!history || history.length === 0) {
+                historyList.innerHTML = '<p style="color: #6b7280;">Nenhum histórico.</p>';
             } else {
-                // Formata cada item do histórico para HTML
+                // Formatação simples e segura
                 historyList.innerHTML = history.map(h => {
                     const date = new Date(h.created_at).toLocaleString('pt-BR');
-                    let text = '';
-
-                    // --- TRADUÇÃO DO JSON 'DETALHES' ---
-                    if (h.evento === 'Criação') {
-                        const criadoPor = h.detalhes?.criado_por || 'Sistema';
-                        const designadoPara = h.detalhes?.designado_para || 'Ninguém';
-                        text = `Criada por <strong>${criadoPor}</strong> para <strong>${designadoPara}</strong>`;
-                    } 
-                    else if (h.evento === 'Alteração de Status') {
-                        // Traduz o status técnico (pending) para visual (Em Andamento)
-                        const deKey = h.detalhes?.de;
-                        const paraKey = h.detalhes?.para;
-                        const deTexto = state.STATUSES[deKey]?.text || deKey;
-                        const paraTexto = state.STATUSES[paraKey]?.text || paraKey;
-                        
-                        text = `Status alterado de <strong>${deTexto}</strong> para <strong>${paraTexto}</strong>`;
-                    } 
-                    else if (h.evento === 'Re-designação') {
-                        const de = h.detalhes?.de || 'Ninguém';
-                        const para = h.detalhes?.para || 'Alguém';
-                        text = `Re-designada de <strong>${de}</strong> para <strong>${para}</strong>`;
-                    } 
-                    else {
-                        // Fallback para eventos desconhecidos
-                        text = h.evento;
+                    let text = h.evento;
+                    if (h.detalhes && h.detalhes.de && h.detalhes.para) {
+                         text += `: de ${h.detalhes.de} para ${h.detalhes.para}`;
                     }
-                    // ------------------------------------
-
-                    return `
-                        <div class="history-item" style="border-bottom: 1px solid #eee; padding: 8px 0;">
-                            <div style="font-size: 0.8rem; color: #9ca3af;">${date}</div>
-                            <div style="font-size: 0.9rem;">${text}</div>
-                        </div>
-                    `;
+                    return `<div style="border-bottom:1px solid #eee;padding:5px;font-size:0.85em"><strong>${date}</strong>: ${text}</div>`;
                 }).join('');
             }
-        } catch (error) {
-            console.error("Erro ao carregar histórico:", error);
-            historyList.innerHTML = '<p style="color: red;">Erro ao carregar histórico.</p>';
-        }
+        });
     }
 
-    // 3. Abre o modal
+    // 4. Abre o modal (Simplesmente muda o display)
     const modal = document.getElementById('edit-task-modal');
     if (modal) modal.style.display = 'flex';
 }
@@ -1740,7 +1837,12 @@ async function handleDeleteTask(taskId, taskTitle) {
 
 
 async function handleTaskListClick(event) {
+    event.stopPropagation(); 
+
+    // Tenta encontrar o botão mais próximo
     const button = event.target.closest('button');
+    
+    // Se não clicou em um botão, não faz nada
     if (!button) return;
 
     // --- 1. LÓGICA DO BOTÃO "CARREGAR MAIS" ---
@@ -1753,22 +1855,14 @@ async function handleTaskListClick(event) {
         const searchTerm = document.getElementById('search-term-input').value.trim();
         filters.searchTerm = searchTerm;
         if (filters.status === 'all') filters.status = null;
-
-        // Calcula quantas tarefas já temos (para saber o offset)
+        
         const currentCount = state.tasks.length;
 
         try {
-            // Busca as PRÓXIMAS 20 tarefas no servidor
             const newTasks = await api.searchTasks(filters, state.currentUserProfile, 20, currentCount); 
-            
             if (newTasks.length > 0) {
-                // Adiciona as novas tarefas à lista existente
                 state.tasks = [...state.tasks, ...newTasks];
-                
-                // Aumenta o limite de exibição
                 state.displayLimit += 20;
-                
-                // Redesenha a tela
                 state.tasksToDisplayForPdf = render.renderTasks(state);
             } else {
                 button.remove();
@@ -1776,24 +1870,26 @@ async function handleTaskListClick(event) {
             }
         } catch (error) {
             console.error("Erro ao carregar mais tarefas:", error);
-            alert("Erro ao carregar mais tarefas.");
             button.textContent = btnOriginalText;
             button.disabled = false;
         }
-        return; // Para aqui se foi o botão de carregar mais
+        return;
     }
 
-    // --- 2. LÓGICA DAS AÇÕES DE TAREFA (RESTAURADA) ---
+    // --- 2. LÓGICA DAS AÇÕES DE TAREFA (Editar, Concluir, Excluir) ---
     const action = button.dataset.action;
-    const taskId = button.dataset.taskid ? parseInt(button.dataset.taskid, 10) : null;
+    const taskIdRaw = button.dataset.taskid; 
+    const taskId = taskIdRaw ? parseInt(taskIdRaw, 10) : null;
 
     if (!action || !taskId) return;
 
     if (action === 'edit-task') {
         handleOpenEditTaskModal(taskId);
-    } else if (action === 'toggle-task-status') {
+    } 
+    else if (action === 'toggle-task-status') {
         handleToggleTaskStatus(taskId);
-    } else if (action === 'delete-task') {
+    } 
+    else if (action === 'delete-task') {
         const task = state.tasks.find(t => t.id === taskId);
         if (task) {
             handleDeleteTask(taskId, task.titulo);
@@ -1907,7 +2003,7 @@ function setupPasswordToggle(toggleId, inputId) {
 
 
 // --- SETUP INICIAL E LISTENERS ---
-/* function setupEventListeners() {
+ function setupEventListeners() {
 
      if (listenersInitialized) return;
     listenersInitialized = true;
@@ -2399,431 +2495,6 @@ function setupPasswordToggle(toggleId, inputId) {
 
     // Evento global para troca de view
     window.addEventListener('viewChanged', handleViewChange);
-}*/
-
-function setupEventListeners() {
-    // 1. PROTEÇÃO DE PERFORMANCE (No topo para evitar lentidão)
-    if (listenersInitialized) return;
-    listenersInitialized = true;
-
-    // 2. AUXILIAR DE ÁUDIO (Definida antes de usar)
-    // 2. AUXILIAR DE ÁUDIO (LÓGICA CORRIGIDA)
-    /* const unlockAudio = () => {
-        // Se já estiver desbloqueado, não faz nada
-       // if (state.audioUnlocked) return;
-
-        const sound = document.getElementById('notification-sound');
-        if (sound) {
-            sound.volume = 0; // Mudo
-            
-            // Tenta tocar
-            sound.play().then(() => {
-                // SUCESSO: O navegador deixou tocar!
-                state.audioUnlocked = true;
-                sound.pause();
-                sound.currentTime = 0;
-                sound.volume = 1; // Restaura volume
-                
-                state.audioUnlocked = true; // <--- AGORA SIM: Só marca true aqui dentro
-                console.log("Áudio desbloqueado com sucesso.");
-
-                // Só remove os ouvintes se tivermos SUCESSO
-                document.removeEventListener('click', unlockAudio);
-                document.removeEventListener('touchstart', unlockAudio);
-            }).catch(e => {
-                // FALHA: O navegador bloqueou.
-                // Não marcamos true. Não removemos o listener.
-                // Assim, no próximo clique do usuário, ele tentará novamente.
-                console.warn("Tentativa de desbloqueio falhou (tentará de novo no próximo clique):", e);
-            });
-        }
-    };*/
-                            const unlockAudio = () => {
-                    // 1. Marca como desbloqueado IMEDIATAMENTE ao primeiro toque
-                    // (Assume que a interação do usuário já liberou a permissão do navegador)
-                    state.audioUnlocked = true;
-                    console.log("Interação detectada. Áudio desbloqueado.");
-
-                    // 2. Tenta tocar o som mudo apenas para "aquecer" o motor de áudio
-                    const sound = document.getElementById('notification-sound');
-                    if (sound) {
-                        sound.volume = 0; // Mudo
-                        sound.play().then(() => {
-                            sound.pause();
-                            sound.currentTime = 0;
-                            sound.volume = 1; // Restaura volume
-                        }).catch(e => {
-                            // Se falhar aqui, não tem problema, pois a flag 'audioUnlocked' já é true.
-                            // O som real vai tocar quando a notificação chegar.
-                            console.warn("Tentativa silenciosa falhou, mas permissão foi registrada:", e);
-                            sound.volume = 1; 
-                        });
-                    }
-                    
-                    // 3. Remove os ouvintes imediatamente para não repetir
-                    document.removeEventListener('click', unlockAudio);
-                    document.removeEventListener('touchstart', unlockAudio);
-                };
-
-    // 3. LISTENERS GLOBAIS DE INICIALIZAÇÃO
-    document.addEventListener('click', unlockAudio);
-    document.addEventListener('touchstart', unlockAudio);
-
-    // Permissão de Notificação (Primeiro clique)
-    document.addEventListener('click', async () => {
-        if (Notification.permission === 'default') {
-            await Notification.requestPermission().catch(err => console.log("Erro permissão:", err));
-        }
-    }, { once: true });
-
-    // --- 4. AUTENTICAÇÃO ---
-    const loginBtn = document.getElementById('login-btn');
-    if (loginBtn) loginBtn.addEventListener('click', login); // Corrigido para 'login'
-
-    const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) logoutBtn.addEventListener('click', logout);
-
-    // Login com Enter
-    const loginInputs = ['email', 'password'];
-    loginInputs.forEach(id => {
-        const inputElement = document.getElementById(id);
-        if (inputElement) {
-            inputElement.addEventListener('keypress', (event) => {
-                if (event.key === 'Enter') {
-                    event.preventDefault();
-                    document.getElementById('login-btn')?.click();
-                }
-            });
-        }
-    });
-    
-    // Senha e Recuperação
-    setupPasswordToggle('toggle-password', 'password');
-    setupPasswordToggle('toggle-new-password', 'change-new-password'); 
-    setupPasswordToggle('toggle-confirm-password', 'change-confirm-password');
-    document.getElementById('forgot-password-link')?.addEventListener('click', handleForgotPassword);
-    document.getElementById('change-password-btn')?.addEventListener('click', ui.openChangePasswordModal);
-    document.getElementById('change-password-close-btn')?.addEventListener('click', ui.closeChangePasswordModal);
-    document.getElementById('change-password-cancel-btn')?.addEventListener('click', ui.closeChangePasswordModal);
-    document.getElementById('change-password-form')?.addEventListener('submit', handleUpdatePassword);
-    document.getElementById('set-password-form')?.addEventListener('submit', handleSetPassword);
-
-    // --- 5. SUPER ADMIN (Lógica Completa Restaurada) ---
-    document.getElementById('nav-super-admin')?.addEventListener('click', async () => {
-        try {
-            ui.showView('super-admin-view');
-            const todasAsEmpresas = await api.fetchAllCompaniesForSuperAdmin();
-            state.todasAsEmpresas = todasAsEmpresas; 
-            render.renderSuperAdminDashboard(todasAsEmpresas);
-        } catch (error) {
-            alert("Acesso negado ou erro ao carregar dados: " + error.message);
-            ui.showView('view-tasks-view');
-        }
-    });
-
-    // Edição de Empresa (Tabela)
-    document.getElementById('super-admin-table-body')?.addEventListener('click', async (event) => {
-        const editButton = event.target.closest('.btn-edit');
-        if (editButton) {
-            const empresaId = parseInt(editButton.dataset.empresaId, 10);
-            const empresa = state.todasAsEmpresas.find(e => e.id === empresaId);
-            
-            if (empresa) {
-                try {
-                    const planos = await api.fetchAllPlans(); 
-                    const planoSelect = document.getElementById('edit-empresa-plano');
-                    planoSelect.innerHTML = ''; 
-                    planos.forEach(plano => {
-                        const option = document.createElement('option');
-                        option.value = plano.id;
-                        option.textContent = plano.nome;
-                        planoSelect.appendChild(option);
-                    });
-
-                    document.getElementById('edit-empresa-id').value = empresa.id;
-                    document.getElementById('edit-empresa-nome').value = empresa.nome_empresa;
-                    document.getElementById('edit-empresa-cnpj').value = empresa.cnpj_cpf;
-                    document.getElementById('edit-empresa-status').value = empresa.status_assinatura;
-                    planoSelect.value = empresa.plano_id || ''; 
-                    document.getElementById('edit-empresa-logo-url').value = empresa.logo_url || ''; 
-
-                    document.getElementById('edit-empresa-modal').style.display = 'flex';
-                } catch (error) {
-                    alert("Erro ao carregar dados para edição: " + error.message);
-                }
-            }
-        }
-    });
-
-    // Salvar Empresa
-    document.getElementById('edit-empresa-form')?.addEventListener('submit', async (event) => {
-        event.preventDefault(); 
-        const form = event.target;
-        const empresaId = parseInt(form.elements['edit-empresa-id'].value, 10);
-
-        const dadosAtualizados = {
-            nome_empresa: form.elements['edit-empresa-nome'].value,
-            cnpj: form.elements['edit-empresa-cnpj'].value,
-            status_assinatura: form.elements['edit-empresa-status'].value,
-            plano_id: parseInt(form.elements['edit-empresa-plano'].value, 10),
-            logo_url: form.elements['edit-empresa-logo-url'].value.trim() || null
-        };
-
-        try {
-            await api.updateCompanyBySuperAdmin(empresaId, dadosAtualizados);
-            alert('Empresa atualizada com sucesso!');
-            document.getElementById('edit-empresa-modal').style.display = 'none';
-            document.getElementById('nav-super-admin').click(); 
-        } catch (error) {
-            alert('Falha ao atualizar a empresa: ' + error.message);
-        }
-    });
-
-    document.getElementById('edit-empresa-modal-close-btn')?.addEventListener('click', () => {
-        document.getElementById('edit-empresa-modal').style.display = 'none';
-    });
-    document.getElementById('edit-empresa-modal-cancel-btn')?.addEventListener('click', () => {
-        document.getElementById('edit-empresa-modal').style.display = 'none';
-    });
-
-
-    // --- 6. NAVEGAÇÃO ---
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const viewId = e.target.closest('.nav-btn').dataset.view;
-            handleViewChange(viewId);
-        });
-    });
-
-    document.getElementById('nav-create')?.addEventListener('click', () => ui.showView('create-task-view'));
-    document.getElementById('nav-view')?.addEventListener('click', () => ui.showView('view-tasks-view'));
-    document.getElementById('nav-dashboard')?.addEventListener('click', () => ui.showView('dashboard-view'));
-    document.getElementById('nav-admin')?.addEventListener('click', () => ui.showView('admin-menu-view'));
-    
-    document.getElementById('admin-menu-view')?.addEventListener('click', (event) => {
-        const button = event.target.closest('.admin-menu-btn');
-        if (button && button.dataset.view) ui.showView(button.dataset.view);
-    });
-    
-    document.getElementById('main-container').addEventListener('click', (event) => {
-        const backButton = event.target.closest('.btn-back');
-        if (backButton && backButton.dataset.view) ui.showView(backButton.dataset.view);
-    });
-
-
-    // --- 7. TAREFAS (Criação e Edição) ---
-    document.getElementById('task-list')?.addEventListener('click', handleTaskListClick);
-    document.getElementById('fab-add-task')?.addEventListener('click', () => ui.showView('create-task-view'));
-    
-    // Criar Tarefa
-    document.getElementById('task-form')?.addEventListener('submit', handleCreateTask);
-
-    // Editar Tarefa (Com Validação de Síndico)
-    document.getElementById('edit-task-form')?.addEventListener('submit', async (event) => {
-        const assigneeId = document.getElementById('edit-task-assignee').value;
-        const condominioId = document.getElementById('edit-task-condominio').value; 
-
-        if (typeof validarVinculoSindico === 'function') {
-            if (!validarVinculoSindico(assigneeId, condominioId)) {
-                event.preventDefault();
-                return;
-            }
-        }
-        handleUpdateTask(event);
-    });
-
-    document.getElementById('edit-task-modal-close-btn')?.addEventListener('click', ui.closeEditTaskModal);
-    document.getElementById('edit-task-modal-cancel-btn')?.addEventListener('click', ui.closeEditTaskModal);
-    document.getElementById('record-desc-btn')?.addEventListener('click', handleAudioTranscription);
-
-
-    // --- 8. BUSCA (SEARCH) ---
-    document.getElementById('search-tasks-btn')?.addEventListener('click', executeTaskSearch);
-    document.getElementById('search-term-input')?.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            executeTaskSearch();
-        }
-    });
-
-    // Botão Limpar Filtros
-    document.getElementById('clear-filters')?.addEventListener('click', () => {
-        state.displayLimit = 20;
-        const filterBarForm = document.getElementById('filter-bar')?.closest('div');
-        if (filterBarForm) {
-            Array.from(filterBarForm.querySelectorAll('select, input[type="date"]')).forEach(input => input.value = '');
-        }
-        document.getElementById('filter-condo-search').value = '';
-        document.getElementById('search-term-input').value = '';
-        state.activeFilters = { searchTerm: '', condominioId: '', status: 'in_progress', dateStart: '', dateEnd: '', assigneeId: '', taskTypeId: '', groupId: '' };
-        document.getElementById('filter-status').value = 'in_progress';
-        executeTaskSearch();
-    });
-
-    // Filtros da Barra Superior
-    const filters = ['filter-status', 'filter-assignee', 'filter-date-start', 'filter-date-end', 'filter-task-type', 'filter-group'];
-    filters.forEach(id => {
-        document.getElementById(id)?.addEventListener('change', (e) => {
-            state.displayLimit = 20;
-            const filterMap = {
-                'filter-status': 'status',
-                'filter-assignee': 'assigneeId',
-                'filter-date-start': 'dateStart',
-                'filter-date-end': 'dateEnd',
-                'filter-task-type': 'taskTypeId',
-                'filter-group': 'groupId'
-            };
-            state.activeFilters[filterMap[id]] = e.target.value;
-            executeTaskSearch();
-        });
-    });
-
-
-    // --- 9. CRUD ADMIN (Usuários, Condos, etc) ---
-    document.getElementById('add-user-btn')?.addEventListener('click', handleOpenCreateUserModal);
-    document.getElementById('create-user-form')?.addEventListener('submit', handleCreateUser);
-    document.getElementById('edit-user-form')?.addEventListener('submit', handleUpdateUser);
-    document.getElementById('create-user-modal-close-btn')?.addEventListener('click', ui.closeCreateUserModal);
-    document.getElementById('create-user-modal-cancel-btn')?.addEventListener('click', ui.closeCreateUserModal);
-    document.getElementById('edit-user-modal-close-btn')?.addEventListener('click', ui.closeEditUserModal);
-    document.getElementById('edit-user-modal-cancel-btn')?.addEventListener('click', ui.closeEditUserModal);
-
-    document.getElementById('add-condo-btn')?.addEventListener('click', handleOpenCreateCondoModal);
-    document.getElementById('create-condo-form')?.addEventListener('submit', handleCreateCondo);
-    document.getElementById('edit-condo-form')?.addEventListener('submit', handleUpdateCondo);
-    document.getElementById('edit-condo-modal-close-btn')?.addEventListener('click', ui.closeEditCondoModal);
-    document.getElementById('edit-condo-modal-cancel-btn')?.addEventListener('click', ui.closeEditCondoModal);
-    document.getElementById('create-condo-modal-close-btn')?.addEventListener('click', ui.closeCreateCondoModal);
-    document.getElementById('create-condo-modal-cancel-btn')?.addEventListener('click', ui.closeCreateCondoModal);
-    document.getElementById('import-condo-btn')?.addEventListener('click', () => document.getElementById('condo-csv-input').click());
-    document.getElementById('condo-csv-input')?.addEventListener('change', handleCondoImport);
-    
-    document.getElementById('task-type-form')?.addEventListener('submit', handleCreateOrUpdateTaskType);
-    document.getElementById('group-form')?.addEventListener('submit', handleCreateOrUpdateGroup);
-    document.getElementById('cargo-form')?.addEventListener('submit', handleCreateOrUpdateCargo);
-    document.getElementById('template-select')?.addEventListener('change', handleTemplateSelect);
-    document.getElementById('download-template-btn')?.addEventListener('click', handleDownloadTemplate);
-
-    // --- 10. DASHBOARD ---
-    document.getElementById('dashboard-user-filter')?.addEventListener('change', () => {
-        if (typeof refreshDashboard === 'function') refreshDashboard();
-    });
-    document.getElementById('dashboard-date-start')?.addEventListener('change', () => {
-        if (typeof refreshDashboard === 'function') refreshDashboard();
-    });
-    document.getElementById('dashboard-date-end')?.addEventListener('change', () => {
-        if (typeof refreshDashboard === 'function') refreshDashboard();
-    });
-
-
-    // --- 11. NOTIFICAÇÕES ---
-    document.getElementById('notification-btn')?.addEventListener('click', ui.openNotificationsModal);
-    document.getElementById('notification-bell-container')?.addEventListener('click', async () => {
-        const { data: notifications, error } = await supabaseClient
-            .from('notificacoes_detalhadas')
-            .select('*')
-            .eq('user_id', state.currentUserProfile.id)
-            .order('created_at', { ascending: false })
-            .limit(10);
-
-        if (error) { console.error("Erro ao buscar notificações:", error); return; }
-
-        const listContainer = document.getElementById('notifications-list');
-        if (!listContainer) return;
-
-        if (notifications && notifications.length > 0) {
-            listContainer.innerHTML = notifications.map(n => {
-                const data = new Date(n.created_at).toLocaleString('pt-BR');
-                return `
-                    <div class="notification-item ${n.lida ? '' : 'unread'}" data-task-id="${n.tarefa_id}" data-notification-id="${n.id}">
-                        <p>${n.mensagem}</p>
-                        <small>${data}</small>
-                    </div>
-                `;
-            }).join('');
-        } else {
-            listContainer.innerHTML = '<p style="text-align: center; color: #6b7280;">Nenhuma notificação recente.</p>';
-        }
-
-        ui.openNotificationsModal();
-
-        const badge = document.getElementById('notification-badge');
-        if (badge) badge.style.display = 'none';
-        state.unreadNotifications = 0;
-        if (typeof updateFavicon === 'function') updateFavicon(0);
-
-        const unreadIds = notifications.filter(n => !n.lida).map(n => n.id);
-        if (unreadIds.length > 0) {
-            await api.markNotificationAsRead(unreadIds);
-        }
-    });
-
-    // Clique na Notificação (Ir para Tarefa)
-    document.getElementById('notifications-list')?.addEventListener('click', async (event) => {
-        const item = event.target.closest('.notification-item');
-        if (item && item.dataset.taskId) {
-            const taskId = item.dataset.taskId;
-            const notificationId = item.dataset.notificationId;
-            
-            ui.closeNotificationsModal();
-            ui.showView('view-tasks-view');
-            
-            try {
-                const task = await api.fetchTaskById(taskId);
-                if (task) {
-                    state.tasks = [task];
-                    state.tasksToDisplayForPdf = render.renderTasks(state);
-                    setTimeout(() => {
-                        const cardToFocus = document.querySelector(`.task-card .btn-edit[data-taskid="${taskId}"]`)?.closest('.task-card');
-                        if (cardToFocus) {
-                            cardToFocus.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            cardToFocus.classList.add('highlight');
-                            setTimeout(() => cardToFocus.classList.remove('highlight'), 2000);
-                        }
-                    }, 100);
-                }
-                if (notificationId) {
-                    await api.markNotificationAsRead([notificationId]);
-                    await verificarNotificacoes();
-                }
-            } catch (error) {
-                console.error("Erro ao carregar tarefa da notificação:", error);
-                alert("Não foi possível carregar a tarefa.");
-            }
-        }
-    });
-
-    document.getElementById('notifications-modal-close-btn')?.addEventListener('click', ui.closeNotificationsModal);
-    document.getElementById('notifications-modal-ok-btn')?.addEventListener('click', ui.closeNotificationsModal);
-    if (typeof handleMarkAllRead !== 'undefined') {
-        document.getElementById('mark-all-read-btn')?.addEventListener('click', handleMarkAllRead);
-    }
-    document.getElementById('access-denied-logout-btn')?.addEventListener('click', logout);
-
-    // Exportação e Instruções
-    document.getElementById('export-pdf-btn')?.addEventListener('click', handleExportToPDF);
-    
-    document.getElementById('open-instructions-link')?.addEventListener('click', (event) => {
-        event.preventDefault();
-        ui.openInstructionsModal();
-    });
-    document.getElementById('instructions-modal-close-btn')?.addEventListener('click', ui.closeInstructionsModal);
-    document.getElementById('instructions-modal-ok-btn')?.addEventListener('click', ui.closeInstructionsModal);
-
-    // Event Delegation para Listas Dinâmicas (Admin)
-    document.getElementById('user-list')?.removeEventListener('click', handleUserListClick);
-    document.getElementById('user-list')?.addEventListener('click', handleUserListClick);
-    document.getElementById('condo-list')?.removeEventListener('click', handleCondoListClick);
-    document.getElementById('condo-list')?.addEventListener('click', handleCondoListClick);
-    document.getElementById('task-type-list')?.removeEventListener('click', handleTaskTypeListClick);
-    document.getElementById('task-type-list')?.addEventListener('click', handleTaskTypeListClick);
-    document.getElementById('group-list')?.removeEventListener('click', handleGroupListClick);
-    document.getElementById('group-list')?.addEventListener('click', handleGroupListClick);
-    document.getElementById('cargo-list')?.removeEventListener('click', handleCargoListClick);
-    document.getElementById('cargo-list')?.addEventListener('click', handleCargoListClick);
-    
-    // Evento global para troca de view
-    window.addEventListener('viewChanged', handleViewChange);
 }
 
 // O restante da inicialização... */
@@ -2987,6 +2658,18 @@ async function startApp() {
                 state.condominios,
                 (selectedValue) => {
                     document.getElementById('task-condominio').value = selectedValue;
+                }
+            );
+
+            // --- CORREÇÃO: Inicializa o dropdown de Condomínio no Modal de EDIÇÃO ---
+            ui.createSearchableDropdown(
+                'edit-task-condo-search',   // ID do input visual de busca no modal de edição
+                'edit-task-condo-options',  // ID da lista de opções (<ul> ou <div>) no HTML
+                'edit-task-condominio',     // ID do input hidden que guarda o ID real
+                state.condominios,          // Lista de dados
+                (selectedValue) => {
+                    // Callback: Atualiza o input hidden quando o usuário clica numa opção
+                    document.getElementById('edit-task-condominio').value = selectedValue;
                 }
             );
 
