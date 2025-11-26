@@ -219,14 +219,22 @@ export async function exportTasksToPDF(tasksToExport, CONDOMINIOS, TASK_TYPES, S
                     const eventDate = new Date(e.created_at).toLocaleDateString('pt-BR');
                     const userName = e.usuario_nome || 'Sistema';
 
+                    // --- INÍCIO DA ATUALIZAÇÃO (LÓGICA IGUAL AO MODAL) ---
                     if (e.evento === 'Criação') {
-                        return `${eventDate}: Tarefa criada por ${userName}`;
+                        // 1. Tenta pegar os dados do JSON
+                        const criador = e.detalhes?.criado_por || userName;
+                        const designado = e.detalhes?.designado_para;
+
+                        let text = `Tarefa criada por ${criador}`;
+
+                        // 2. Se tiver designado e for diferente do criador, adiciona a info
+                        if (designado && designado !== criador) {
+                            text += ` e designada para ${designado}`;
+                        }
+                        
+                        return `${eventDate}: ${text}`;
                     }
-                    if (e.evento === 'Re-designação') {
-                        const de = e.detalhes?.de || 'Ninguém';
-                        const para = e.detalhes?.para || 'Não definido';
-                        return `${eventDate}: Re-designado de '${de}' para '${para}' por ${userName}`;
-                    }
+                    // --- FIM DA ATUALIZAÇÃO ---
                     if (e.evento === 'Alteração de Status') {
                         const statusKeyDe = e.detalhes?.de || null;
                         const statusKeyPara = e.detalhes?.para || 'desconhecido';
