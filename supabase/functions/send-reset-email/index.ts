@@ -34,7 +34,7 @@ serve(async (req) => {
         'Authorization': `Bearer ${resendApiKey}`,
       },
       body: JSON.stringify({
-        from: 'Autenticação TasKCom <nao-responda@taskcom.iadev.app>',
+        from: 'Autenticação TasKCom <nao-responda@iadev.app>',
         to: email,
         subject: 'Redefinição de Senha - TasKCom',
          html: `

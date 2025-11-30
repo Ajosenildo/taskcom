@@ -1,6 +1,6 @@
 // js/render.js (Versão Definitiva e Corrigida)
 import { state } from './state.js';
-import * as utils from './utils.js';
+import * as utils from './utils.v4.js';
 
 function getVisualStatus(task, STATUSES) {
     if (!task || !task.status) return null;

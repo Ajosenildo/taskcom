@@ -1,11 +1,11 @@
 // js/app.v2.js - VERSÃO FINAL, COMPLETA E VERIFICADA
 
 import { supabaseClient } from './supabaseClient.js';
-import { login, logout, checkSession } from './auth.v3.js';
-import * as ui from './ui.v3.js';
-import * as api from './api.v3.js';
-import * as render from './render.v3.js';
-import * as utils from './utils.js';
+import { login, logout, checkSession } from './auth.v4.js';
+import * as ui from './ui.v4.js';
+import * as api from './api.v4.js';
+import * as render from './render.v4.js';
+import * as utils from './utils.v4.js';
 import { state } from './state.js';
 
 supabaseClient.auth.getUser().then(({ data, error }) => {
@@ -262,63 +262,6 @@ async function handleAudioTranscription(event) {
         alert("Não foi possível iniciar o microfone.");
     }
 }
-
-/* function handleViewChange(event) {
-    const { viewId } = event.detail;
-    try {
-        // Lógica de renderização principal
-        if (viewId === 'view-tasks-view') {
-            state.tasksToDisplayForPdf = render.renderTasks(state);
-        } else if (viewId === 'dashboard-view') {
-            // Chama a função unificada que já lê os filtros
-            refreshDashboard();
-        }
-
-        // Lógica de renderização para as novas telas de Admin
-        // Agora renderiza apenas o necessário, tornando o app mais eficiente
-        if (viewId === 'admin-users-view') {
-            render.renderUserList(state.allUsers, state.currentUserProfile, state.allCargos, state.allGroups, state.userGroupAssignments, state.condominios, state.allCondoAssignments);
-            const addUserBtn = document.getElementById('add-user-btn');
-            const userLimit = state.plano?.limite_usuarios;
-            const activeUserCount = state.allUsers.filter(u => u.ativo).length;
-
-            // Limpa qualquer mensagem de limite anterior
-            const oldLimitMessage = document.getElementById('user-limit-message');
-            if (oldLimitMessage) oldLimitMessage.remove();
-
-            if (userLimit && activeUserCount >= userLimit) {
-                // Se o limite existe E foi atingido
-                addUserBtn.disabled = true;
-                addUserBtn.style.backgroundColor = '#9ca3af'; // Cor cinza de desabilitado
-                addUserBtn.style.cursor = 'not-allowed';
-
-                // Cria e insere a mensagem de aviso
-                const limitMessage = document.createElement('p');
-                limitMessage.id = 'user-limit-message';
-                limitMessage.style.color = 'red';
-                limitMessage.style.textAlign = 'center';
-                limitMessage.textContent = `Limite de ${userLimit} usuários ativos atingido para o ${state.plano.nome}.`;
-                addUserBtn.after(limitMessage); // Insere a mensagem após o botão
-            } else {
-                // Garante que o botão esteja habilitado se o limite não foi atingido
-                addUserBtn.disabled = false;
-                addUserBtn.style.backgroundColor = ''; // Volta à cor padrão
-                addUserBtn.style.cursor = 'pointer';
-            }
-        } else if (viewId === 'admin-cargos-view') {
-            render.renderCargoList(state.allCargos);
-        } else if (viewId === 'admin-groups-view') {
-            render.renderGroupList(state.allGroups);
-        } else if (viewId === 'admin-types-view') {
-            render.renderTaskTypeList(state.taskTypes);
-        } else if (viewId === 'admin-condos-view') {
-            render.renderCondoList(state.condominios, state.allGroups);
-        }
-    } catch (error) {
-        console.error(`Erro fatal ao renderizar a view '${viewId}':`, error);
-        alert(`Ocorreu um erro ao tentar exibir a tela '${viewId}'.`);
-    } 
-}*/
 
 async function handleViewChange(input) {
     let viewId;
@@ -1475,62 +1418,6 @@ function updateFavicon(count) {
     };
 }
 
-// Função para verificar contagem e atualizar ícones (Sem Popup Genérico)
-/* async function verificarNotificacoes() {
-    if (!state.currentUserProfile) return;
-
-    try {
-        const { count, error } = await supabaseClient
-            .from('notificacoes')
-            .select('id', { count: 'exact', head: true })
-            .eq('user_id', state.currentUserProfile.id)
-            .eq('lida', false);
-
-        if (error) throw error;
-
-        // 1. Atualiza UI Interna
-        const badge = document.getElementById('notification-badge');
-        if (badge) {
-            if (count > 0) {
-                badge.textContent = count > 99 ? '99+' : count;
-                badge.style.display = 'flex';
-            } else {
-                badge.style.display = 'none';
-            }
-        }
-
-        // 2. Atualiza Favicon (PC)
-        if (typeof updateFavicon === 'function') updateFavicon(count);
-
-        // 3. Atualiza App Badge (Mobile/PWA - Bolinha no ícone)
-        if ('setAppBadge' in navigator) {
-            if (count > 0) {
-                navigator.setAppBadge(count).catch(() => {});
-            } else {
-                navigator.clearAppBadge().catch(() => {});
-            }
-        }
-
-        // 4. Toca o Som (Mantido aqui para garantir alerta sonoro)
-        if (
-            typeof state.lastNotifiedCount === 'number' &&
-            count > state.lastNotifiedCount &&
-            state.audioUnlocked
-        ) {
-            const sound = document.getElementById('notification-sound');
-            if (sound) {
-                sound.currentTime = 0;
-                sound.play().catch(e => console.warn("Erro ao tocar som:", e));
-            }
-        }
-
-        state.lastNotifiedCount = count;
-
-    } catch (error) {
-        console.error("Erro ao verificar notificações:", error);
-    }
-} */
-
     async function verificarNotificacoes() {
     if (!state.currentUserProfile) return;
 
@@ -1582,82 +1469,6 @@ function updateFavicon(count) {
     }
 }
 
-/* async function verificarNotificacoes() {
-    if (!state.currentUserProfile) return;
-
-    try {
-        const { count, error } = await supabaseClient
-            .from('notificacoes')
-            .select('id', { count: 'exact', head: true })
-            .eq('user_id', state.currentUserProfile.id)
-            .eq('lida', false);
-
-        if (error) throw error;
-
-        // 1. Atualiza UI Interna
-        const badge = document.getElementById('notification-badge');
-        if (badge) {
-            if (count > 0) {
-                badge.textContent = count > 99 ? '99+' : count;
-                badge.style.display = 'flex';
-            } else {
-                badge.style.display = 'none';
-            }
-        }
-
-        // 2. Atualiza Favicon (PC)
-        if (typeof updateFavicon === 'function') updateFavicon(count);
-
-        // 3. Lógica de Notificação do Sistema (Mobile/Desktop)
-        if (count > 0) {
-            // A. Tenta definir o Badge (funciona bem em Desktop/iOS)
-            if ('setAppBadge' in navigator) {
-                navigator.setAppBadge(count).catch(() => {});
-            }
-
-            // B. Dispara Notificação Visual (O Segredo para o Android)
-            // Só dispara se tiver permissão E se a contagem aumentou (para não flodar)
-            if (Notification.permission === 'granted') {
-                // Verifica se chegou notificação nova comparando com o estado anterior
-                if (typeof state.lastNotifiedCount === 'number' && count > state.lastNotifiedCount) {
-                    
-                    // Cria a notificação visual no Android
-                    // (Isso geralmente faz a bolinha aparecer no ícone)
-                    new Notification('TasKCom', {
-                        body: `Você tem ${count} nova(s) tarefa(s) pendente(s).`,
-                        icon: 'favicon/favicon-96x96.png', // Ícone que aparece na barra
-                        badge: 'favicon/favicon-96x96.png', // Ícone pequeno (Android)
-                        tag: 'taskcom-notification' // Evita spam (substitui a anterior)
-                    });
-                }
-            }
-        } else {
-            // Limpa tudo se for zero
-            if ('clearAppBadge' in navigator) navigator.clearAppBadge().catch(() => {});
-        }
-
-        // 4. Toca o Som
-        if (
-            typeof state.lastNotifiedCount === 'number' &&
-            count > state.lastNotifiedCount &&
-            state.audioUnlocked
-        ) {
-            const sound = document.getElementById('notification-sound');
-            if (sound) {
-                sound.currentTime = 0;
-                sound.play().catch(e => console.warn("Erro ao tocar som:", e));
-            }
-        }
-
-        state.lastNotifiedCount = count;
-
-    } catch (error) {
-        console.error("Erro ao verificar notificações:", error);
-    }
-}*/
-
-
-
 function unlockAudio() {
     const sound = document.getElementById('notification-sound');
     if (sound) {
@@ -1671,54 +1482,6 @@ function unlockAudio() {
         });
     }
 }
-
-/* function updateFavicon(count) {
-    const favicon = document.getElementById('favicon');
-    if (!favicon) return;
-
-    // Se não houver notificações, restaura o ícone original e para a execução.
-    if (count === 0) {
-        favicon.href = '/favicon/favicon-96x96.png';
-        return;
-    }
-
-    // Cria um objeto de imagem para garantir que o favicon original seja carregado antes de desenharmos
-    const img = new Image();
-    img.src = '/favicon/favicon-96x96.png';
-
-    // Quando a imagem do favicon original for carregada, o desenho começa
-    img.onload = () => {
-        // Cria um canvas (uma tela de desenho) invisível
-        const canvas = document.createElement('canvas');
-        canvas.width = 32;
-        canvas.height = 32;
-        const ctx = canvas.getContext('2d');
-
-        // 1. Desenha a imagem original do favicon no canvas
-        ctx.drawImage(img, 0, 0, 32, 32);
-
-        // 2. Prepara o texto da notificação (ex: "1", "2", ..., "9+")
-        const text = count > 9 ? '9+' : count.toString();
-
-        // 3. Configurações do círculo vermelho (badge)
-        ctx.beginPath();
-        ctx.arc(22, 10, 8, 0, 2 * Math.PI); // Posição (x,y), raio, etc.
-        ctx.fillStyle = 'red';
-        ctx.fill();
-
-        // 4. Configurações do texto do número
-        ctx.font = 'bold 14px sans-serif';
-        ctx.fillStyle = 'white';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        // 5. Desenha o número sobre o círculo vermelho
-        ctx.fillText(text, 22, 10);
-
-        // 6. Converte o desenho do canvas em uma imagem e atualiza o favicon
-        favicon.href = canvas.toDataURL('image/png');
-    };
-}*/ 
 
 // --- FUNÇÕES DE AÇÃO DA TAREFA (RESTAURADAS) ---
 

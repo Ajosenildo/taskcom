@@ -1,17 +1,17 @@
-const CACHE_NAME = "taskcom-cache-v5"; // Atualizei a versão
+const CACHE_NAME = "taskcom-cache-v6"; // Atualizei a versão
 const urlsToCache = [
   "./",
   "./index.html",
-  "./css/styles.v3.css", // Atualizado para o nome real do seu arquivo
-  "./js/app.v3.js",      // Atualizado para o nome real do seu arquivo
-  "./js/api.v3.js",
-  "./js/auth.v3.js",
+  "./css/styles.v4.css", // Atualizado para o nome real do seu arquivo
+  "./js/app.v4.js",      // Atualizado para o nome real do seu arquivo
+  "./js/api.v4.js",
+  "./js/auth.v4.js",
   "./js/config.js",
-  "./js/render.v3.js",
+  "./js/render.v4.js",
   "./js/state.js",
   "./js/supabaseClient.js",
-  "./js/ui.v3.js",
-  "./js/utils.js",
+  "./js/ui.v4.js",
+  "./js/utils.v4.js",
   "./manifest.json",
   "./favicon/favicon-96x96.png"
   // Adicione aqui seus ícones se tiver (icon-192.png, etc)
