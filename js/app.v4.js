@@ -1041,20 +1041,28 @@ async function handleForgotPassword(event) {
     if (!email) return;
 
     try {
-        // CORREÇÃO:
-        // Agora chamamos a nossa Edge Function 'send-reset-email' em vez da função padrão.
+        // Chama a Edge Function
         const { data, error } = await supabaseClient.functions.invoke('send-reset-email', {
             body: { email: email }
         });
 
+        // Se o supabaseClient detectar um erro na chamada, ele lança aqui
         if (error) throw error;
 
-        // Mensagem de sucesso para o usuário.
+        // Sucesso
         alert("Se uma conta com este e-mail existir, um link para redefinir a senha foi enviado.");
 
     } catch (error) {
         console.error("Erro ao chamar a Edge Function de redefinição:", error);
-        alert("Ocorreu um erro ao tentar enviar o e-mail de redefinição: " + error.message);
+
+        // --- TRATAMENTO PERSONALIZADO DE ERRO ---
+        // Verifica se o erro é o retorno "non-2xx" (que acontece quando a função falha/não acha o usuário)
+        if (error.message && (error.message.includes('non-2xx') || error.message.includes('400') || error.message.includes('404'))) {
+            alert("O e-mail informado não foi localizado, tente com outro ou confirme seu e-mail de cadastro com o administrador do sistema.");
+        } else {
+            // Erros reais de conexão ou outros problemas
+            alert("Ocorreu um erro ao tentar enviar o e-mail de redefinição: " + error.message);
+        }
     }
 }
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = "taskcom-cache-v6"; // Atualizei a versão
+const CACHE_NAME = "taskcom-cache-v7"; // Atualizei a versão
 const urlsToCache = [
   "./",
   "./index.html",
